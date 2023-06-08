@@ -1,0 +1,47 @@
+#!/bin/bash
+[ -z $DB_POD ] && export DB_POD=db15
+[ -z $DB_PORT ] && export DB_PORT=5432
+[ -z $DB_PASSWORD ] && export DB_PASSWORD=postgres
+[ -z $DB_USERS ] && export DB_USERS="odoo15 odoo16"
+[ -z $DB_USER_PASSWORD ] && export DB_USER_PASSWORD=odooodoo
+
+
+function cli_help(){
+  printf "db - Postgres 15 Container using podman\n"
+  printf "\nDB Admin Commands\n"
+  printf "   fullreset  Fully wipe all databases [CAUTION]\n"
+  printf "\n"
+  printf "   start      Start the instance\n"
+  printf "   stop       Stop the instance\n"
+  printf "   restart    Restart the instance\n"
+  printf "\n"
+  printf "   logs       Follow the logs\n"
+  printf "   stats      Get POD stats\n"
+  printf "   top        POD top command\n"
+  printf "   psql       Access the raw database\n"
+}
+
+case ${1} in
+  "start") podman start $DB_POD ;;
+  "stop") podman stop $DB_POD ;;
+  "restart") podman restart $DB_POD ;;
+  "logs") podman logs -f $DB_POD ;;
+  "stats") podman stats $DB_POD ;;
+  "top") podman top $DB_POD ;;
+  "psql") podman exec -it --user postgres $DB_POD psql ;;
+  "fullreset")
+    read -r -p "Are you sure? [y/N] " response
+    if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
+      podman stop $DB_POD
+      podman rm $DB_POD
+      podman volume rm $DB_POD
+      podman run --name $DB_POD -p ${DB_PORT}:5432 -e POSTGRES_PASSWORD=${DB_PASSWORD} -v $DB_POD:/var/lib/postgresql/data -d docker.io/postgres:15-alpine
+      sleep 10
+      for DU in $DB_USERS
+      do
+        podman exec -it --user postgres $DB_POD psql -c "create role ${DU} with createdb login password '${DB_USER_PASSWORD}';"
+      done
+    fi
+    ;;
+  *) cli_help ;;
+esac
