@@ -1,0 +1,2 @@
+# oda
+Odoo Administration Tool
