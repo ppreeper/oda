@@ -10,8 +10,7 @@ import subprocess
 import tempfile
 import zipfile
 
-odoo_c = os.environ.get("ODOO_C")
-sys.path.append(odoo_c)
+sys.path.append("odoo")
 
 from psycopg2 import sql
 from contextlib import closing
