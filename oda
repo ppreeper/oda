@@ -1,7 +1,7 @@
 #!/bin/bash
 [ -z $ODOODB ] && export ODOODB=${PWD##*/}
 POD=${PWD##*/}
-IPV4=$(ip -4 -br a show eth0 | awk '{print $3}' | awk -F'/' '{print $1}')
+IPV4=$(ip -4 -br a show | grep -v ^lo | grep UP | awk '{print $3}' | awk -F'/' '{print $1}')
 BASE=`dirname "${0}"`
 
 function envrc(){
