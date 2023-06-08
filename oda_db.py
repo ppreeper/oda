@@ -322,7 +322,7 @@ def main():
     addons = odoo.tools.config["addons_path"].split(',')[2:]
 
     if not args.backup and not args.restore and not args.addons:
-        print("backup or restore or addons must select one")
+        print(argParser.print_help())
         return
 
     if args.backup and (args.restore or args.addons):
