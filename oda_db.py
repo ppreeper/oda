@@ -135,12 +135,10 @@ def dump_db_manifest(cr):
     return manifest
 
 
-def _dump_db(db_name, backup_format='zip'):
+def _dump_db(db_name, bkp_name, folder="./backups", backup_format='zip'):
     """Dump database `db` into file-like object `stream` if stream is None
     return a file object with the dump """
-    folder = "./backups"
-    bkp_file = '%s_%s.%s' % (time.strftime('%Y_%m_%d_%H_%M_%S'), db_name,
-                             "zip")
+    bkp_file = f"{bkp_name}.zip"
     file_path = os.path.join(folder, bkp_file)
     with open(file_path, 'wb') as stream:
         _logger.info('DUMP DB: %s format %s', db_name, backup_format)
@@ -190,6 +188,21 @@ def _dump_db(db_name, backup_format='zip'):
             else:
                 return stdout
         return file_path
+
+
+def _dump_addons(addons,bkp_name,bkp_dir="./backups", ):
+    cwd = os.getcwd()
+    for addon in addons:
+        folder=addon.replace(cwd+"/","")
+        bkp_file = f"{bkp_name}_{folder}.zip"
+        file_path = os.path.join(bkp_dir, bkp_file)
+        with open(file_path, 'wb') as stream:
+            odoo.tools.osutil.zip_dir(
+                folder,
+                file_path,
+                include_dir=False
+            )
+            print(file_path)
 
 
 def _restore_db(db, dump_file, copy=False, neutralize_database=False):
@@ -244,6 +257,15 @@ def _restore_db(db, dump_file, copy=False, neutralize_database=False):
     _logger.info('RESTORE DB: %s', db)
 
 
+def _restore_addons(dump_file, addons=""):
+    cwd = os.getcwd()
+    dest = addons if addons != "" else dump_file.split('_')[-1:][0].split('.')[0]
+    with zipfile.ZipFile(dump_file, 'r') as z:
+    #     # only extract known members!
+        z.extractall(dest)
+
+
+
 def list_dbs(force=False):
     if not odoo.tools.config['list_db'] and not force:
         raise odoo.exceptions.AccessDenied()
@@ -285,20 +307,32 @@ def main():
                            "--dump_file",
                            action="store",
                            help="database dump file")
+    argParser.add_argument("-a",
+                           "--addons",
+                           action="store_true",
+                           help="restore addons")
+    argParser.add_argument("-f",
+                           "--folder",
+                           action="store",
+                           help="addons folder")
+
     args = argParser.parse_args()
     odoo.tools.config._parse_config(["-c", "./conf/odoo.conf"])
     db_name = odoo.tools.config["db_name"]
+    addons = odoo.tools.config["addons_path"].split(',')[2:]
 
-    if not args.backup and not args.restore:
-        print("backup or restore must select one")
+    if not args.backup and not args.restore and not args.addons:
+        print("backup or restore or addons must select one")
         return
 
-    if args.backup and args.restore:
+    if args.backup and (args.restore or args.addons):
         print("backup or restore cannot run both commands")
         return
 
     if args.backup:
-        print(_dump_db(db_name, "zip"))
+        bkp_name = f"{time.strftime('%Y_%m_%d_%H_%M_%S')}_{db_name}"
+        print(_dump_db(db_name,bkp_name))
+        _dump_addons(addons,bkp_name)
         return
 
     if args.restore and args.dump_file is None or args.dump_file == "":
@@ -308,6 +342,15 @@ def main():
     if args.restore and args.dump_file:
         print(f"restore from dump file {args.dump_file}")
         _restore_db(db_name, args.dump_file)
+        return
+
+    if args.addons and args.dump_file is None or args.dump_file == "":
+        print("addons restore command requires a dump file to read")
+        return
+
+    if args.addons and args.dump_file:
+        print(f"addons restore from dump file {args.dump_file} ")
+        _restore_addons(args.dump_file) if (args.folder is None or args.folder == "") else _restore_addons(args.dump_file,args.folder)
         return
 
 
