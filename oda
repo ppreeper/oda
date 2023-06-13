@@ -180,17 +180,14 @@ case ${1} in
   "stop") odoo_stop $POD ;;
   "restart") odoo_stop $POD && sleep 2 && odoo_start $POD ;;
   "psql")
-    PGPASSWORD=$(gcfg db_pass) psql -U $(gcfg db_user) -h $(gcfg db_host) -p $(gcfg db_port) $ODOODB
-    if [[ $(echo $?) != 0 ]]; then
-      PGPASSWORD=$(gcfg db_pass) psql -U $(gcfg db_user) -h $(gcfg db_host) -p $(gcfg db_port) $(gcfg db_name)
-    fi
+    PGPASSWORD=$(gcfg db_pass) psql -U $(gcfg db_user) -h $(gcfg db_host) -p $(gcfg db_port) $(gcfg db_name)
     ;;
   "reset")
     read -r -p "Are you sure? [y/N] " response
     if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
         odoo_stop $POD
         rm -rf data/* > /dev/null
-        PGPASSWORD=$(gcfg db_pass) dropdb -U $(gcfg db_user) -h $(gcfg db_host) -p $(gcfg db_port) -f $ODOODB
+        PGPASSWORD=$(gcfg db_pass) dropdb -U $(gcfg db_user) -h $(gcfg db_host) -p $(gcfg db_port) -f $(gcfg db_name)
     fi
     ;;
   "destroy")
@@ -201,7 +198,7 @@ case ${1} in
         echo "Destroying project"
         odoo_stop $POD
         sudo rm -rf .direnv/ addons/ backups/ conf/ data/ .envrc Pipfile enterprise odoo
-        PGPASSWORD=$(gcfg db_pass) dropdb -U $(gcfg db_user) -h $(gcfg db_host) -p $(gcfg db_port) -f $ODOODB >/dev/null
+        PGPASSWORD=$(gcfg db_pass) dropdb -U $(gcfg db_user) -h $(gcfg db_host) -p $(gcfg db_port) -f  $(gcfg db_name) >/dev/null
         echo "Project has been destroyed"
       fi
     fi
