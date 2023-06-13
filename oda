@@ -31,11 +31,19 @@ db_password = odooodoo
 db_name = ${ODOODB}
 db_template = template0
 db_sslmode = disable
+list_db = False
+workers = 4
+max_cron_threads = 2
 http_enable = True
 http_interface =
 http_port = 8069
 reportgz = False
 server_wide_modules = base,web
+logfile = ./odoo.log
+log_level = debug
+logrotate = True
+# log_handler = werkzeug:CRITICAL,odoo.api:DEBUG
+# log_db_level = warning
 EOF
 }
 
@@ -127,7 +135,7 @@ function odoo_upgrade(){
 
 function odoo_start(){
     truncate -s 0 odoo.log
-    nohup ../${1}/odoo/odoo-bin -c conf/odoo.conf --http-port $ODOO_PORT > odoo.log &
+    nohup ../${1}/odoo/odoo-bin -c conf/odoo.conf --http-port $ODOO_PORT > /dev/null &
 }
 
 function odoo_stop(){
