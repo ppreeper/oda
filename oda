@@ -134,6 +134,11 @@ function odoo_stop(){
     pkill -f "${1}/odoo/odoo-bin"
 }
 
+function gcfg(){
+  # Get variable from odoo config
+  printf $(grep "${1}" conf/odoo.conf | awk -F'=' '{print $2}')
+}
+
 function cli_help(){
   printf "oda - Odoo Administration Tool\n"
   printf "\nProject Admin Commands\n"
@@ -167,9 +172,9 @@ case ${1} in
   "stop") odoo_stop $POD ;;
   "restart") odoo_stop $POD && sleep 2 && odoo_start $POD ;;
   "psql")
-    podman exec -it --user postgres db15 psql $ODOODB
+    PGPASSWORD=$(gcfg db_pass) psql -U $(gcfg db_user) -h $(gcfg db_host) -p $(gcfg db_port) $ODOODB
     if [[ $(echo $?) != 0 ]]; then
-         podman exec -it --user postgres db15 psql
+      PGPASSWORD=$(gcfg db_pass) psql -U $(gcfg db_user) -h $(gcfg db_host) -p $(gcfg db_port) $(gcfg db_name)
     fi
     ;;
   "reset")
@@ -177,7 +182,7 @@ case ${1} in
     if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
         odoo_stop $POD
         rm -rf data/* > /dev/null
-        podman exec -it --user postgres db15 dropdb -f $ODOODB
+        PGPASSWORD=$(gcfg db_pass) dropdb -U $(gcfg db_user) -h $(gcfg db_host) -p $(gcfg db_port) -f $ODOODB
     fi
     ;;
   "destroy")
@@ -188,7 +193,7 @@ case ${1} in
         echo "Destroying project"
         odoo_stop $POD
         sudo rm -rf .direnv/ addons/ backups/ conf/ data/ .envrc Pipfile enterprise odoo
-        podman exec -it --user postgres db15 dropdb -f $ODOODB >/dev/null
+        PGPASSWORD=$(gcfg db_pass) dropdb -U $(gcfg db_user) -h $(gcfg db_host) -p $(gcfg db_port) -f $ODOODB >/dev/null
         echo "Project has been destroyed"
       fi
     fi
