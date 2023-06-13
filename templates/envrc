@@ -1,0 +1,5 @@
+layout python3
+export ODOO_V={{.Version}}.0
+export ODOO_PORT={{.Port}}
+export ODOO_C=${HOME}/workspace/repos/{{.Version}}.0/odoo
+export ODOO_E=${HOME}/workspace/repos/{{.Version}}.0/enterprise
