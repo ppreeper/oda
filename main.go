@@ -2,34 +2,41 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"embed"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"os/exec"
+	"path"
 	"strconv"
 	"strings"
 	"text/template"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/nxadm/tail"
+	cp "github.com/otiai10/copy"
 	"github.com/spf13/cobra"
 )
 
 //go:embed templates/*
 var res embed.FS
 
-func parseConfig(param string) (string, error) {
+func parseConfig(key string) string {
 	// Get variable from odoo config
 	file, err := os.Open("./conf/odoo.conf")
 	if err != nil {
-		return "cannot find file, make sure you are in the odoo project folder", err
+		return "cannot find file, make sure you are in the odoo project folder"
 	}
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
+	value := ""
 	vv := []string{}
 	for scanner.Scan() {
-		if strings.Contains(scanner.Text(), param) {
+		if strings.Contains(scanner.Text(), key) {
 			vv = strings.Split(scanner.Text(), "=")
 			for i := range vv {
 				vv[i] = strings.TrimSpace(vv[i])
@@ -37,9 +44,12 @@ func parseConfig(param string) (string, error) {
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return "scanner error", err
+		return "scanner error"
 	}
-	return vv[1], nil
+	if len(vv) == 2 {
+		value = vv[1]
+	}
+	return value
 }
 
 func parseEnv(param string) (string, error) {
@@ -63,6 +73,31 @@ func parseEnv(param string) (string, error) {
 		return "scanner error", err
 	}
 	return vv[1], nil
+}
+
+func parseFile(filename, key string) (value string) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return "cannot find file, make sure you are in the odoo project folder"
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	vv := []string{}
+	for scanner.Scan() {
+		if strings.HasPrefix(scanner.Text(), key) {
+			vv = strings.Split(scanner.Text(), "=")
+			for i := range vv {
+				vv[i] = strings.TrimSpace(vv[i])
+			}
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return "scanner error"
+	}
+	if len(vv) == 2 {
+		value = vv[1]
+	}
+	return value
 }
 
 func pipfile() {
@@ -309,6 +344,213 @@ func stopOdoo() {
 	}
 }
 
+func loggerOut() {
+	logfile := parseConfig("logfile")
+
+	c := exec.Command("tail", "-f", logfile)
+
+	stdout, err := c.StdoutPipe()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := c.Start(); err != nil {
+		log.Fatal(err)
+	}
+	scanner := bufio.NewScanner(stdout)
+	// scanner.Split(bufio.ScanLines)
+	go func() {
+		for scanner.Scan() {
+			line := scanner.Text()
+			fmt.Println(line)
+		}
+	}()
+
+	if err := c.Wait(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func dsn() string {
+	dbUser := parseConfig("db_user")
+	dbPass := parseConfig("db_pass")
+	dbHost := parseConfig("db_host")
+	dbPort := parseConfig("db_port")
+	dbName := parseConfig("db_name")
+	return "postgres://" + dbUser + ":" + dbPass + "@" + dbHost + ":" + dbPort + "/" + dbName
+}
+
+func manifest(dbName string) (output string) {
+	conn, err := pgx.Connect(context.Background(), dsn())
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close(context.Background())
+
+	output = "{" + "\n"
+	output += `    "odoo_dump": "1",` + "\n"
+	output += `    "db_name": "` + dbName + `",` + "\n"
+
+	versionInfo := parseFile("./odoo/odoo/release.py", "version_info")
+	versionInfo = strings.Trim(versionInfo, "(")
+	versionInfo = strings.Trim(versionInfo, ")")
+	version := strings.Split(versionInfo, ",")
+	fmt.Println("versionInfo", versionInfo)
+	fmt.Println("version", version)
+	output += `    "version": "` + strings.TrimSpace(version[0]) + "." + strings.TrimSpace(version[1]) + `"` + ",\n"
+	output += `    "version_info": [` + "\n"
+	for k, v := range version {
+		suffix := ",\n"
+		if k == len(version)-1 {
+			suffix = "\n"
+		}
+		val := strings.TrimSpace(v)
+		if strings.ToUpper(val) == "FINAL" {
+			val = `"final"`
+		}
+		output += `        ` + val + suffix
+	}
+
+	output += `    ],` + "\n"
+	output += `    "major_version": "` + strings.TrimSpace(version[0]) + "." + strings.TrimSpace(version[1]) + `"` + ",\n"
+
+	var pgVersion string
+	err = conn.QueryRow(context.Background(), "SHOW server_version").Scan(&pgVersion)
+	if err != nil {
+		log.Fatal(err)
+	}
+	output += `    "pg_version": "` + pgVersion + `",` + "\n"
+
+	type Module struct {
+		name          string
+		latestVersion string
+	}
+	modules := []Module{}
+	rows, err := conn.Query(context.Background(), "SELECT name, latest_version FROM ir_module_module WHERE state = 'installed'")
+	if err != nil {
+		log.Fatal(err)
+	}
+	for rows.Next() {
+		values, err := rows.Values()
+		if err != nil {
+			log.Fatal(err)
+		}
+		modules = append(modules, Module{name: values[0].(string), latestVersion: values[1].(string)})
+	}
+	output += `    "modules": {` + "\n"
+	for i, module := range modules {
+		suffix := ",\n"
+		if i == len(modules)-1 {
+			suffix = "\n"
+		}
+		output += `        "` + module.name + `": "` + module.latestVersion + `"` + suffix
+	}
+	output += `    }` + "\n"
+	output += "}"
+	return
+}
+
+func dumpDB(dbName string, bkp string) {
+	fmt.Println(dbName, bkp)
+	folder := "./backups"
+	bkpFile := path.Join(folder, bkp+".zip")
+	fmt.Println(bkpFile)
+
+	dataDir := parseConfig("data_dir")
+	filestore := path.Join(dataDir, "filestore", dbName)
+	fmt.Println(filestore)
+
+	tPath := path.Join(os.TempDir(), bkp)
+	fmt.Println(tPath)
+	tFilestore := path.Join(tPath, "filestore")
+	fmt.Println(tFilestore)
+
+	// Filestore
+	err := cp.Copy(filestore, tFilestore)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// SQL Dump
+	c := exec.Command("pg_dump", dsn(), "--no-owner", "--file", path.Join(tPath, "dump.sql"))
+	if err := c.Run(); err != nil {
+		log.Fatal(err)
+	}
+	// dump_db_manifest(cr)
+	manifest := manifest(dbName)
+	mjson, err := os.Create(path.Join(tPath, "manifest.json"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer mjson.Close()
+	mjson.WriteString(manifest)
+
+	// write zip file
+
+	// if err := zipSource(tPath, bkpFile); err != nil {
+	// 	log.Fatal(err)
+	// }
+	zipWriter(tPath, bkpFile)
+
+	// def _dump_db(db_name, bkp_name, folder="./backups", backup_format='zip'):
+	// """Dump database `db` into file-like object `stream` if stream is None
+	// return a file object with the dump """
+	// bkp_file = f"{bkp_name}.zip"
+	// file_path = os.path.join(folder, bkp_file)
+	// with open(file_path, 'wb') as stream:
+	//     _logger.info('DUMP DB: %s format %s', db_name, backup_format)
+
+	//     cmd = [find_pg_tool('pg_dump'), '--no-owner', db_name]
+	//     env = exec_pg_environ()
+
+	//     if backup_format == 'zip':
+	//         with tempfile.TemporaryDirectory() as dump_dir:
+	//             filestore = odoo.tools.config.filestore(db_name)
+	//             if os.path.exists(filestore):
+	//                 shutil.copytree(filestore,
+	//                                 os.path.join(dump_dir, 'filestore'))
+	//             with open(os.path.join(dump_dir, 'manifest.json'), 'w') as fh:
+	//                 db = odoo.sql_db.db_connect(db_name)
+	//                 with db.cursor() as cr:
+	//                     json.dump(dump_db_manifest(cr), fh, indent=4)
+	//             cmd.insert(-1, '--file=' + os.path.join(dump_dir, 'dump.sql'))
+	//             subprocess.run(cmd,
+	//                            env=env,
+	//                            stdout=subprocess.DEVNULL,
+	//                            stderr=subprocess.STDOUT,
+	//                            check=True)
+	//             if stream:
+	//                 odoo.tools.osutil.zip_dir(
+	//                     dump_dir,
+	//                     stream,
+	//                     include_dir=False,
+	//                     fnct_sort=lambda file_name: file_name != 'dump.sql')
+	//             else:
+	//                 t = tempfile.TemporaryFile()
+	//                 odoo.tools.osutil.zip_dir(
+	//                     dump_dir,
+	//                     t,
+	//                     include_dir=False,
+	//                     fnct_sort=lambda file_name: file_name != 'dump.sql')
+	//                 t.seek(0)
+	//                 return t
+	//     else:
+	//         cmd.insert(-1, '--format=c')
+	//         stdout = subprocess.Popen(cmd,
+	//                                   env=env,
+	//                                   stdin=subprocess.DEVNULL,
+	//                                   stdout=subprocess.PIPE).stdout
+	//         if stream:
+	//             shutil.copyfileobj(stdout, stream)
+	//         else:
+	//             return stdout
+	//     return file_path
+}
+
+func dumpAddon(name string, bkp string) {
+	fmt.Println(name, bkp)
+}
+
 func main() {
 	var dumpFile string
 
@@ -396,16 +638,12 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			cwd, _ := getCwd()
 
-			dbName, err := parseConfig("db_name")
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
+			dbName := parseConfig("db_name")
 
 			c := exec.Command(cwd+"/odoo/odoo-bin", "-c", cwd+"/conf/odoo.conf", "--no-http", "--stop-after-init", "-d", dbName, "-i", "base,l10n_ca")
+
 			if err := c.Run(); err != nil {
-				fmt.Println(err)
-				return
+				log.Fatal(err)
 			}
 		},
 	}
@@ -418,16 +656,12 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			cwd, _ := getCwd()
 
-			dbName, err := parseConfig("db_name")
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
+			dbName := parseConfig("db_name")
 
 			c := exec.Command(cwd+"/odoo/odoo-bin", "-c", cwd+"/conf/odoo.conf", "--no-http", "--stop-after-init", "-d", dbName, "-i", args[0])
+
 			if err := c.Run(); err != nil {
-				fmt.Println(err)
-				return
+				log.Fatal(err)
 			}
 		},
 	}
@@ -440,16 +674,12 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			cwd, _ := getCwd()
 
-			dbName, err := parseConfig("db_name")
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
+			dbName := parseConfig("db_name")
 
 			c := exec.Command(cwd+"/odoo/odoo-bin", "-c", cwd+"/conf/odoo.conf", "--no-http", "--stop-after-init", "-d", dbName, "-u", args[0])
+
 			if err := c.Run(); err != nil {
-				fmt.Println(err)
-				return
+				log.Fatal(err)
 			}
 		},
 	}
@@ -459,26 +689,19 @@ func main() {
 		Short: "Backup database and filestore",
 		Long:  "Backup database and filestore",
 		Run: func(cmd *cobra.Command, args []string) {
-			t := time.Now()
-			// %Y_%m_%d_%H_%M_%S')}_{db_name}
-			dbName, err := parseConfig("db_name")
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-			addonDirs, err := parseConfig("addons")
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
+			dbName := parseConfig("db_name")
+			addonDirs := parseConfig("addons")
 			addons := strings.Split(addonDirs, ",")[2:]
 
+			t := time.Now()
 			curDate := t.Format("2006_01_02_15_04_05")
 			bkpName := curDate + "_" + dbName
 			fmt.Printf("backup %s\n", bkpName)
+			dumpDB(dbName, bkpName)
 			for _, v := range addons {
 				addon := strings.TrimPrefix(v, "./")
 				fmt.Printf("backup %s_%s\n", bkpName, addon)
+				dumpAddon(addon, bkpName)
 			}
 		},
 	}
@@ -517,34 +740,14 @@ func main() {
 		Long:  `Follow the logs`,
 		Args:  cobra.MaximumNArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
-			logfile, err := parseConfig("logfile")
+			logfile := parseConfig("logfile")
+
+			t, err := tail.TailFile(logfile, tail.Config{Follow: true, ReOpen: true})
 			if err != nil {
-				fmt.Println(err)
-				return
+				log.Fatal(err)
 			}
-
-			c := exec.Command("tail", "-f", logfile)
-
-			reader, err := c.StdoutPipe()
-			if err != nil {
-				return
-			}
-
-			scanner := bufio.NewScanner(reader)
-			go func() {
-				for scanner.Scan() {
-					line := scanner.Text()
-					fmt.Printf("%s\n", line)
-				}
-			}()
-
-			if err := c.Start(); err != nil {
-				fmt.Println(err)
-				return
-			}
-			if err := c.Wait(); err != nil {
-				fmt.Println(err)
-				return
+			for line := range t.Lines {
+				fmt.Println(line.Text)
 			}
 		},
 	}
@@ -595,31 +798,11 @@ func main() {
 		Long:  `Access the raw database`,
 		Args:  cobra.MaximumNArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
-			dbHost, err := parseConfig("db_host")
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-			dbPort, err := parseConfig("db_port")
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-			dbName, err := parseConfig("db_name")
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-			dbUser, err := parseConfig("db_user")
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-			dbPass, err := parseConfig("db_pass")
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
+			dbHost := parseConfig("db_host")
+			dbPort := parseConfig("db_port")
+			dbName := parseConfig("db_name")
+			dbUser := parseConfig("db_user")
+			dbPass := parseConfig("db_pass")
 			// psql -d "host=10.0.30.90 port=5432 dbname=odoo15c user=odoo16 password=odooodoo"
 			goexecpath, _ := exec.LookPath("psql")
 			fmt.Println(goexecpath, "postgresql://"+dbUser+":"+dbPass+"@"+dbHost+":"+dbPort+"/"+dbName)
