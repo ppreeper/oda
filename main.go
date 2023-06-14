@@ -620,32 +620,51 @@ func main() {
 				fmt.Println(err)
 				return
 			}
-			dbConn := fmt.Sprintf("host=" + dbHost + " port=" + dbPort + " user=" + dbUser + " password=" + dbPass + " dbname=" + dbName)
 			// psql -d "host=10.0.30.90 port=5432 dbname=odoo15c user=odoo16 password=odooodoo"
-			fmt.Println("psql", "-d", `"`+dbConn+`"`)
-			c := exec.Command("psql", "-d", `"`+dbConn+`"`)
+			goexecpath, _ := exec.LookPath("psql")
+			fmt.Println(goexecpath, "postgresql://"+dbUser+":"+dbPass+"@"+dbHost+":"+dbPort+"/"+dbName)
+			// cmdGoVer := &exec.Cmd{
+			// 	Path:   goexecpath,
+			// 	Args:   []string{"postgresql://" + dbUser + ":" + dbPass + "@127.0.0.1:" + dbPort + "/" + dbName},
+			// 	Stdout: os.Stdout,
+			// 	Stderr: os.Stdout,
+			// }
+			// fmt.Println(cmdGoVer.String())
+			// if err := cmdGoVer.Start(); err != nil {
+			// 	fmt.Println("error:", err)
+			// }
+			// cmdGoVer.Process.Release()
+			// c := exec.Command(goexecpath, "postgresql://"+dbUser+":"+dbPass+"@"+dbHost+":"+dbPort+"/"+dbName)
 
-			reader, err := c.StdoutPipe()
-			if err != nil {
-				return
-			}
+			// if err := c.Start(); err != nil {
+			// 	fmt.Println(err)
+			// 	return
+			// }
+			// c.Wait()
+			// fmt.Println(c.ProcessState)
+			// c.Process.Release()
 
-			scanner := bufio.NewScanner(reader)
-			go func() {
-				for scanner.Scan() {
-					line := scanner.Text()
-					fmt.Printf("%s\n", line)
-				}
-			}()
+			// reader, err := c.StdoutPipe()
+			// if err != nil {
+			// 	return
+			// }
 
-			if err := c.Start(); err != nil {
-				fmt.Println(err)
-				return
-			}
-			if err := c.Wait(); err != nil {
-				fmt.Println(err)
-				return
-			}
+			// scanner := bufio.NewScanner(reader)
+			// go func() {
+			// 	for scanner.Scan() {
+			// 		line := scanner.Text()
+			// 		fmt.Printf("%s\n", line)
+			// 	}
+			// }()
+
+			// if err := cmdGoVer.Start(); err != nil {
+			// 	fmt.Println(err)
+			// 	return
+			// }
+			// if err := cmdGoVer.Wait(); err != nil {
+			// 	fmt.Println(err)
+			// 	return
+			// }
 		},
 	}
 
