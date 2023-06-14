@@ -330,7 +330,7 @@ def main():
         return
 
     if args.backup:
-        bkp_name = f"{time.strftime('%Y_%m_%d_%H_%M_%S')}_{db_name}"
+        dbName = f"{time.strftime('%Y_%m_%d_%H_%M_%S')}_{db_name}"
         print(_dump_db(db_name,bkp_name))
         _dump_addons(addons,bkp_name)
         return
