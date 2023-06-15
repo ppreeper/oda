@@ -138,7 +138,12 @@ func dumpManifest(dbName string) map[string]interface{} {
 		if err != nil {
 			log.Fatal(err)
 		}
-		modules[values[0].(string)] = values[1].(string)
+		switch v := values[1].(type) {
+		case string:
+			modules[values[0].(string)] = v
+		default:
+			modules[values[0].(string)] = ""
+		}
 	}
 	mm["modules"] = modules
 	return mm
