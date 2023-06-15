@@ -118,10 +118,8 @@ func getIP() string {
 	var ip net.IP
 	switch v := addrs[0].(type) {
 	case *net.IPAddr:
-		fmt.Println("IPAddr", v)
 		ip = v.IP
 	case *net.IPNet:
-		fmt.Println("IPNet", v)
 		ip = v.IP
 	default:
 		break
@@ -169,20 +167,6 @@ func initProject(version string, port, dbPort int16) {
 
 	_, cdir := getCwd()
 
-	name, err := os.Hostname()
-	if err != nil {
-		fmt.Printf("Oops: %v\n", err)
-		return
-	}
-
-	addrs, err := net.LookupHost(name)
-	if err != nil {
-		fmt.Printf("Oops: %v\n", err)
-		return
-	}
-	for _, a := range addrs {
-		fmt.Println(a)
-	}
 	ip := getIP()
 
 	odooconf(version, port, dbPort, ip, cdir)
