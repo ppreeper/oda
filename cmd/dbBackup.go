@@ -11,10 +11,29 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	cp "github.com/otiai10/copy"
+	"github.com/spf13/cobra"
 )
+
+var backupCmd = &cobra.Command{
+	Use:   "backup",
+	Short: "Backup database and filestore",
+	Long:  "Backup database and filestore",
+	Run: func(cmd *cobra.Command, args []string) {
+		dbName := parseFile("conf/odoo.conf", "db_name")
+		addonDirs := parseFile("conf/odoo.conf", "addons")
+		addons := strings.Split(addonDirs, ",")[2:]
+
+		t := time.Now()
+		curDate := t.Format("2006_01_02_15_04_05")
+		bkpName := curDate + "_" + dbName
+		dumpDB("backups", dbName, bkpName)
+		dumpAddons("backups", addons, bkpName)
+	},
+}
 
 func dumpDB(folder string, dbName string, bkp string) {
 	bkpFile := path.Join(folder, bkp+".zip")
@@ -26,7 +45,7 @@ func dumpDB(folder string, dbName string, bkp string) {
 	tPath := path.Join(os.TempDir(), bkp)
 	tFilestore := path.Join(tPath, "filestore")
 
-	// Filestore
+	// Filestore backup
 	err := cp.Copy(filestore, tFilestore)
 	if err != nil {
 		log.Fatal(err)

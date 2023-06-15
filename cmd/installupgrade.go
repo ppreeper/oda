@@ -1,7 +1,8 @@
 package cmd
 
 import (
-	"log"
+	"fmt"
+	"os"
 	"os/exec"
 
 	"github.com/spf13/cobra"
@@ -51,6 +52,7 @@ func installModule(install bool, modules string) {
 	c := exec.Command(cwd+"/odoo/odoo-bin", "-c", cwd+"/conf/odoo.conf", "--no-http", "--stop-after-init", "-d", dbName, iFlag, modules)
 
 	if err := c.Run(); err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }

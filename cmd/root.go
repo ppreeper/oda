@@ -32,13 +32,13 @@ func init() {
 
 	rootCmd.AddCommand(backupCmd)
 	rootCmd.AddCommand(restoreCmd)
-	// restoreCmd.AddCommand(restoreAddonsCmd)
 
 	rootCmd.AddCommand(logsCmd)
-	// rootCmd.AddCommand(binCmd)
 	rootCmd.AddCommand(startCmd)
 	rootCmd.AddCommand(stopCmd)
 	rootCmd.AddCommand(restartCmd)
+
+	// rootCmd.AddCommand(binCmd)
 	// rootCmd.AddCommand(psqlCmd)
 
 	rootCmd.AddCommand(projectCmd)

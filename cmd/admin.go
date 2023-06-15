@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 
 	"github.com/nxadm/tail"
@@ -33,7 +34,15 @@ var binCmd = &cobra.Command{
 	Short: "Run an odoo-bin command",
 	Long:  `Run an odoo-bin command`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// fmt.Println("odoo/odoo-bin ", args)
+		cwd, _ := getCwd()
+
+		fmt.Println(cwd+"/odoo/odoo-bin", args)
+		c := exec.Command(cwd+"/odoo/odoo-bin", args...)
+		if err := c.Start(); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		c.Process.Release()
 	},
 }
 
