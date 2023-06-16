@@ -1,0 +1,1 @@
+psql postgres://${args[--user]}:${args[--pass]}@${args[--host]}:${args[--port]}/${args[--name]}
