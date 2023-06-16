@@ -1,0 +1,226 @@
+name: oda
+help: Odoo Administration Tool
+version: 0.1.0
+
+environment_variables:
+  - name: pod
+    help: Odoo instance
+    default: ${PWD##*/}
+
+# [ -z $ODOODB ] && export ODOODB=${PWD##*/}
+# IPV4=$(ip -4 -br a show | grep -v ^lo | grep UP | awk '{print $3}' | awk -F'/' '{print $1}')
+# BASE=`dirname "${0}"`
+
+commands:
+  - name: start
+    help: Start the instance
+    environment_variables:
+      - name: odoo_port
+        help: Odoo Port
+        default: $(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
+
+    examples:
+      - oda start
+
+  - name: stop
+    help: Stop the instance
+    environment_variables:
+      - name: odoo_port
+        help: Odoo Port
+        default: $(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
+
+    examples:
+      - oda stop
+
+  - name: restart
+    help: Restart the instance
+    environment_variables:
+      - name: odoo_port
+        help: Odoo Port
+        default: $(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
+
+    examples:
+      - oda stop
+
+  - name: logs
+    help: Follow the logs
+
+    examples:
+      - oda logs
+
+  - name: init
+    help: initialize the database
+    args:
+      - name: modules
+        help: comma seperated list of modules
+        default: base,l10n_ca
+    flags:
+      - long: "--name"
+        short: "-d"
+        help: Database Name
+        arg: name
+        default: $(grep db_name conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+
+    examples:
+      - oda init
+
+  - name: install
+    help: Install module(s)
+    args:
+      - name: modules
+        help: comma seperated list of modules
+        required: true
+    flags:
+      - long: "--name"
+        short: "-d"
+        help: Database Name
+        arg: name
+        default: $(grep db_name conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+
+    examples:
+      - oda install base,web
+
+  - name: upgrade
+    help: Upgrade module(s)
+    args:
+      - name: modules
+        help: comma seperated list of modules
+        required: true
+    flags:
+      - long: "--name"
+        short: "-d"
+        help: Database Name
+        arg: name
+        default: $(grep db_name conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+
+    examples:
+      - oda upgrade base,web
+
+  - name: psql
+    help: Access the raw database
+    flags:
+      - long: "--host"
+        help: Database Host
+        arg: host
+        default: $(grep db_host conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+      - long: "--port"
+        help: Database Port
+        arg: port
+        default: $(grep db_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+      - long: "--user"
+        help: Username
+        arg: username
+        default: $(grep db_user conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+      - long: "--pass"
+        help: Password
+        arg: pass
+        default: $(grep db_pass conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+      - long: "--name"
+        help: Database Name
+        arg: name
+        default: $(grep db_name conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+
+    examples:
+      - oda psql
+
+  - name: backup
+    help: Backup database filestore and addons
+
+    examples:
+      - oda backup
+
+  - name: restore
+    help: Restore database and filestore or addons
+    args:
+      - name: file
+        help: Path to backup file
+        required: true
+        repeatable: true
+
+    examples:
+      - oda restore backups/2020_01_01_12_00_01_odoo.zip
+      - oda restore backups/2020_01_01_12_00_01_odoo_addons-custom.zip
+      - oda restore backups/2020_01_01_12_00_01_odoo.zip backups/2020_01_01_12_00_01_odoo_addons-custom.zip
+
+  - name: project
+    help: Project level commands [CAUTION]
+
+    commands:
+      - name: init
+        help: Create a new project specifying Odoo version, Odoo Port, PostgreSQL port
+        environment_variables:
+          - name: ipv4
+            private: true
+            default: $(ip -4 -br a show | grep -v ^lo | grep UP | awk '{print $3}' | awk -F'/' '{print $1}')
+        args:
+          - name: version
+            help: Odoo Version
+            required: true
+            allowed:
+              - "15"
+              - "16"
+          - name: oport
+            help: Odoo Port
+            default: "8069"
+          - name: pgport
+            help: PostgreSQL Port
+            default: "5432"
+
+        examples:
+          - oda project init 16
+          - oda project init 16 8080
+          - oda project init 16 8080 5444
+
+      - name: reset
+        help: Drop database and filestore [CAUTION]
+        flags:
+          - long: "--host"
+            help: Database Host
+            arg: host
+            default: $(grep db_host conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+          - long: "--port"
+            help: Database Port
+            arg: port
+            default: $(grep db_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+          - long: "--user"
+            help: Username
+            arg: username
+            default: $(grep db_user conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+          - long: "--pass"
+            help: Password
+            arg: pass
+            default: $(grep db_pass conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+          - long: "--name"
+            help: Database Name
+            arg: name
+            default: $(grep db_name conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+
+        examples:
+          - oda project reset
+
+      - name: destroy
+        help: Fully destroy the project and all its files [CAUTION]
+        flags:
+          - long: "--host"
+            help: Database Host
+            arg: host
+            default: $(grep db_host conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+          - long: "--port"
+            help: Database Port
+            arg: port
+            default: $(grep db_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+          - long: "--user"
+            help: Username
+            arg: username
+            default: $(grep db_user conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+          - long: "--pass"
+            help: Password
+            arg: pass
+            default: $(grep db_pass conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+          - long: "--name"
+            help: Database Name
+            arg: name
+            default: $(grep db_name conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+
+        examples:
+          - oda project destroy
