@@ -31,6 +31,10 @@ After requirements are installed. Copy the files to your path, the oda and oda_d
 
 ### Command: `oda`
 
+### Requirements
+
+- gem install bashly
+
 #### Project Admin Commands
 
 |                     |                                                   |

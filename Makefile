@@ -1,2 +1,2 @@
 build:
-	CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -a .
+	BASHLY_TAB_INDENT=1 bashly generate
