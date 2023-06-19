@@ -1,3 +1,10 @@
+if [ -z $ODOO_PORT ]; then
+  if [[ -f ".envrc" ]]; then
+    export ODOO_PORT=$(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
+  else
+    export ODOO_PORT=$(grep http_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+  fi
+fi
 ## stop
 pkill -f "${POD}/odoo/odoo-bin"
 sleep 2

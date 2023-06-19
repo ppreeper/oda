@@ -34,17 +34,18 @@ oda_usage() {
 	echo
 	# :command.usage_commands
 	printf "%s\n" "Commands:"
-	printf "  %s   Start the instance\n" "start  "
-	printf "  %s   Stop the instance\n" "stop   "
-	printf "  %s   Restart the instance\n" "restart"
-	printf "  %s   Follow the logs\n" "logs   "
-	printf "  %s   initialize the database\n" "init   "
-	printf "  %s   Install module(s)\n" "install"
-	printf "  %s   Upgrade module(s)\n" "upgrade"
-	printf "  %s   Access the raw database\n" "psql   "
-	printf "  %s   Backup database filestore and addons\n" "backup "
-	printf "  %s   Restore database and filestore or addons\n" "restore"
-	printf "  %s   Project level commands [CAUTION]\n" "project"
+	printf "  %s   Start the instance\n" "start   "
+	printf "  %s   Stop the instance\n" "stop    "
+	printf "  %s   Restart the instance\n" "restart "
+	printf "  %s   Follow the logs\n" "logs    "
+	printf "  %s   Generates an Odoo module skeleton in addons\n" "scaffold"
+	printf "  %s   initialize the database\n" "init    "
+	printf "  %s   Install module(s)\n" "install "
+	printf "  %s   Upgrade module(s)\n" "upgrade "
+	printf "  %s   Access the raw database\n" "psql    "
+	printf "  %s   Backup database filestore and addons\n" "backup  "
+	printf "  %s   Restore database and filestore or addons\n" "restore "
+	printf "  %s   Project level commands [CAUTION]\n" "project "
 	echo
 
 	# :command.long_usage
@@ -97,15 +98,6 @@ oda_start_usage() {
 		printf "    Show this help\n"
 		echo
 
-		# :command.usage_environment_variables
-		printf "%s\n" "Environment Variables:"
-
-		# :environment_variable.usage
-		printf "  %s\n" "ODOO_PORT"
-		printf "    Odoo Port\n"
-		printf "    Default: $(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')\n"
-		echo
-
 		# :command.usage_examples
 		printf "%s\n" "Examples:"
 		printf "  oda start\n"
@@ -140,15 +132,6 @@ oda_stop_usage() {
 		printf "    Show this help\n"
 		echo
 
-		# :command.usage_environment_variables
-		printf "%s\n" "Environment Variables:"
-
-		# :environment_variable.usage
-		printf "  %s\n" "ODOO_PORT"
-		printf "    Odoo Port\n"
-		printf "    Default: $(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')\n"
-		echo
-
 		# :command.usage_examples
 		printf "%s\n" "Examples:"
 		printf "  oda stop\n"
@@ -181,15 +164,6 @@ oda_restart_usage() {
 		# :command.usage_fixed_flags
 		printf "  %s\n" "--help, -h"
 		printf "    Show this help\n"
-		echo
-
-		# :command.usage_environment_variables
-		printf "%s\n" "Environment Variables:"
-
-		# :environment_variable.usage
-		printf "  %s\n" "ODOO_PORT"
-		printf "    Odoo Port\n"
-		printf "    Default: $(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')\n"
 		echo
 
 		# :command.usage_examples
@@ -229,6 +203,48 @@ oda_logs_usage() {
 		# :command.usage_examples
 		printf "%s\n" "Examples:"
 		printf "  oda logs\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_scaffold_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda scaffold - Generates an Odoo module skeleton in addons\n"
+		echo
+
+	else
+		printf "oda scaffold - Generates an Odoo module skeleton in addons\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda scaffold MODULE\n"
+	printf "  oda scaffold --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+		# :command.usage_args
+		printf "%s\n" "Arguments:"
+
+		# :argument.usage
+		printf "  %s\n" "MODULE"
+		printf "    Name of the module to create\n"
+		echo
+
+		# :command.usage_examples
+		printf "%s\n" "Examples:"
+		printf "  oda scaffold module_ext\n"
 		echo
 
 	fi
@@ -803,6 +819,13 @@ inspect_args() {
 # :command.function
 oda_start_command() {
 	# src/start_command.sh
+	if [ -z $ODOO_PORT ]; then
+		if [[ -f ".envrc" ]]; then
+			export ODOO_PORT=$(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
+		else
+			export ODOO_PORT=$(grep http_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+		fi
+	fi
 	truncate -s 0 odoo.log
 	nohup ../${POD}/odoo/odoo-bin -c conf/odoo.conf --http-port ${ODOO_PORT} > /dev/null 2>&1 & disown
 }
@@ -816,6 +839,13 @@ oda_stop_command() {
 # :command.function
 oda_restart_command() {
 	# src/restart_command.sh
+	if [ -z $ODOO_PORT ]; then
+		if [[ -f ".envrc" ]]; then
+			export ODOO_PORT=$(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
+		else
+			export ODOO_PORT=$(grep http_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+		fi
+	fi
 	pkill -f "${POD}/odoo/odoo-bin"
 	sleep 2
 	truncate -s 0 odoo.log
@@ -830,8 +860,21 @@ oda_logs_command() {
 }
 
 # :command.function
+oda_scaffold_command() {
+	# src/scaffold_command.sh
+	../${POD}/odoo/odoo-bin scaffold ${args[module]} ../${POD}/addons-custom/.
+}
+
+# :command.function
 oda_init_command() {
 	# src/init_command.sh
+	if [ -z $ODOO_PORT ]; then
+		if [[ -f ".envrc" ]]; then
+			export ODOO_PORT=$(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
+		else
+			export ODOO_PORT=$(grep http_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+		fi
+	fi
 	odoo/odoo-bin -c conf/odoo.conf --no-http --stop-after-init -d ${args[--name]} -i ${args[modules]}
 	pkill -f "${POD}/odoo/odoo-bin"
 	sleep 2
@@ -843,6 +886,13 @@ oda_init_command() {
 # :command.function
 oda_install_command() {
 	# src/install_command.sh
+	if [ -z $ODOO_PORT ]; then
+		if [[ -f ".envrc" ]]; then
+			export ODOO_PORT=$(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
+		else
+			export ODOO_PORT=$(grep http_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+		fi
+	fi
 	odoo/odoo-bin -c conf/odoo.conf --no-http --stop-after-init -d ${args[--name]} -i ${args[modules]}
 	pkill -f "${POD}/odoo/odoo-bin"
 	sleep 2
@@ -854,6 +904,13 @@ oda_install_command() {
 # :command.function
 oda_upgrade_command() {
 	# src/upgrade_command.sh
+	if [ -z $ODOO_PORT ]; then
+		if [[ -f ".envrc" ]]; then
+			export ODOO_PORT=$(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
+		else
+			export ODOO_PORT=$(grep http_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+		fi
+	fi
 	odoo/odoo-bin -c conf/odoo.conf --no-http --stop-after-init -d ${args[--name]} -u ${args[modules]}
 	pkill -f "${POD}/odoo/odoo-bin"
 	sleep 2
@@ -902,7 +959,7 @@ oda_project_init_command() {
 	function configfile(){
 	cat <<-_EOF_ | tee conf/odoo.conf > /dev/null
 	[options]
-	addons_path = ./odoo/addons,./enterprise,./addons
+	addons_path = ./odoo/addons,./enterprise,./addons-purchased,./addons-custom
 	admin_passwd = adminadmin
 	without_demo = all
 	csv_internal_sep = ;
@@ -994,7 +1051,7 @@ oda_project_init_command() {
 
 	envrc ${args[version]} ${args[oport]}
 	direnv allow >/dev/null
-	mkdir -p conf data backups addons
+	mkdir -p conf data backups addons-custom addons-purchased
 	ODOO_C=$(grep ODOO_C .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
 	ODOO_E=$(grep ODOO_E .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
 	if [ -L "odoo" ]; then rm -f odoo ; fi
@@ -1003,7 +1060,7 @@ oda_project_init_command() {
 	ln -f -s ${ODOO_E} enterprise
 	configfile ${args[version]}
 	pipfile
-	# pipenv install --dev
+	printf "To install python dev dependencies run:\npipenv install --dev\n\n"
 }
 
 # :command.function
@@ -1096,6 +1153,13 @@ parse_requirements() {
 			action="logs"
 			shift
 			oda_logs_parse_requirements "$@"
+			shift $#
+			;;
+
+		scaffold)
+			action="scaffold"
+			shift
+			oda_scaffold_parse_requirements "$@"
 			shift $#
 			;;
 
@@ -1202,10 +1266,6 @@ oda_start_parse_requirements() {
 		esac
 	done
 
-	# :command.environment_variables_filter
-	# :command.environment_variables_default
-	export ODOO_PORT="${ODOO_PORT:-$(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')}"
-
 	# :command.command_filter
 	action="start"
 
@@ -1250,10 +1310,6 @@ oda_stop_parse_requirements() {
 		esac
 	done
 
-	# :command.environment_variables_filter
-	# :command.environment_variables_default
-	export ODOO_PORT="${ODOO_PORT:-$(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')}"
-
 	# :command.command_filter
 	action="stop"
 
@@ -1297,10 +1353,6 @@ oda_restart_parse_requirements() {
 
 		esac
 	done
-
-	# :command.environment_variables_filter
-	# :command.environment_variables_default
-	export ODOO_PORT="${ODOO_PORT:-$(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')}"
 
 	# :command.command_filter
 	action="restart"
@@ -1369,6 +1421,62 @@ oda_logs_parse_requirements() {
 
 		esac
 	done
+
+}
+
+# :command.parse_requirements
+oda_scaffold_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_scaffold_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="scaffold"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				if [[ -z ${args['module']+x} ]]; then
+
+					args['module']=$1
+					shift
+				else
+					printf "invalid argument: %s\n" "$key" >&2
+					exit 1
+				fi
+
+				;;
+
+		esac
+	done
+
+	# :command.required_args_filter
+	if [[ -z ${args['module']+x} ]]; then
+		printf "missing required argument: MODULE\nusage: oda scaffold MODULE\n" >&2
+		exit 1
+	fi
 
 }
 
@@ -2245,6 +2353,7 @@ run() {
 		"stop") oda_stop_command ;;
 		"restart") oda_restart_command ;;
 		"logs") oda_logs_command ;;
+		"scaffold") oda_scaffold_command ;;
 		"init") oda_init_command ;;
 		"install") oda_install_command ;;
 		"upgrade") oda_upgrade_command ;;

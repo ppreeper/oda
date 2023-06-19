@@ -7,37 +7,21 @@ environment_variables:
     help: Odoo instance
     default: ${PWD##*/}
 
-# [ -z $ODOODB ] && export ODOODB=${PWD##*/}
-# IPV4=$(ip -4 -br a show | grep -v ^lo | grep UP | awk '{print $3}' | awk -F'/' '{print $1}')
-# BASE=`dirname "${0}"`
-
 commands:
   - name: start
     help: Start the instance
-    environment_variables:
-      - name: odoo_port
-        help: Odoo Port
-        default: $(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
 
     examples:
       - oda start
 
   - name: stop
     help: Stop the instance
-    environment_variables:
-      - name: odoo_port
-        help: Odoo Port
-        default: $(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
 
     examples:
       - oda stop
 
   - name: restart
     help: Restart the instance
-    environment_variables:
-      - name: odoo_port
-        help: Odoo Port
-        default: $(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
 
     examples:
       - oda stop
@@ -47,6 +31,16 @@ commands:
 
     examples:
       - oda logs
+
+  - name: scaffold
+    help: Generates an Odoo module skeleton in addons
+    args:
+      - name: module
+        help: Name of the module to create
+        required: true
+
+    examples:
+      - oda scaffold module_ext
 
   - name: init
     help: initialize the database

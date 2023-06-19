@@ -1,0 +1,1 @@
+../${POD}/odoo/odoo-bin scaffold ${args[module]} ../${POD}/addons-custom/.
