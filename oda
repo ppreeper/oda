@@ -825,7 +825,8 @@ oda_restart_command() {
 # :command.function
 oda_logs_command() {
 	# src/logs_command.sh
-	tail -f odoo.log
+	LOG=$(grep logfile conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+	tail -f ${LOG}
 }
 
 # :command.function
