@@ -136,6 +136,42 @@ commands:
       - oda restore backups/2020_01_01_12_00_01_odoo_addons-custom.zip
       - oda restore backups/2020_01_01_12_00_01_odoo.zip backups/2020_01_01_12_00_01_odoo_addons-custom.zip
 
+  - name: admin
+    help: Admin user management
+    flags:
+      - long: "--host"
+        help: Database Host
+        arg: host
+        default: $(grep db_host conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+      - long: "--port"
+        help: Database Port
+        arg: port
+        default: $(grep db_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+      - long: "--db_user"
+        help: Username
+        arg: db_username
+        default: $(grep db_user conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+      - long: "--db_pass"
+        help: Password
+        arg: db_pass
+        default: $(grep db_pass conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+      - long: "--db_name"
+        help: Database Name
+        arg: db_name
+        default: $(grep db_name conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+    commands:
+      - name: user
+        help: Odoo Admin username
+        args:
+          - name: admin_name
+            help: Odoo Admin username
+      - name: password
+        help: Odoo Admin password
+        args:
+          - name: admin_password
+            help: Odoo Admin password
+            required: true
+
   - name: project
     help: Project level commands [CAUTION]
 

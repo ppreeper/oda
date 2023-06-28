@@ -45,6 +45,7 @@ oda_usage() {
 	printf "  %s   Access the raw database\n" "psql    "
 	printf "  %s   Backup database filestore and addons\n" "backup  "
 	printf "  %s   Restore database and filestore or addons\n" "restore "
+	printf "  %s   Admin user management\n" "admin   "
 	printf "  %s   Project level commands [CAUTION]\n" "project "
 	echo
 
@@ -542,6 +543,145 @@ oda_restore_usage() {
 }
 
 # :command.usage
+oda_admin_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda admin - Admin user management\n"
+		echo
+
+	else
+		printf "oda admin - Admin user management\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda admin [OPTIONS] COMMAND\n"
+	printf "  oda admin [COMMAND] --help | -h\n"
+	echo
+	# :command.usage_commands
+	printf "%s\n" "Commands:"
+	printf "  %s   Odoo Admin username\n" "user    "
+	printf "  %s   Odoo Admin password\n" "password"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_flags
+		# :flag.usage
+		printf "  %s\n" "--host HOST"
+		printf "    Database Host\n"
+		printf "    Default: $(grep db_host conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')\n"
+		echo
+
+		# :flag.usage
+		printf "  %s\n" "--port PORT"
+		printf "    Database Port\n"
+		printf "    Default: $(grep db_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')\n"
+		echo
+
+		# :flag.usage
+		printf "  %s\n" "--db_user DB_USERNAME"
+		printf "    Username\n"
+		printf "    Default: $(grep db_user conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')\n"
+		echo
+
+		# :flag.usage
+		printf "  %s\n" "--db_pass DB_PASS"
+		printf "    Password\n"
+		printf "    Default: $(grep db_pass conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')\n"
+		echo
+
+		# :flag.usage
+		printf "  %s\n" "--db_name DB_NAME"
+		printf "    Database Name\n"
+		printf "    Default: $(grep db_name conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')\n"
+		echo
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_admin_user_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda admin user - Odoo Admin username\n"
+		echo
+
+	else
+		printf "oda admin user - Odoo Admin username\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda admin user [ADMIN_NAME]\n"
+	printf "  oda admin user --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+		# :command.usage_args
+		printf "%s\n" "Arguments:"
+
+		# :argument.usage
+		printf "  %s\n" "ADMIN_NAME"
+		printf "    Odoo Admin username\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_admin_password_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda admin password - Odoo Admin password\n"
+		echo
+
+	else
+		printf "oda admin password - Odoo Admin password\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda admin password ADMIN_PASSWORD\n"
+	printf "  oda admin password --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+		# :command.usage_args
+		printf "%s\n" "Arguments:"
+
+		# :argument.usage
+		printf "  %s\n" "ADMIN_PASSWORD"
+		printf "    Odoo Admin password\n"
+		echo
+
+	fi
+}
+
+# :command.usage
 oda_project_usage() {
 	if [[ -n $long_usage ]]; then
 		printf "oda project - Project level commands [CAUTION]\n"
@@ -943,6 +1083,32 @@ oda_restore_command() {
 }
 
 # :command.function
+oda_admin_user_command() {
+	# src/admin_user_command.sh
+	if [ -z "${args[admin_name]}" ]; then
+		admin_user=$(psql postgres://${args[--db_user]}:${args[--db_pass]}@${args[--host]}:${args[--port]}/${args[--db_name]} -t -c "select login from res_users where id=2;")
+		echo "Odoo Admin username: $(echo $admin_user || awk '{print $1}')"
+	else
+		read -r -p "Are you sure you want to change the admin username to: ${args[admin_name]} [YES/N] " response
+		if [[ "$response" =~ ^(YES)$ ]]; then
+		echo "changing username to: ${args[admin_name]}"
+		admin_user=$(psql postgres://${args[--db_user]}:${args[--db_pass]}@${args[--host]}:${args[--port]}/${args[--db_name]} -t -c "update res_users set login='${args[admin_name]}' where id=2;")
+		fi
+	fi
+}
+
+# :command.function
+oda_admin_password_command() {
+	# src/admin_password_command.sh
+	read -r -p "Are you sure you want to change the admin password [YES/N] " response
+	if [[ "$response" =~ ^(YES)$ ]]; then
+		BASE=`dirname "${0}"`
+		admin_password=$(python3 -B ${BASE}/oda_db.py -p ${args[admin_password]})
+		psql postgres://${args[--db_user]}:${args[--db_pass]}@${args[--host]}:${args[--port]}/${args[--db_name]} -t -c "update res_users set password='${admin_password}' where id=2;" >/dev/null
+	fi
+}
+
+# :command.function
 oda_project_init_command() {
 	# src/project_init_command.sh
 	function envrc(){
@@ -1202,6 +1368,13 @@ parse_requirements() {
 			action="restore"
 			shift
 			oda_restore_parse_requirements "$@"
+			shift $#
+			;;
+
+		admin)
+			action="admin"
+			shift
+			oda_admin_parse_requirements "$@"
 			shift $#
 			;;
 
@@ -1920,6 +2093,268 @@ oda_restore_parse_requirements() {
 }
 
 # :command.parse_requirements
+oda_admin_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_admin_usage
+				exit
+				;;
+
+			# :flag.case
+			--host)
+
+				# :flag.case_arg
+				if [[ -n ${2+x} ]]; then
+
+					args['--host']="$2"
+					shift
+					shift
+				else
+					printf "%s\n" "--host requires an argument: --host HOST" >&2
+					exit 1
+				fi
+				;;
+
+			# :flag.case
+			--port)
+
+				# :flag.case_arg
+				if [[ -n ${2+x} ]]; then
+
+					args['--port']="$2"
+					shift
+					shift
+				else
+					printf "%s\n" "--port requires an argument: --port PORT" >&2
+					exit 1
+				fi
+				;;
+
+			# :flag.case
+			--db_user)
+
+				# :flag.case_arg
+				if [[ -n ${2+x} ]]; then
+
+					args['--db_user']="$2"
+					shift
+					shift
+				else
+					printf "%s\n" "--db_user requires an argument: --db_user DB_USERNAME" >&2
+					exit 1
+				fi
+				;;
+
+			# :flag.case
+			--db_pass)
+
+				# :flag.case_arg
+				if [[ -n ${2+x} ]]; then
+
+					args['--db_pass']="$2"
+					shift
+					shift
+				else
+					printf "%s\n" "--db_pass requires an argument: --db_pass DB_PASS" >&2
+					exit 1
+				fi
+				;;
+
+			# :flag.case
+			--db_name)
+
+				# :flag.case_arg
+				if [[ -n ${2+x} ]]; then
+
+					args['--db_name']="$2"
+					shift
+					shift
+				else
+					printf "%s\n" "--db_name requires an argument: --db_name DB_NAME" >&2
+					exit 1
+				fi
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action=${1:-}
+
+	case $action in
+		-*) ;;
+
+		user)
+			action="user"
+			shift
+			oda_admin_user_parse_requirements "$@"
+			shift $#
+			;;
+
+		password)
+			action="password"
+			shift
+			oda_admin_password_parse_requirements "$@"
+			shift $#
+			;;
+
+		# :command.command_fallback
+		"")
+			oda_admin_usage >&2
+			exit 1
+			;;
+
+		*)
+			printf "invalid command: %s\n" "$action" >&2
+			exit 1
+			;;
+
+	esac
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				printf "invalid argument: %s\n" "$key" >&2
+				exit 1
+
+				;;
+
+		esac
+	done
+
+	# :command.default_assignments
+	[[ -n ${args['--host']:-} ]] || args['--host']="$(grep db_host conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
+	[[ -n ${args['--port']:-} ]] || args['--port']="$(grep db_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
+	[[ -n ${args['--db_user']:-} ]] || args['--db_user']="$(grep db_user conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
+	[[ -n ${args['--db_pass']:-} ]] || args['--db_pass']="$(grep db_pass conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
+	[[ -n ${args['--db_name']:-} ]] || args['--db_name']="$(grep db_name conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
+
+}
+
+# :command.parse_requirements
+oda_admin_user_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_admin_user_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="admin user"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				if [[ -z ${args['admin_name']+x} ]]; then
+
+					args['admin_name']=$1
+					shift
+				else
+					printf "invalid argument: %s\n" "$key" >&2
+					exit 1
+				fi
+
+				;;
+
+		esac
+	done
+
+}
+
+# :command.parse_requirements
+oda_admin_password_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_admin_password_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="admin password"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				if [[ -z ${args['admin_password']+x} ]]; then
+
+					args['admin_password']=$1
+					shift
+				else
+					printf "invalid argument: %s\n" "$key" >&2
+					exit 1
+				fi
+
+				;;
+
+		esac
+	done
+
+	# :command.required_args_filter
+	if [[ -z ${args['admin_password']+x} ]]; then
+		printf "missing required argument: ADMIN_PASSWORD\nusage: oda admin password ADMIN_PASSWORD\n" >&2
+		exit 1
+	fi
+
+}
+
+# :command.parse_requirements
 oda_project_parse_requirements() {
 	# :command.fixed_flags_filter
 	while [[ $# -gt 0 ]]; do
@@ -2360,6 +2795,9 @@ run() {
 		"psql") oda_psql_command ;;
 		"backup") oda_backup_command ;;
 		"restore") oda_restore_command ;;
+		"admin") oda_admin_command ;;
+		"admin user") oda_admin_user_command ;;
+		"admin password") oda_admin_password_command ;;
 		"project") oda_project_command ;;
 		"project init") oda_project_init_command ;;
 		"project reset") oda_project_reset_command ;;

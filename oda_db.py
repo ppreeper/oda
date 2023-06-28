@@ -14,6 +14,7 @@ sys.path.append("odoo")
 
 from psycopg2 import sql
 from contextlib import closing
+from passlib.context import CryptContext
 
 import psycopg2
 
@@ -35,11 +36,11 @@ def _create_empty_database(name):
     db = odoo.sql_db.db_connect('postgres')
     with closing(db.cursor()) as cr:
         chosen_template = odoo.tools.config['db_template']
-        cr.execute("SELECT datname FROM pg_database WHERE datname = %s",
-                   (name, ),
-                   log_exceptions=False)
+        cr.execute(
+            "SELECT datname FROM pg_database WHERE datname = %s", (name,),
+            log_exceptions=False)
         if cr.fetchall():
-            raise DatabaseExists("database %r already exists!" % (name, ))
+            raise DatabaseExists("database %r already exists!" % (name,))
         else:
             # database-altering operations cannot be executed inside a transaction
             cr.rollback()
@@ -49,9 +50,10 @@ def _create_empty_database(name):
             collate = sql.SQL("LC_COLLATE 'C'" if chosen_template ==
                               'template0' else "")
             cr.execute(
-                sql.SQL("CREATE DATABASE {} ENCODING 'unicode' {} TEMPLATE {}"
-                        ).format(sql.Identifier(name), collate,
-                                 sql.Identifier(chosen_template)))
+                sql.SQL("CREATE DATABASE {} ENCODING 'unicode' {} TEMPLATE {}")
+                .format(
+                    sql.Identifier(name), collate,
+                    sql.Identifier(chosen_template)))
 
     # TODO: add --extension=trigram,unaccent
     try:
@@ -84,7 +86,7 @@ def _drop_conn(cr, db_name):
                       FROM pg_stat_activity
                       WHERE datname = %%s AND
                             %(pid_col)s != pg_backend_pid()""" %
-            {'pid_col': pid_col}, (db_name, ))
+            {'pid_col': pid_col}, (db_name,))
     except Exception:
         pass
 
@@ -157,11 +159,12 @@ def _dump_db(db_name, bkp_name, folder="./backups", backup_format='zip'):
                     with db.cursor() as cr:
                         json.dump(dump_db_manifest(cr), fh, indent=4)
                 cmd.insert(-1, '--file=' + os.path.join(dump_dir, 'dump.sql'))
-                subprocess.run(cmd,
-                               env=env,
-                               stdout=subprocess.DEVNULL,
-                               stderr=subprocess.STDOUT,
-                               check=True)
+                subprocess.run(
+                    cmd,
+                    env=env,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.STDOUT,
+                    check=True)
                 if stream:
                     odoo.tools.osutil.zip_dir(
                         dump_dir,
@@ -179,10 +182,9 @@ def _dump_db(db_name, bkp_name, folder="./backups", backup_format='zip'):
                     return t
         else:
             cmd.insert(-1, '--format=c')
-            stdout = subprocess.Popen(cmd,
-                                      env=env,
-                                      stdin=subprocess.DEVNULL,
-                                      stdout=subprocess.PIPE).stdout
+            stdout = subprocess.Popen(
+                cmd, env=env, stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE).stdout
             if stream:
                 shutil.copyfileobj(stdout, stream)
             else:
@@ -190,20 +192,20 @@ def _dump_db(db_name, bkp_name, folder="./backups", backup_format='zip'):
         return file_path
 
 
-def _dump_addons(addons,bkp_name,bkp_dir="./backups", ):
+def _dump_addons(
+    addons,
+    bkp_name,
+    bkp_dir="./backups",
+):
     cwd = os.getcwd()
     for addon in addons:
-        folder=addon.replace(cwd+"/","")
+        folder = addon.replace(cwd + "/", "")
         dir = os.listdir(folder)
-        if len(dir) !=0:
+        if len(dir) != 0:
             bkp_file = f"{bkp_name}_{folder}.zip"
             file_path = os.path.join(bkp_dir, bkp_file)
             with open(file_path, 'wb') as stream:
-                odoo.tools.osutil.zip_dir(
-                    folder,
-                    file_path,
-                    include_dir=False
-                )
+                odoo.tools.osutil.zip_dir(folder, file_path, include_dir=False)
             return file_path
 
 
@@ -261,13 +263,15 @@ def _restore_db(db, dump_file, copy=False, neutralize_database=False):
 
 def _restore_addons(dump_file, addons=""):
     cwd = os.getcwd()
-    dest = addons if addons != "" else dump_file.split('_')[-1:][0].split('.')[0]
+    dest = addons if addons != "" else dump_file.split('_')[-1:][0].split(
+        '.')[0]
     if os.path.isdir(dest):
         shutil.rmtree(dest)
     if not os.path.exists(dest):
         os.makedirs(dest)
     with zipfile.ZipFile(dump_file, 'r') as z:
         z.extractall(dest)
+
 
 def list_dbs(force=False):
     if not odoo.tools.config['list_db'] and not force:
@@ -277,8 +281,8 @@ def list_dbs(force=False):
         # In case --db-filter is not provided and --database is passed, Odoo will not
         # fetch the list of databases available on the postgres server and instead will
         # use the value of --database as comma seperated list of exposed databases.
-        res = sorted(db.strip()
-                     for db in odoo.tools.config['db_name'].split(','))
+        res = sorted(
+            db.strip() for db in odoo.tools.config['db_name'].split(','))
         return res
 
     chosen_template = odoo.tools.config['db_template']
@@ -288,44 +292,46 @@ def list_dbs(force=False):
         try:
             cr.execute(
                 "select datname from pg_database where datdba=(select usesysid from pg_user where usename=current_user) and not datistemplate and datallowconn and datname not in %s order by datname",
-                (templates_list, ))
-            res = [odoo.tools.ustr(name) for (name, ) in cr.fetchall()]
+                (templates_list,))
+            res = [odoo.tools.ustr(name) for (name,) in cr.fetchall()]
         except Exception:
             _logger.exception('Listing databases failed:')
             res = []
     return res
 
 
+def change_password(new_password):
+    new_password = new_password.strip()
+    if new_password == '':
+        return
+    ctx = CryptContext(schemes=['pbkdf2_sha512'])
+    pw_hash = ctx.hash(new_password)
+    print(pw_hash)
+    return
+
+
 def main():
     argParser = argparse.ArgumentParser()
-    argParser.add_argument("-b",
-                           "--backup",
-                           action="store_true",
-                           help="backup database")
-    argParser.add_argument("-r",
-                           "--restore",
-                           action="store_true",
-                           help="restore database")
-    argParser.add_argument("-d",
-                           "--dump_file",
-                           action="store",
-                           help="database dump file")
-    # argParser.add_argument("-a",
-    #                        "--addons",
-    #                        action="store_true",
-    #                        help="restore addons")
-    # argParser.add_argument("-f",
-    #                        "--folder",
-    #                        action="store",
-    #                        help="addons folder")
+    argParser.add_argument(
+        "-b", "--backup", action="store_true", help="backup database")
+    argParser.add_argument(
+        "-r", "--restore", action="store_true", help="restore database")
+    argParser.add_argument(
+        "-d", "--dump_file", action="store", help="database dump file")
+    argParser.add_argument(
+        "-p", "--password", action="store", help="generate password hash")
 
     args = argParser.parse_args()
     odoo.tools.config._parse_config(["-c", "./conf/odoo.conf"])
     db_name = odoo.tools.config["db_name"]
     addons = odoo.tools.config["addons_path"].split(',')[2:]
 
-    if not args.backup and not args.restore:
+    if not args.backup and not args.restore and not args.password:
         print(argParser.print_help())
+        return
+
+    if args.password:
+        change_password(args.password)
         return
 
     if args.backup and args.restore:
@@ -334,8 +340,8 @@ def main():
 
     if args.backup:
         bkp_name = f"{time.strftime('%Y_%m_%d_%H_%M_%S')}_{db_name}"
-        print(_dump_db(db_name,bkp_name))
-        print(_dump_addons(addons,bkp_name))
+        print(_dump_db(db_name, bkp_name))
+        print(_dump_addons(addons, bkp_name))
         return
 
     if args.restore and args.dump_file is None or args.dump_file == "":
@@ -343,7 +349,7 @@ def main():
         return
 
     if args.restore and args.dump_file:
-        dump_file =args.dump_file.strip('"')
+        dump_file = args.dump_file.strip('"')
         bfile = os.path.splitext(os.path.basename(dump_file))[0].split("_")
         if len(bfile) == 7:
             print(f"restore from dump file {dump_file}")
@@ -354,15 +360,6 @@ def main():
         else:
             print("invalid backup filename")
         return
-
-    # if args.addons and args.dump_file is None or args.dump_file == "":
-    #     print("addons restore command requires a dump file to read")
-    #     return
-
-    # if args.addons and args.dump_file:
-    #     print(f"addons restore from dump file {args.dump_file} ")
-    #     _restore_addons(args.dump_file) if (args.folder is None or args.folder == "") else _restore_addons(args.dump_file,args.folder)
-    #     return
 
 
 if __name__ == "__main__":
