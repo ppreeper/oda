@@ -42,6 +42,9 @@ commands:
     examples:
       - oda scaffold module_ext
 
+  - name: vscode
+    help: Setup vscode settings and launch json files
+
   - name: init
     help: initialize the database
     args:

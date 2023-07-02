@@ -39,6 +39,7 @@ oda_usage() {
 	printf "  %s   Restart the instance\n" "restart "
 	printf "  %s   Follow the logs\n" "logs    "
 	printf "  %s   Generates an Odoo module skeleton in addons\n" "scaffold"
+	printf "  %s   Setup vscode settings and launch json files\n" "vscode  "
 	printf "  %s   initialize the database\n" "init    "
 	printf "  %s   Install module(s)\n" "install "
 	printf "  %s   Upgrade module(s)\n" "upgrade "
@@ -246,6 +247,35 @@ oda_scaffold_usage() {
 		# :command.usage_examples
 		printf "%s\n" "Examples:"
 		printf "  oda scaffold module_ext\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_vscode_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda vscode - Setup vscode settings and launch json files\n"
+		echo
+
+	else
+		printf "oda vscode - Setup vscode settings and launch json files\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda vscode\n"
+	printf "  oda vscode --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
 		echo
 
 	fi
@@ -1006,6 +1036,63 @@ oda_scaffold_command() {
 }
 
 # :command.function
+oda_vscode_command() {
+	# src/vscode_command.sh
+	if [ -z $ODOO_PORT ]; then
+		if [[ -f ".envrc" ]]; then
+			export ODOO_PORT=$(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
+		else
+			export ODOO_PORT=$(grep http_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+		fi
+	fi
+
+	function launch_json(){
+	[ -z ${2} ] && export PORT=8069 || export PORT=${2}
+	cat <<-_EOF_ | tee .vscode/launch.json > /dev/null
+	{
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "Launch",
+				"type": "python",
+				"request": "launch",
+				"stopOnEntry": false,
+				"python": "\${command:python.interpreterPath}",
+				"program": "\${workspaceRoot}/odoo/odoo-bin",
+				"args": ["-c", "\${workspaceRoot}/odoo.conf","-p","$ODOO_PORT"],
+				"cwd": "\${workspaceRoot}",
+				"env": {},
+				"envFile": "\${workspaceFolder}/.env",
+				"console": "integratedTerminal"
+			}
+		]
+	}
+	_EOF_
+	}
+
+	function settings_json(){
+	[ -z ${2} ] && export PORT=8069 || export PORT=${2}
+	cat <<-_EOF_ | tee .vscode/settings.json > /dev/null
+	{
+		"python.analysis.extraPaths": ["odoo", "enterprise"],
+		"python.linting.pylintEnabled": true,
+		"python.linting.enabled": true,
+		"python.terminal.executeInFileDir": true,
+		"python.formatting.provider": "yapf",
+		"python.formatting.yapfArgs": [
+			"--style",
+			"{allow_split_before_dict_value=False,force_multiline_dict=True,split_before_closing_bracket=True,join_multiple_lines=False}"
+		]
+	}
+	_EOF_
+	}
+
+	mkdir -p .vscode
+	settings_json
+	launch_json
+}
+
+# :command.function
 oda_init_command() {
 	# src/init_command.sh
 	if [ -z $ODOO_PORT ]; then
@@ -1326,6 +1413,13 @@ parse_requirements() {
 			action="scaffold"
 			shift
 			oda_scaffold_parse_requirements "$@"
+			shift $#
+			;;
+
+		vscode)
+			action="vscode"
+			shift
+			oda_vscode_parse_requirements "$@"
 			shift $#
 			;;
 
@@ -1650,6 +1744,50 @@ oda_scaffold_parse_requirements() {
 		printf "missing required argument: MODULE\nusage: oda scaffold MODULE\n" >&2
 		exit 1
 	fi
+
+}
+
+# :command.parse_requirements
+oda_vscode_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_vscode_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="vscode"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				printf "invalid argument: %s\n" "$key" >&2
+				exit 1
+
+				;;
+
+		esac
+	done
 
 }
 
@@ -2789,6 +2927,7 @@ run() {
 		"restart") oda_restart_command ;;
 		"logs") oda_logs_command ;;
 		"scaffold") oda_scaffold_command ;;
+		"vscode") oda_vscode_command ;;
 		"init") oda_init_command ;;
 		"install") oda_install_command ;;
 		"upgrade") oda_upgrade_command ;;
