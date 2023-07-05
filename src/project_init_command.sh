@@ -26,8 +26,8 @@ db_name = ${POD}
 db_template = template0
 db_sslmode = disable
 list_db = False
-workers = 4
-max_cron_threads = 2
+workers = 0
+#max_cron_threads = 2
 http_enable = True
 http_interface =
 http_port = 8069
@@ -93,6 +93,7 @@ zeep = "==3.4.0"
 paramiko = "==2.12.0"
 
 [dev-packages]
+black="*"
 yapf="*"
 pylint="*"
 pylint-odoo="*"
