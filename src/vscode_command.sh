@@ -19,7 +19,7 @@ cat <<-_EOF_ | tee .vscode/launch.json > /dev/null
       "stopOnEntry": false,
       "python": "\${command:python.interpreterPath}",
       "program": "\${workspaceRoot}/odoo/odoo-bin",
-      "args": ["-c", "\${workspaceRoot}/odoo.conf","-p","$ODOO_PORT"],
+      "args": ["-c", "\${workspaceRoot}/conf/odoo.conf","-p","$ODOO_PORT"],
       "cwd": "\${workspaceRoot}",
       "env": {},
       "envFile": "\${workspaceFolder}/.env",
