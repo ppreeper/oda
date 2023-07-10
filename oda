@@ -44,6 +44,7 @@ oda_usage() {
 	printf "  %s   Install module(s)\n" "install "
 	printf "  %s   Upgrade module(s)\n" "upgrade "
 	printf "  %s   Access the raw database\n" "psql    "
+	printf "  %s   Query the database\n" "query   "
 	printf "  %s   Backup database filestore and addons\n" "backup  "
 	printf "  %s   Restore database and filestore or addons\n" "restore "
 	printf "  %s   Admin user management\n" "admin   "
@@ -489,6 +490,88 @@ oda_psql_usage() {
 		# :command.usage_examples
 		printf "%s\n" "Examples:"
 		printf "  oda psql\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_query_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda query - Query the database\n"
+		echo
+
+	else
+		printf "oda query - Query the database\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda query MODEL [OPTIONS]\n"
+	printf "  oda query --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_flags
+		# :flag.usage
+		printf "  %s\n" "--db_name DATABASE"
+		printf "    Database Name\n"
+		printf "    Default: $(grep db_name conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')\n"
+		echo
+
+		# :flag.usage
+		printf "  %s\n" "-U USERNAME"
+		printf "    Odoo username\n"
+		printf "    Default: admin\n"
+		echo
+
+		# :flag.usage
+		printf "  %s\n" "-P PASSWORD"
+		printf "    Odoo password\n"
+		printf "    Default: admin\n"
+		echo
+
+		# :flag.usage
+		printf "  %s\n" "--filter FILTER"
+		printf "    Model domain filter\n"
+		printf "    Default: \n"
+		echo
+
+		# :flag.usage
+		printf "  %s\n" "--fields FIELDS"
+		printf "    Model fields to show\n"
+		echo
+
+		# :flag.usage
+		printf "  %s\n" "--limit LIMIT"
+		printf "    Limit on records returned\n"
+		echo
+
+		# :flag.usage
+		printf "  %s\n" "--offset OFFSET"
+		printf "    Offset of records returned\n"
+		echo
+
+		# :flag.usage
+		printf "  %s\n" "--count"
+		printf "    Count matching records\n"
+		echo
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+		# :command.usage_args
+		printf "%s\n" "Arguments:"
+
+		# :argument.usage
+		printf "  %s\n" "MODEL"
+		printf "    odoo model to be queried\n"
 		echo
 
 	fi
@@ -1153,6 +1236,27 @@ oda_psql_command() {
 }
 
 # :command.function
+oda_query_command() {
+	# src/query_command.sh
+	if [ -z $ODOO_PORT ]; then
+		if [[ -f ".envrc" ]]; then
+			export ODOO_PORT=$(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
+		else
+			export ODOO_PORT=$(grep http_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+		fi
+	fi
+
+	EXEC="odooquery -host localhost -port ${ODOO_PORT} -d ${args[--db_name]} -U ${args[-U]} -P ${args[-P]} -model ${args[model]}"
+	[ -z ${args[--filter]} ] || EXEC="${EXEC} -filter \"${args[--filter]}\""
+	[ -z ${args[--fields]} ] || EXEC="${EXEC} -fields ${args[--fields]}"
+	[ -z ${args[--limit]} ] || EXEC="${EXEC} -limit ${args[--limit]}"
+	[ -z ${args[--offset]} ] || EXEC="${EXEC} -offset ${args[--offset]}"
+	[ -z ${args[--count]} ] || EXEC="${EXEC} -count"
+	${EXEC}
+
+}
+
+# :command.function
 oda_backup_command() {
 	# src/backup_command.sh
 	BASE=`dirname "${0}"`
@@ -1449,6 +1553,13 @@ parse_requirements() {
 			action="psql"
 			shift
 			oda_psql_parse_requirements "$@"
+			shift $#
+			;;
+
+		query)
+			action="query"
+			shift
+			oda_query_parse_requirements "$@"
 			shift $#
 			;;
 
@@ -2128,6 +2239,180 @@ oda_psql_parse_requirements() {
 	[[ -n ${args['--user']:-} ]] || args['--user']="$(grep db_user conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
 	[[ -n ${args['--pass']:-} ]] || args['--pass']="$(grep db_pass conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
 	[[ -n ${args['--name']:-} ]] || args['--name']="$(grep db_name conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
+
+}
+
+# :command.parse_requirements
+oda_query_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_query_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="query"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+			# :flag.case
+			--db_name)
+
+				# :flag.case_arg
+				if [[ -n ${2+x} ]]; then
+
+					args['--db_name']="$2"
+					shift
+					shift
+				else
+					printf "%s\n" "--db_name requires an argument: --db_name DATABASE" >&2
+					exit 1
+				fi
+				;;
+
+			# :flag.case
+			-U)
+
+				# :flag.case_arg
+				if [[ -n ${2+x} ]]; then
+
+					args['-U']="$2"
+					shift
+					shift
+				else
+					printf "%s\n" "-U requires an argument: -U USERNAME" >&2
+					exit 1
+				fi
+				;;
+
+			# :flag.case
+			-P)
+
+				# :flag.case_arg
+				if [[ -n ${2+x} ]]; then
+
+					args['-P']="$2"
+					shift
+					shift
+				else
+					printf "%s\n" "-P requires an argument: -P PASSWORD" >&2
+					exit 1
+				fi
+				;;
+
+			# :flag.case
+			--filter)
+
+				# :flag.case_arg
+				if [[ -n ${2+x} ]]; then
+
+					args['--filter']="$2"
+					shift
+					shift
+				else
+					printf "%s\n" "--filter requires an argument: --filter FILTER" >&2
+					exit 1
+				fi
+				;;
+
+			# :flag.case
+			--fields)
+
+				# :flag.case_arg
+				if [[ -n ${2+x} ]]; then
+
+					args['--fields']="$2"
+					shift
+					shift
+				else
+					printf "%s\n" "--fields requires an argument: --fields FIELDS" >&2
+					exit 1
+				fi
+				;;
+
+			# :flag.case
+			--limit)
+
+				# :flag.case_arg
+				if [[ -n ${2+x} ]]; then
+
+					args['--limit']="$2"
+					shift
+					shift
+				else
+					printf "%s\n" "--limit requires an argument: --limit LIMIT" >&2
+					exit 1
+				fi
+				;;
+
+			# :flag.case
+			--offset)
+
+				# :flag.case_arg
+				if [[ -n ${2+x} ]]; then
+
+					args['--offset']="$2"
+					shift
+					shift
+				else
+					printf "%s\n" "--offset requires an argument: --offset OFFSET" >&2
+					exit 1
+				fi
+				;;
+
+			# :flag.case
+			--count)
+
+				# :flag.case_no_arg
+				args['--count']=1
+				shift
+				;;
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				if [[ -z ${args['model']+x} ]]; then
+
+					args['model']=$1
+					shift
+				else
+					printf "invalid argument: %s\n" "$key" >&2
+					exit 1
+				fi
+
+				;;
+
+		esac
+	done
+
+	# :command.required_args_filter
+	if [[ -z ${args['model']+x} ]]; then
+		printf "missing required argument: MODEL\nusage: oda query MODEL [OPTIONS]\n" >&2
+		exit 1
+	fi
+
+	# :command.default_assignments
+	[[ -n ${args['--db_name']:-} ]] || args['--db_name']="$(grep db_name conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
+	[[ -n ${args['-U']:-} ]] || args['-U']="admin"
+	[[ -n ${args['-P']:-} ]] || args['-P']="admin"
+	[[ -n ${args['--filter']:-} ]] || args['--filter']=""
 
 }
 
@@ -2933,6 +3218,7 @@ run() {
 		"install") oda_install_command ;;
 		"upgrade") oda_upgrade_command ;;
 		"psql") oda_psql_command ;;
+		"query") oda_query_command ;;
 		"backup") oda_backup_command ;;
 		"restore") oda_restore_command ;;
 		"admin") oda_admin_command ;;

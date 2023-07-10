@@ -120,6 +120,41 @@ commands:
     examples:
       - oda psql
 
+  - name: query
+    help: Query the database
+    args:
+      - name: model
+        help: odoo model to be queried
+        required: true
+    flags:
+      - long: "--db_name"
+        help: Database Name
+        arg: database
+        default: $(grep db_name conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+      - short: "-U"
+        help: Odoo username
+        arg: username
+        default: "admin"
+      - short: "-P"
+        help: Odoo password
+        arg: password
+        default: "admin"
+      - long: "--filter"
+        help: Model domain filter
+        arg: filter
+        default: ""
+      - long: "--fields"
+        help: Model fields to show
+        arg: fields
+      - long: "--limit"
+        help: Limit on records returned
+        arg: limit
+      - long: "--offset"
+        help: Offset of records returned
+        arg: offset
+      - long: "--count"
+        help: Count matching records
+
   - name: backup
     help: Backup database filestore and addons
 

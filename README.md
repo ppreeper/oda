@@ -7,6 +7,23 @@ These tools allow quick Odoo development on a local machine. Was build with a li
 - podman (for postgres container)
 - odoo community repository
 - odoo enterprise repository
+- odooquery (for querying of Odoo instance)
+
+### odooquery
+
+`odooquery` requires `go` as its base language. This must be installed first to install `odooquery`.
+
+To install `odooquery` run the following command:
+
+```bash
+go install github.com/ppreeper/odooquery@latest
+```
+
+To install the latest version of `go` run the following command:
+
+```bash
+wget -qcO- https://raw.githubusercontent.com/ppreeper/gup/main/gup | bash -s - install go
+```
 
 ## Installation
 
