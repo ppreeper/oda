@@ -22,7 +22,7 @@ go install github.com/ppreeper/odooquery@latest
 To install the latest version of `go` run the following command:
 
 ```bash
-wget -qcO- https://raw.githubusercontent.com/ppreeper/gup/main/gup | bash -s - install go
+wget -qcO- https://raw.githubusercontent.com/ppreeper/gup/main/gup | sudo bash -s - install go
 ```
 
 ## Installation
