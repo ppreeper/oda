@@ -49,6 +49,8 @@ oda_usage() {
 	printf "  %s   Restore database and filestore or addons\n" "restore "
 	printf "  %s   Admin user management\n" "admin   "
 	printf "  %s   Project level commands [CAUTION]\n" "project "
+	printf "  %s   node management commands\n" "node    "
+	printf "  %s   server management commands\n" "server  "
 	echo
 
 	# :command.long_usage
@@ -813,6 +815,7 @@ oda_project_usage() {
 	# :command.usage_commands
 	printf "%s\n" "Commands:"
 	printf "  %s   Create a new project specifying Odoo version, Odoo Port, PostgreSQL port\n" "init   "
+	printf "  %s   branch a project from git repository and setup for dev environ\n" "branch "
 	printf "  %s   Drop database and filestore [CAUTION]\n" "reset  "
 	printf "  %s   Fully destroy the project and all its files [CAUTION]\n" "destroy"
 	echo
@@ -881,6 +884,71 @@ oda_project_init_usage() {
 		printf "  oda project init 16\n"
 		printf "  oda project init 16 8080\n"
 		printf "  oda project init 16 8080 5444\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_project_branch_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda project branch - branch a project from git repository and setup for dev environ\n"
+		echo
+
+	else
+		printf "oda project branch - branch a project from git repository and setup for dev environ\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda project branch VERSION PROJECT URL BRANCH [OPORT] [PGPORT]\n"
+	printf "  oda project branch --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+		# :command.usage_args
+		printf "%s\n" "Arguments:"
+
+		# :argument.usage
+		printf "  %s\n" "VERSION"
+		printf "    Odoo Version\n"
+		printf "    Allowed: 15, 16\n"
+		echo
+
+		# :argument.usage
+		printf "  %s\n" "PROJECT"
+		printf "    name of the project\n"
+		echo
+
+		# :argument.usage
+		printf "  %s\n" "URL"
+		printf "    url of the repository\n"
+		echo
+
+		# :argument.usage
+		printf "  %s\n" "BRANCH"
+		printf "    branch to pull from the repository\n"
+		echo
+
+		# :argument.usage
+		printf "  %s\n" "OPORT"
+		printf "    Odoo Port\n"
+		printf "    Default: 8069\n"
+		echo
+
+		# :argument.usage
+		printf "  %s\n" "PGPORT"
+		printf "    PostgreSQL Port\n"
+		printf "    Default: 5432\n"
 		echo
 
 	fi
@@ -1011,6 +1079,309 @@ oda_project_destroy_usage() {
 		# :command.usage_examples
 		printf "%s\n" "Examples:"
 		printf "  oda project destroy\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_node_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda node - node management commands\n"
+		echo
+
+	else
+		printf "oda node - node management commands\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda node COMMAND\n"
+	printf "  oda node [COMMAND] --help | -h\n"
+	echo
+	# :command.usage_commands
+	printf "%s\n" "Commands:"
+	printf "  %s   mount project and odoo to system\n" "mount"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_node_mount_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda node mount - mount project and odoo to system\n"
+		echo
+
+	else
+		printf "oda node mount - mount project and odoo to system\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda node mount VERSION [PROJECTNAME]\n"
+	printf "  oda node mount --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+		# :command.usage_args
+		printf "%s\n" "Arguments:"
+
+		# :argument.usage
+		printf "  %s\n" "VERSION"
+		printf "    Odoo Version\n"
+		printf "    Allowed: 15, 16\n"
+		echo
+
+		# :argument.usage
+		printf "  %s\n" "PROJECTNAME"
+		printf "    Odoo Project\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_server_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda server - server management commands\n"
+		echo
+
+	else
+		printf "oda server - server management commands\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda server COMMAND\n"
+	printf "  oda server [COMMAND] --help | -h\n"
+	echo
+	# :command.usage_commands
+	printf "%s\n" "Commands:"
+	printf "  %s   Odoo community and enterprise repository management\n" "code  "
+	printf "  %s   project folder setup\n" "init  "
+	printf "  %s   pull from git latest project code\n" "update"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_server_code_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda server code - Odoo community and enterprise repository management\n"
+		echo
+
+	else
+		printf "oda server code - Odoo community and enterprise repository management\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda server code COMMAND\n"
+	printf "  oda server code [COMMAND] --help | -h\n"
+	echo
+	# :command.usage_commands
+	printf "%s\n" "Commands:"
+	printf "  %s   odoo community and enterprise repository init\n" "init  "
+	printf "  %s   odoo community and enterprise repository update\n" "update"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_server_code_init_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda server code init - odoo community and enterprise repository init\n"
+		echo
+
+	else
+		printf "oda server code init - odoo community and enterprise repository init\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda server code init VERSION\n"
+	printf "  oda server code init --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+		# :command.usage_args
+		printf "%s\n" "Arguments:"
+
+		# :argument.usage
+		printf "  %s\n" "VERSION"
+		printf "    Odoo Version\n"
+		printf "    Allowed: 15, 16\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_server_code_update_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda server code update - odoo community and enterprise repository update\n"
+		echo
+
+	else
+		printf "oda server code update - odoo community and enterprise repository update\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda server code update\n"
+	printf "  oda server code update --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_server_init_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda server init - project folder setup\n"
+		echo
+
+	else
+		printf "oda server init - project folder setup\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda server init VERSION PROJECTNAME PROJECTURL [OPTIONS]\n"
+	printf "  oda server init --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_flags
+		# :flag.usage
+		printf "  %s\n" "--branch, -b BRANCH"
+		printf "    Project Branch\n"
+		echo
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+		# :command.usage_args
+		printf "%s\n" "Arguments:"
+
+		# :argument.usage
+		printf "  %s\n" "VERSION"
+		printf "    Odoo Version\n"
+		printf "    Allowed: 15, 16\n"
+		echo
+
+		# :argument.usage
+		printf "  %s\n" "PROJECTNAME"
+		printf "    Odoo Project\n"
+		echo
+
+		# :argument.usage
+		printf "  %s\n" "PROJECTURL"
+		printf "    Odoo Project Git URL\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_server_update_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda server update - pull from git latest project code\n"
+		echo
+
+	else
+		printf "oda server update - pull from git latest project code\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda server update PROJECTNAME\n"
+	printf "  oda server update --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+		# :command.usage_args
+		printf "%s\n" "Arguments:"
+
+		# :argument.usage
+		printf "  %s\n" "PROJECTNAME"
+		printf "    Odoo Project\n"
 		echo
 
 	fi
@@ -1422,6 +1793,132 @@ oda_project_init_command() {
 }
 
 # :command.function
+oda_project_branch_command() {
+	# src/project_branch_command.sh
+	function envrc(){
+	[ -z ${2} ] && export PORT=8069 || export PORT=${2}
+	cat <<-_EOF_ | tee .envrc > /dev/null
+	layout python3
+	export ODOO_V=${1}.0
+	export ODOO_PORT=${PORT}
+	export ODOO_C=${HOME}/workspace/repos/${1}.0/odoo
+	export ODOO_E=${HOME}/workspace/repos/${1}.0/enterprise
+	_EOF_
+	}
+
+	function configfile(){
+	cat <<-_EOF_ | tee conf/odoo.conf > /dev/null
+	[options]
+	addons_path = ./odoo/addons,./enterprise,./addons
+	admin_passwd = adminadmin
+	without_demo = all
+	csv_internal_sep = ;
+	data_dir = ./data
+	db_host = ${IPV4}
+	db_port = 5432
+	db_maxconn = 24
+	db_user = odoo${1}
+	db_password = odooodoo
+	db_name = ${2}
+	db_template = template0
+	db_sslmode = disable
+	list_db = False
+	workers = 0
+	#max_cron_threads = 2
+	http_enable = True
+	http_interface =
+	http_port = 8069
+	reportgz = False
+	server_wide_modules = base,web
+	logfile = ./odoo.log
+	log_level = debug
+	logrotate = True
+	# log_handler = werkzeug:CRITICAL,odoo.api:DEBUG
+	# log_db_level = warning
+	_EOF_
+	}
+
+	function pipfile(){
+	cat <<-_EOF_ | tee Pipfile > /dev/null
+	[[source]]
+	url = "https://pypi.org/simple"
+	verify_ssl = true
+	name = "pypi"
+
+	[packages]
+	babel = "==2.9.1"
+	chardet = "==3.0.4"
+	cryptography = "==2.6.1"
+	decorator = "==4.4.2"
+	docutils = "==0.16"
+	ebaysdk = "==2.1.5"
+	freezegun = "==0.3.15"
+	gevent = "==21.8.0"
+	google-auth = "==2.17.*"
+	greenlet = "==1.1.*"
+	idna = "==2.8"
+	jinja2 = "==2.11.3"
+	libsass = "==0.18.0"
+	lxml = "==4.6.5"
+	markupsafe = "==1.1.0"
+	num2words = "==0.5.6"
+	ofxparse = "==0.21"
+	passlib = "==1.7.3"
+	pillow = "==9.0.1"
+	polib = "==1.1.0"
+	"pdfminer.six" = "*"
+	psutil = "==5.6.7"
+	psycopg2-binary = "2.9.5"
+	pydot = "==1.4.1"
+	pyopenssl = "==19.0.0"
+	pypdf2 = "==1.26.0"
+	pyserial = "==3.4"
+	python-dateutil = "==2.8.2"
+	python-stdnum = "==1.13"
+	pytz = "*"
+	pyusb = "==1.0.2"
+	qrcode = "==6.1"
+	reportlab = "==3.5.59"
+	requests = "==2.25.1"
+	urllib3 = "==1.26.5"
+	vobject = "==0.9.6.1"
+	werkzeug = "==2.0.3"
+	xlrd = "==1.2.0"
+	xlsxwriter = "==1.1.2"
+	xlwt = "==1.3.*"
+	zeep = "==3.4.0"
+	paramiko = "==2.12.0"
+
+	[dev-packages]
+	black="*"
+	yapf="*"
+	pylint="*"
+	pylint-odoo="*"
+
+	[requires]
+	python_version = "3"
+	_EOF_
+	}
+
+	PDIR=${HOME}/workspace/odoo/${args[project]}_${args[branch]}
+	mkdir -p ${PDIR}
+	cd ${PDIR}
+	envrc ${args[version]} ${args[oport]}
+	direnv allow >/dev/null
+	mkdir -p conf data backups
+	git clone ${args[url]} -b ${args[branch]} addons
+	ODOO_C=$(grep ODOO_C .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
+	ODOO_E=$(grep ODOO_E .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
+	if [ -L "odoo" ]; then rm -f odoo ; fi
+	ln -f -s ${ODOO_C} odoo
+	if [ -L "enterprise" ]; then rm -f enterprise ; fi
+	ln -f -s ${ODOO_E} enterprise
+	configfile ${args[version]} ${args[project]}_${args[branch]}
+	pipfile
+	printf "To install python dev dependencies run:\npipenv install --dev\n\n"
+}
+
+# :command.function
 oda_project_reset_command() {
 	# src/project_reset_command.sh
 	read -r -p "Are you sure you want to reset the database? [YES/N] " response
@@ -1451,6 +1948,56 @@ oda_project_destroy_command() {
 			echo "Project has been destroyed"
 		fi
 	fi
+}
+
+# :command.function
+oda_node_mount_command() {
+	# src/node_mount_command.sh
+	echo "# this file is located in 'src/node_mount_command.sh'"
+	echo "# code for 'oda node mount' goes here"
+	echo "# you can edit it freely and regenerate (it will not be overwritten)"
+	inspect_args
+
+}
+
+# :command.function
+oda_server_code_init_command() {
+	# src/server_code_init_command.sh
+	echo "# this file is located in 'src/server_code_init_command.sh'"
+	echo "# code for 'oda server code init' goes here"
+	echo "# you can edit it freely and regenerate (it will not be overwritten)"
+	inspect_args
+
+}
+
+# :command.function
+oda_server_code_update_command() {
+	# src/server_code_update_command.sh
+	echo "# this file is located in 'src/server_code_update_command.sh'"
+	echo "# code for 'oda server code update' goes here"
+	echo "# you can edit it freely and regenerate (it will not be overwritten)"
+	inspect_args
+
+}
+
+# :command.function
+oda_server_init_command() {
+	# src/server_init_command.sh
+	echo "# this file is located in 'src/server_init_command.sh'"
+	echo "# code for 'oda server init' goes here"
+	echo "# you can edit it freely and regenerate (it will not be overwritten)"
+	inspect_args
+
+}
+
+# :command.function
+oda_server_update_command() {
+	# src/server_update_command.sh
+	echo "# this file is located in 'src/server_update_command.sh'"
+	echo "# code for 'oda server update' goes here"
+	echo "# you can edit it freely and regenerate (it will not be overwritten)"
+	inspect_args
+
 }
 
 # :command.parse_requirements
@@ -1588,6 +2135,20 @@ parse_requirements() {
 			action="project"
 			shift
 			oda_project_parse_requirements "$@"
+			shift $#
+			;;
+
+		node)
+			action="node"
+			shift
+			oda_node_parse_requirements "$@"
+			shift $#
+			;;
+
+		server)
+			action="server"
+			shift
+			oda_server_parse_requirements "$@"
 			shift $#
 			;;
 
@@ -2809,6 +3370,13 @@ oda_project_parse_requirements() {
 			shift $#
 			;;
 
+		branch)
+			action="branch"
+			shift
+			oda_project_branch_parse_requirements "$@"
+			shift $#
+			;;
+
 		reset)
 			action="reset"
 			shift
@@ -2922,6 +3490,108 @@ oda_project_init_parse_requirements() {
 	# :command.required_args_filter
 	if [[ -z ${args['version']+x} ]]; then
 		printf "missing required argument: VERSION\nusage: oda project init VERSION [OPORT] [PGPORT]\n" >&2
+		exit 1
+	fi
+
+	# :command.default_assignments
+	[[ -n ${args['oport']:-} ]] || args['oport']="8069"
+	[[ -n ${args['pgport']:-} ]] || args['pgport']="5432"
+
+	# :command.whitelist_filter
+	if [[ -n ${args['version']} ]] && [[ ! ${args['version']} =~ ^(15|16)$ ]]; then
+		printf "%s\n" "version must be one of: 15, 16" >&2
+		exit 1
+	fi
+
+}
+
+# :command.parse_requirements
+oda_project_branch_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_project_branch_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.environment_variables_filter
+	# :command.environment_variables_default
+	export IPV4="${IPV4:-$(ip -4 -br a show | grep -v ^lo | grep UP | awk '{print $3}' | awk -F'/' '{print $1}')}"
+
+	# :command.command_filter
+	action="project branch"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				if [[ -z ${args['version']+x} ]]; then
+
+					args['version']=$1
+					shift
+				elif [[ -z ${args['project']+x} ]]; then
+
+					args['project']=$1
+					shift
+				elif [[ -z ${args['url']+x} ]]; then
+
+					args['url']=$1
+					shift
+				elif [[ -z ${args['branch']+x} ]]; then
+
+					args['branch']=$1
+					shift
+				elif [[ -z ${args['oport']+x} ]]; then
+
+					args['oport']=$1
+					shift
+				elif [[ -z ${args['pgport']+x} ]]; then
+
+					args['pgport']=$1
+					shift
+				else
+					printf "invalid argument: %s\n" "$key" >&2
+					exit 1
+				fi
+
+				;;
+
+		esac
+	done
+
+	# :command.required_args_filter
+	if [[ -z ${args['version']+x} ]]; then
+		printf "missing required argument: VERSION\nusage: oda project branch VERSION PROJECT URL BRANCH [OPORT] [PGPORT]\n" >&2
+		exit 1
+	fi
+	if [[ -z ${args['project']+x} ]]; then
+		printf "missing required argument: PROJECT\nusage: oda project branch VERSION PROJECT URL BRANCH [OPORT] [PGPORT]\n" >&2
+		exit 1
+	fi
+	if [[ -z ${args['url']+x} ]]; then
+		printf "missing required argument: URL\nusage: oda project branch VERSION PROJECT URL BRANCH [OPORT] [PGPORT]\n" >&2
+		exit 1
+	fi
+	if [[ -z ${args['branch']+x} ]]; then
+		printf "missing required argument: BRANCH\nusage: oda project branch VERSION PROJECT URL BRANCH [OPORT] [PGPORT]\n" >&2
 		exit 1
 	fi
 
@@ -3187,6 +3857,548 @@ oda_project_destroy_parse_requirements() {
 
 }
 
+# :command.parse_requirements
+oda_node_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_node_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action=${1:-}
+
+	case $action in
+		-*) ;;
+
+		mount)
+			action="mount"
+			shift
+			oda_node_mount_parse_requirements "$@"
+			shift $#
+			;;
+
+		# :command.command_fallback
+		"")
+			oda_node_usage >&2
+			exit 1
+			;;
+
+		*)
+			printf "invalid command: %s\n" "$action" >&2
+			exit 1
+			;;
+
+	esac
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				printf "invalid argument: %s\n" "$key" >&2
+				exit 1
+
+				;;
+
+		esac
+	done
+
+}
+
+# :command.parse_requirements
+oda_node_mount_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_node_mount_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="node mount"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				if [[ -z ${args['version']+x} ]]; then
+
+					args['version']=$1
+					shift
+				elif [[ -z ${args['projectname']+x} ]]; then
+
+					args['projectname']=$1
+					shift
+				else
+					printf "invalid argument: %s\n" "$key" >&2
+					exit 1
+				fi
+
+				;;
+
+		esac
+	done
+
+	# :command.required_args_filter
+	if [[ -z ${args['version']+x} ]]; then
+		printf "missing required argument: VERSION\nusage: oda node mount VERSION [PROJECTNAME]\n" >&2
+		exit 1
+	fi
+
+	# :command.whitelist_filter
+	if [[ -n ${args['version']} ]] && [[ ! ${args['version']} =~ ^(15|16)$ ]]; then
+		printf "%s\n" "version must be one of: 15, 16" >&2
+		exit 1
+	fi
+
+}
+
+# :command.parse_requirements
+oda_server_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_server_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action=${1:-}
+
+	case $action in
+		-*) ;;
+
+		code)
+			action="code"
+			shift
+			oda_server_code_parse_requirements "$@"
+			shift $#
+			;;
+
+		init)
+			action="init"
+			shift
+			oda_server_init_parse_requirements "$@"
+			shift $#
+			;;
+
+		update)
+			action="update"
+			shift
+			oda_server_update_parse_requirements "$@"
+			shift $#
+			;;
+
+		# :command.command_fallback
+		"")
+			oda_server_usage >&2
+			exit 1
+			;;
+
+		*)
+			printf "invalid command: %s\n" "$action" >&2
+			exit 1
+			;;
+
+	esac
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				printf "invalid argument: %s\n" "$key" >&2
+				exit 1
+
+				;;
+
+		esac
+	done
+
+}
+
+# :command.parse_requirements
+oda_server_code_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_server_code_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action=${1:-}
+
+	case $action in
+		-*) ;;
+
+		init)
+			action="init"
+			shift
+			oda_server_code_init_parse_requirements "$@"
+			shift $#
+			;;
+
+		update)
+			action="update"
+			shift
+			oda_server_code_update_parse_requirements "$@"
+			shift $#
+			;;
+
+		# :command.command_fallback
+		"")
+			oda_server_code_usage >&2
+			exit 1
+			;;
+
+		*)
+			printf "invalid command: %s\n" "$action" >&2
+			exit 1
+			;;
+
+	esac
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				printf "invalid argument: %s\n" "$key" >&2
+				exit 1
+
+				;;
+
+		esac
+	done
+
+}
+
+# :command.parse_requirements
+oda_server_code_init_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_server_code_init_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="server code init"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				if [[ -z ${args['version']+x} ]]; then
+
+					args['version']=$1
+					shift
+				else
+					printf "invalid argument: %s\n" "$key" >&2
+					exit 1
+				fi
+
+				;;
+
+		esac
+	done
+
+	# :command.required_args_filter
+	if [[ -z ${args['version']+x} ]]; then
+		printf "missing required argument: VERSION\nusage: oda server code init VERSION\n" >&2
+		exit 1
+	fi
+
+	# :command.whitelist_filter
+	if [[ -n ${args['version']} ]] && [[ ! ${args['version']} =~ ^(15|16)$ ]]; then
+		printf "%s\n" "version must be one of: 15, 16" >&2
+		exit 1
+	fi
+
+}
+
+# :command.parse_requirements
+oda_server_code_update_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_server_code_update_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="server code update"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				printf "invalid argument: %s\n" "$key" >&2
+				exit 1
+
+				;;
+
+		esac
+	done
+
+}
+
+# :command.parse_requirements
+oda_server_init_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_server_init_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="server init"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+			# :flag.case
+			--branch | -b)
+
+				# :flag.case_arg
+				if [[ -n ${2+x} ]]; then
+
+					args['--branch']="$2"
+					shift
+					shift
+				else
+					printf "%s\n" "--branch requires an argument: --branch, -b BRANCH" >&2
+					exit 1
+				fi
+				;;
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				if [[ -z ${args['version']+x} ]]; then
+
+					args['version']=$1
+					shift
+				elif [[ -z ${args['projectname']+x} ]]; then
+
+					args['projectname']=$1
+					shift
+				elif [[ -z ${args['projecturl']+x} ]]; then
+
+					args['projecturl']=$1
+					shift
+				else
+					printf "invalid argument: %s\n" "$key" >&2
+					exit 1
+				fi
+
+				;;
+
+		esac
+	done
+
+	# :command.required_args_filter
+	if [[ -z ${args['version']+x} ]]; then
+		printf "missing required argument: VERSION\nusage: oda server init VERSION PROJECTNAME PROJECTURL [OPTIONS]\n" >&2
+		exit 1
+	fi
+	if [[ -z ${args['projectname']+x} ]]; then
+		printf "missing required argument: PROJECTNAME\nusage: oda server init VERSION PROJECTNAME PROJECTURL [OPTIONS]\n" >&2
+		exit 1
+	fi
+	if [[ -z ${args['projecturl']+x} ]]; then
+		printf "missing required argument: PROJECTURL\nusage: oda server init VERSION PROJECTNAME PROJECTURL [OPTIONS]\n" >&2
+		exit 1
+	fi
+
+	# :command.whitelist_filter
+	if [[ -n ${args['version']} ]] && [[ ! ${args['version']} =~ ^(15|16)$ ]]; then
+		printf "%s\n" "version must be one of: 15, 16" >&2
+		exit 1
+	fi
+
+}
+
+# :command.parse_requirements
+oda_server_update_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_server_update_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="server update"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				if [[ -z ${args['projectname']+x} ]]; then
+
+					args['projectname']=$1
+					shift
+				else
+					printf "invalid argument: %s\n" "$key" >&2
+					exit 1
+				fi
+
+				;;
+
+		esac
+	done
+
+	# :command.required_args_filter
+	if [[ -z ${args['projectname']+x} ]]; then
+		printf "missing required argument: PROJECTNAME\nusage: oda server update PROJECTNAME\n" >&2
+		exit 1
+	fi
+
+}
+
 # :command.initialize
 initialize() {
 	version="0.1.0"
@@ -3226,8 +4438,17 @@ run() {
 		"admin password") oda_admin_password_command ;;
 		"project") oda_project_command ;;
 		"project init") oda_project_init_command ;;
+		"project branch") oda_project_branch_command ;;
 		"project reset") oda_project_reset_command ;;
 		"project destroy") oda_project_destroy_command ;;
+		"node") oda_node_command ;;
+		"node mount") oda_node_mount_command ;;
+		"server") oda_server_command ;;
+		"server code") oda_server_code_command ;;
+		"server code init") oda_server_code_init_command ;;
+		"server code update") oda_server_code_update_command ;;
+		"server init") oda_server_init_command ;;
+		"server update") oda_server_update_command ;;
 	esac
 }
 

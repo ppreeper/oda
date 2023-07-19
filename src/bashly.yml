@@ -239,6 +239,35 @@ commands:
           - oda project init 16 8080
           - oda project init 16 8080 5444
 
+      - name: branch
+        help: branch a project from git repository and setup for dev environ
+        environment_variables:
+          - name: ipv4
+            private: true
+            default: $(ip -4 -br a show | grep -v ^lo | grep UP | awk '{print $3}' | awk -F'/' '{print $1}')
+        args:
+          - name: version
+            help: Odoo Version
+            required: true
+            allowed:
+              - "15"
+              - "16"
+          - name: project
+            help: name of the project
+            required: true
+          - name: url
+            help: url of the repository
+            required: true
+          - name: branch
+            help: branch to pull from the repository
+            required: true
+          - name: oport
+            help: Odoo Port
+            default: "8069"
+          - name: pgport
+            help: PostgreSQL Port
+            default: "5432"
+
       - name: reset
         help: Drop database and filestore [CAUTION]
         flags:
@@ -292,3 +321,62 @@ commands:
 
         examples:
           - oda project destroy
+
+  - name: node
+    help: node management commands
+    commands:
+      - name: mount
+        help: mount project and odoo to system
+        args:
+          - name: version
+            help: Odoo Version
+            required: true
+            allowed:
+              - "15"
+              - "16"
+          - name: projectname
+            help: Odoo Project
+
+  - name: server
+    help: server management commands
+    commands:
+      - name: code
+        help: Odoo community and enterprise repository management
+        commands:
+          - name: init
+            help: odoo community and enterprise repository init
+            args:
+              - name: version
+                help: Odoo Version
+                required: true
+                allowed:
+                  - "15"
+                  - "16"
+          - name: update
+            help: odoo community and enterprise repository update
+      - name: init
+        help: project folder setup
+        args:
+          - name: version
+            help: Odoo Version
+            required: true
+            allowed:
+              - "15"
+              - "16"
+          - name: projectname
+            help: Odoo Project
+            required: true
+          - name: projecturl
+            help: Odoo Project Git URL
+            required: true
+        flags:
+          - short: "-b"
+            long: "--branch"
+            help: Project Branch
+            arg: branch
+      - name: update
+        help: pull from git latest project code
+        args:
+          - name: projectname
+            help: Odoo Project
+            required: true
