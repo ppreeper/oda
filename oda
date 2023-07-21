@@ -1102,7 +1102,8 @@ oda_node_usage() {
 	echo
 	# :command.usage_commands
 	printf "%s\n" "Commands:"
-	printf "  %s   mount project and odoo to system\n" "mount"
+	printf "  %s   mount project and odoo to system\n" "mount  "
+	printf "  %s   install systemd startup script\n" "systemd"
 	echo
 
 	# :command.long_usage
@@ -1155,6 +1156,35 @@ oda_node_mount_usage() {
 		# :argument.usage
 		printf "  %s\n" "PROJECTNAME"
 		printf "    Odoo Project\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_node_systemd_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda node systemd - install systemd startup script\n"
+		echo
+
+	else
+		printf "oda node systemd - install systemd startup script\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda node systemd\n"
+	printf "  oda node systemd --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
 		echo
 
 	fi
@@ -1958,6 +1988,35 @@ oda_node_mount_command() {
 	echo "# you can edit it freely and regenerate (it will not be overwritten)"
 	inspect_args
 
+}
+
+# :command.function
+oda_node_systemd_command() {
+	# src/node_systemd_command.sh
+	function systemd_config(){
+	cat <<-_EOF_ | tee /etc/systemd/system/odoo.service > /dev/null
+	[Unit]
+	Description=Odoo
+	Requires=postgresql.service
+	After=network.target postgresql.service
+
+	[Service]
+	Type=simple
+	SyslogIdentifier=odoo
+	PermissionsStartOnly=true
+	User=odoo
+	Group=odoo
+	ExecStart=/opt/odoo/odoo/odoo-bin -c /opt/odoo/conf/odoo.conf
+	StandardOutput=journal+console
+
+	[Install]
+	WantedBy=multi-user.target
+	_EOF_
+	}
+
+	systemd_config
+	sudo systemctl daemon-reload
+	sudo systemctl enable odoo.service
 }
 
 # :command.function
@@ -3888,6 +3947,13 @@ oda_node_parse_requirements() {
 			shift $#
 			;;
 
+		systemd)
+			action="systemd"
+			shift
+			oda_node_systemd_parse_requirements "$@"
+			shift $#
+			;;
+
 		# :command.command_fallback
 		"")
 			oda_node_usage >&2
@@ -3987,6 +4053,50 @@ oda_node_mount_parse_requirements() {
 		printf "%s\n" "version must be one of: 15, 16" >&2
 		exit 1
 	fi
+
+}
+
+# :command.parse_requirements
+oda_node_systemd_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_node_systemd_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="node systemd"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				printf "invalid argument: %s\n" "$key" >&2
+				exit 1
+
+				;;
+
+		esac
+	done
 
 }
 
@@ -4443,6 +4553,7 @@ run() {
 		"project destroy") oda_project_destroy_command ;;
 		"node") oda_node_command ;;
 		"node mount") oda_node_mount_command ;;
+		"node systemd") oda_node_systemd_command ;;
 		"server") oda_server_command ;;
 		"server code") oda_server_code_command ;;
 		"server code init") oda_server_code_init_command ;;

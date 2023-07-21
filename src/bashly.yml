@@ -336,6 +336,8 @@ commands:
               - "16"
           - name: projectname
             help: Odoo Project
+      - name: systemd
+        help: install systemd startup script
 
   - name: server
     help: server management commands
