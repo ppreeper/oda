@@ -142,7 +142,13 @@ def dump_db_manifest(cr):
     return manifest
 
 
-def _dump_db(db_name, bkp_name, folder="./backups", backup_format="zip"):
+def _dump_db(
+    db_name,
+    bkp_name,
+    folder="./backups",
+    conf_file="./conf/odoo.conf",
+    backup_format="zip",
+):
     """Dump database `db` into file-like object `stream` if stream is None
     return a file object with the dump"""
     bkp_file = f"{bkp_name}.zip"
@@ -265,6 +271,16 @@ def _restore_db(db, dump_file, copy=False, neutralize_database=False):
 
     _logger.info("RESTORE DB: %s", db)
 
+def _restore_conf(dump_file):
+    dest = dump_file.split("_")[-1:][0].split(".")[0]
+    print(dest)
+    # if os.path.isdir(dest):
+    #     shutil.rmtree(dest)
+    # if not os.path.exists(dest):
+    #     os.makedirs(dest)
+    # with zipfile.ZipFile(dump_file, "r") as z:
+    #     z.extractall(dest,["odoo.conf"])
+    return
 
 def _restore_addons(dump_file, addons=""):
     cwd = os.getcwd()
@@ -362,7 +378,7 @@ def main():
 
     if args.backup:
         bkp_name = f"{time.strftime('%Y_%m_%d_%H_%M_%S')}_{db_name}"
-        print(_dump_db(db_name, bkp_name, args.destfolder))
+        print(_dump_db(db_name, bkp_name, args.destfolder, args.config))
         print(_dump_addons(addons, bkp_name, args.destfolder))
         return
 
@@ -376,6 +392,7 @@ def main():
         if len(bfile) == 7:
             print(f"restore from dump file {dump_file}")
             _restore_db(db_name, dump_file)
+            _restore_conf(dump_file)
         elif len(bfile) == 8:
             print(f"restore addons file {dump_file}")
             _restore_addons(dump_file)
