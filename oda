@@ -1105,6 +1105,7 @@ oda_node_usage() {
 	printf "  %s   mount project and odoo to system\n" "mount  "
 	printf "  %s   Backup database filestore and addons\n" "backup "
 	printf "  %s   install systemd startup script\n" "systemd"
+	printf "  %s   direct rsyslog to logger\n" "logger "
 	echo
 
 	# :command.long_usage
@@ -1216,6 +1217,35 @@ oda_node_systemd_usage() {
 	printf "%s\n" "Usage:"
 	printf "  oda node systemd\n"
 	printf "  oda node systemd --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_node_logger_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda node logger - direct rsyslog to logger\n"
+		echo
+
+	else
+		printf "oda node logger - direct rsyslog to logger\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda node logger\n"
+	printf "  oda node logger --help | -h\n"
 	echo
 
 	# :command.long_usage
@@ -2121,6 +2151,16 @@ oda_node_systemd_command() {
 	systemd_config
 	sudo systemctl daemon-reload
 	sudo systemctl enable odoo.service
+}
+
+# :command.function
+oda_node_logger_command() {
+	# src/node_logger_command.sh
+	cat <<-_EOF_ | tee /etc/rsyslog.d/99-logger.conf > /dev/null
+	*.*;auth,authpriv.none    @logger:514
+	_EOF_
+
+	sudo systemctl restart rsyslog.service
 }
 
 # :command.function
@@ -4052,6 +4092,13 @@ oda_node_parse_requirements() {
 			shift $#
 			;;
 
+		logger)
+			action="logger"
+			shift
+			oda_node_logger_parse_requirements "$@"
+			shift $#
+			;;
+
 		# :command.command_fallback
 		"")
 			oda_node_usage >&2
@@ -4230,6 +4277,50 @@ oda_node_systemd_parse_requirements() {
 
 	# :command.command_filter
 	action="node systemd"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				printf "invalid argument: %s\n" "$key" >&2
+				exit 1
+
+				;;
+
+		esac
+	done
+
+}
+
+# :command.parse_requirements
+oda_node_logger_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_node_logger_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="node logger"
 
 	# :command.parse_requirements_while
 	while [[ $# -gt 0 ]]; do
@@ -4782,6 +4873,7 @@ run() {
 		"node mount") oda_node_mount_command ;;
 		"node backup") oda_node_backup_command ;;
 		"node systemd") oda_node_systemd_command ;;
+		"node logger") oda_node_logger_command ;;
 		"fs") oda_fs_command ;;
 		"fs odoo") oda_fs_odoo_command ;;
 		"fs odoo init") oda_fs_odoo_init_command ;;

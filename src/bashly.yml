@@ -346,6 +346,8 @@ commands:
           - oda backup
       - name: systemd
         help: install systemd startup script
+      - name: logger
+        help: direct rsyslog to logger
 
   - name: fs
     help: odoofs server management commands
