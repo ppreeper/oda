@@ -1,4 +1,23 @@
-echo "# this file is located in 'src/node_mount_command.sh'"
-echo "# code for 'oda node mount' goes here"
-echo "# you can edit it freely and regenerate (it will not be overwritten)"
-inspect_args
+BASE=/opt/odoo
+BSHARE=/share/backups
+OSHARE=/share/odoo
+PSHARE=/share/projects
+COPTS="rsize=8192,wsize=8192,timeo=15"
+ROPTS="ro,async,noatime"
+WOPTS="rw,sync,relatime"
+
+cat <<-_EOF_ | tee /tmp/odoo_fstab > /dev/null
+#BEGINODOO
+odoofs:${BSHARE} ${BASE}/backups nfs4 ${WOPTS},${COPTS} 0 0
+
+odoofs:${OSHARE}/${args[version]}.0/odoo ${BASE}/odoo nfs4 ${ROPTS},${COPTS} 0 0
+odoofs:${OSHARE}/${args[version]}.0/enterprise ${BASE}/enterprise nfs4 ${ROPTS},${COPTS} 0 0
+
+odoofs:${PSHARE}/${args[projectname]}/${args[branch]}/addons ${BASE}/addons nfs4 ${ROPTS},${COPTS} 0 0
+odoofs:${PSHARE}/${args[projectname]}/${args[branch]}/conf ${BASE}/conf nfs4 ${ROPTS},${COPTS} 0 0
+odoofs:${PSHARE}/${args[projectname]}/${args[branch]}/data ${BASE}/data nfs4 ${WOPTS},${COPTS} 0 0
+#ENDODOO
+_EOF_
+
+sudo sed -e '/#BEGINODOO/{:a; N; /\n#ENDODOO$/!ba; r/tmp/odoo_fstab' -e 'd;}' -i /etc/fstab
+sudo rm -f /tmp/odoo_fstab

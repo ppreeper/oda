@@ -336,17 +336,25 @@ commands:
               - "16"
           - name: projectname
             help: Odoo Project
+            required: true
+          - name: branch
+            help: branch to pull from the repository
+            required: true
+      - name: backup
+        help: Backup database filestore and addons
+        examples:
+          - oda backup
       - name: systemd
         help: install systemd startup script
 
-  - name: server
-    help: server management commands
+  - name: fs
+    help: odoofs server management commands
     commands:
-      - name: code
+      - name: odoo
         help: Odoo community and enterprise repository management
         commands:
           - name: init
-            help: odoo community and enterprise repository init
+            help: initialize Odoo source repository
             args:
               - name: version
                 help: Odoo Version
@@ -355,30 +363,35 @@ commands:
                   - "15"
                   - "16"
           - name: update
-            help: odoo community and enterprise repository update
-      - name: init
-        help: project folder setup
-        args:
-          - name: version
-            help: Odoo Version
-            required: true
-            allowed:
-              - "15"
-              - "16"
-          - name: projectname
-            help: Odoo Project
-            required: true
-          - name: projecturl
-            help: Odoo Project Git URL
-            required: true
-        flags:
-          - short: "-b"
-            long: "--branch"
-            help: Project Branch
-            arg: branch
-      - name: update
-        help: pull from git latest project code
-        args:
-          - name: projectname
-            help: Odoo Project
-            required: true
+            help: update Odoo source repository
+            args:
+              - name: version
+                help: Odoo Version
+                required: true
+                allowed:
+                  - "15"
+                  - "16"
+      - name: project
+        help: project repo management
+        commands:
+          - name: init
+            help: project folder setup
+            args:
+              - name: projectname
+                help: Odoo Project
+                required: true
+              - name: branch
+                help: Project Branch
+                required: true
+              - name: projecturl
+                help: Odoo Project Git URL
+                required: true
+          - name: update
+            help: pull from git latest project code
+            args:
+              - name: projectname
+                help: Odoo Project
+                required: true
+              - name: branch
+                help: Project Branch
+                required: true
