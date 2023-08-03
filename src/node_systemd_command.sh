@@ -2,8 +2,7 @@ function systemd_config(){
 cat <<-_EOF_ | tee /etc/systemd/system/odoo.service > /dev/null
 [Unit]
 Description=Odoo
-Requires=postgresql.service
-After=network.target postgresql.service
+After=network.target
 
 [Service]
 Type=simple

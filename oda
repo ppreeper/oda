@@ -2102,8 +2102,7 @@ oda_node_systemd_command() {
 	cat <<-_EOF_ | tee /etc/systemd/system/odoo.service > /dev/null
 	[Unit]
 	Description=Odoo
-	Requires=postgresql.service
-	After=network.target postgresql.service
+	After=network.target
 
 	[Service]
 	Type=simple
