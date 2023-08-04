@@ -327,6 +327,12 @@ commands:
   - name: node
     help: node management commands
     commands:
+      - name: start
+        help: start odoo server
+      - name: stop
+        help: stop odoo server
+      - name: restart
+        help: restart odoo server
       - name: mount
         help: mount project and odoo to system
         args:

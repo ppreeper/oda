@@ -1102,12 +1102,102 @@ oda_node_usage() {
 	echo
 	# :command.usage_commands
 	printf "%s\n" "Commands:"
+	printf "  %s   start odoo server\n" "start       "
+	printf "  %s   stop odoo server\n" "stop        "
+	printf "  %s   restart odoo server\n" "restart     "
 	printf "  %s   mount project and odoo to system\n" "mount       "
 	printf "  %s   Backup database filestore and addons\n" "backup      "
 	printf "  %s   install requirements to run Odoo (RUN THIS FIRST)\n" "requirements"
 	printf "  %s   install systemd startup script\n" "systemd     "
 	printf "  %s   direct rsyslog to logger\n" "logger      "
 	printf "  %s   manage mounted project\n" "project     "
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_node_start_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda node start - start odoo server\n"
+		echo
+
+	else
+		printf "oda node start - start odoo server\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda node start\n"
+	printf "  oda node start --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_node_stop_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda node stop - stop odoo server\n"
+		echo
+
+	else
+		printf "oda node stop - stop odoo server\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda node stop\n"
+	printf "  oda node stop --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_node_restart_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda node restart - restart odoo server\n"
+		echo
+
+	else
+		printf "oda node restart - restart odoo server\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda node restart\n"
+	printf "  oda node restart --help | -h\n"
 	echo
 
 	# :command.long_usage
@@ -2236,6 +2326,24 @@ oda_project_destroy_command() {
 			echo "Project has been destroyed"
 		fi
 	fi
+}
+
+# :command.function
+oda_node_start_command() {
+	# src/node_start_command.sh
+	sudo systemctl start odoo.service
+}
+
+# :command.function
+oda_node_stop_command() {
+	# src/node_stop_command.sh
+	sudo systemctl stop odoo.service
+}
+
+# :command.function
+oda_node_restart_command() {
+	# src/node_restart_command.sh
+	sudo systemctl restart odoo.service
 }
 
 # :command.function
@@ -4365,6 +4473,27 @@ oda_node_parse_requirements() {
 	case $action in
 		-*) ;;
 
+		start)
+			action="start"
+			shift
+			oda_node_start_parse_requirements "$@"
+			shift $#
+			;;
+
+		stop)
+			action="stop"
+			shift
+			oda_node_stop_parse_requirements "$@"
+			shift $#
+			;;
+
+		restart)
+			action="restart"
+			shift
+			oda_node_restart_parse_requirements "$@"
+			shift $#
+			;;
+
 		mount)
 			action="mount"
 			shift
@@ -4419,6 +4548,138 @@ oda_node_parse_requirements() {
 			;;
 
 	esac
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				printf "invalid argument: %s\n" "$key" >&2
+				exit 1
+
+				;;
+
+		esac
+	done
+
+}
+
+# :command.parse_requirements
+oda_node_start_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_node_start_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="node start"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				printf "invalid argument: %s\n" "$key" >&2
+				exit 1
+
+				;;
+
+		esac
+	done
+
+}
+
+# :command.parse_requirements
+oda_node_stop_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_node_stop_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="node stop"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				printf "invalid argument: %s\n" "$key" >&2
+				exit 1
+
+				;;
+
+		esac
+	done
+
+}
+
+# :command.parse_requirements
+oda_node_restart_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_node_restart_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="node restart"
 
 	# :command.parse_requirements_while
 	while [[ $# -gt 0 ]]; do
@@ -5456,6 +5717,9 @@ run() {
 		"project reset") oda_project_reset_command ;;
 		"project destroy") oda_project_destroy_command ;;
 		"node") oda_node_command ;;
+		"node start") oda_node_start_command ;;
+		"node stop") oda_node_stop_command ;;
+		"node restart") oda_node_restart_command ;;
 		"node mount") oda_node_mount_command ;;
 		"node backup") oda_node_backup_command ;;
 		"node requirements") oda_node_requirements_command ;;
