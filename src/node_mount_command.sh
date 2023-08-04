@@ -27,7 +27,7 @@ _EOF_
 sudo sed -e '/#BEGINODOO/{:a; N; /\n#ENDODOO$/!ba; r /tmp/odoo_fstab' -e 'd;}' -i /etc/fstab
 sudo rm -f /tmp/odoo_fstab
 
-sudo umount ${BASE}/{addons,conf,data,backups,odoo,enterprise}
+sudo umount -R -q ${BASE}/{addons,conf,data,backups,odoo,enterprise}
 sudo mount -a
 # restart odoo service
 sudo systemctl stop odoo.service
