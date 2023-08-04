@@ -386,6 +386,13 @@ commands:
           - name: init
             help: project folder setup
             args:
+              - name: version
+                help: Odoo Version
+                required: true
+                allowed:
+                  - "15"
+                  - "16"
+                  - "17"
               - name: projectname
                 help: Odoo Project
                 required: true

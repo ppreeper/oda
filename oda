@@ -1481,7 +1481,7 @@ oda_fs_project_init_usage() {
 	fi
 
 	printf "%s\n" "Usage:"
-	printf "  oda fs project init PROJECTNAME BRANCH PROJECTURL\n"
+	printf "  oda fs project init VERSION PROJECTNAME BRANCH PROJECTURL\n"
 	printf "  oda fs project init --help | -h\n"
 	echo
 
@@ -1496,6 +1496,12 @@ oda_fs_project_init_usage() {
 
 		# :command.usage_args
 		printf "%s\n" "Arguments:"
+
+		# :argument.usage
+		printf "  %s\n" "VERSION"
+		printf "    Odoo Version\n"
+		printf "    Allowed: 15, 16, 17\n"
+		echo
 
 		# :argument.usage
 		printf "  %s\n" "PROJECTNAME"
@@ -2266,8 +2272,41 @@ oda_fs_odoo_update_command() {
 # :command.function
 oda_fs_project_init_command() {
 	# src/fs_project_init_command.sh
+	function configfile(){
+	cat <<-_EOF_ | sudo -u odoo tee /share/projects/${args[projectname]}/${args[branch]}/conf/odoo.conf > /dev/null
+	[options]
+	addons_path = /opt/odoo/odoo/addons,/opt/odoo/enterprise,/opt/odoo/addons
+	data_dir = /opt/odoo/data
+	admin_passwd = adminadmin
+	without_demo = all
+	csv_internal_sep = ;
+	db_host = db
+	db_port = 5432
+	db_maxconn = 24
+	db_user = odoo${1}
+	db_password = odooodoo
+	db_name = ${args[projectname]}_${args[branch]}
+	db_template = template0
+	db_sslmode = disable
+	list_db = False
+	workers = 4
+	max_cron_threads = 2
+	proxy = True
+	proxy_mode = True
+	http_enable = True
+	http_interface =
+	http_port = 8069
+	reportgz = False
+	syslog = True
+	log_level = debug
+	# log_handler = werkzeug:CRITICAL,odoo.api:DEBUG
+	# log_db_level = warning
+	_EOF_
+	}
+
 	sudo -u odoo mkdir -p /share/projects/${args[projectname]}/${args[branch]}/{data,conf}
 	sudo -u odoo git clone ${args[projecturl]} -b ${args[branch]} /share/projects/${args[projectname]}/${args[branch]}/addons
+	configfile ${args[version]}
 }
 
 # :command.function
@@ -4862,7 +4901,11 @@ oda_fs_project_init_parse_requirements() {
 			*)
 				# :command.parse_requirements_case
 				# :command.parse_requirements_case_simple
-				if [[ -z ${args['projectname']+x} ]]; then
+				if [[ -z ${args['version']+x} ]]; then
+
+					args['version']=$1
+					shift
+				elif [[ -z ${args['projectname']+x} ]]; then
 
 					args['projectname']=$1
 					shift
@@ -4885,16 +4928,26 @@ oda_fs_project_init_parse_requirements() {
 	done
 
 	# :command.required_args_filter
+	if [[ -z ${args['version']+x} ]]; then
+		printf "missing required argument: VERSION\nusage: oda fs project init VERSION PROJECTNAME BRANCH PROJECTURL\n" >&2
+		exit 1
+	fi
 	if [[ -z ${args['projectname']+x} ]]; then
-		printf "missing required argument: PROJECTNAME\nusage: oda fs project init PROJECTNAME BRANCH PROJECTURL\n" >&2
+		printf "missing required argument: PROJECTNAME\nusage: oda fs project init VERSION PROJECTNAME BRANCH PROJECTURL\n" >&2
 		exit 1
 	fi
 	if [[ -z ${args['branch']+x} ]]; then
-		printf "missing required argument: BRANCH\nusage: oda fs project init PROJECTNAME BRANCH PROJECTURL\n" >&2
+		printf "missing required argument: BRANCH\nusage: oda fs project init VERSION PROJECTNAME BRANCH PROJECTURL\n" >&2
 		exit 1
 	fi
 	if [[ -z ${args['projecturl']+x} ]]; then
-		printf "missing required argument: PROJECTURL\nusage: oda fs project init PROJECTNAME BRANCH PROJECTURL\n" >&2
+		printf "missing required argument: PROJECTURL\nusage: oda fs project init VERSION PROJECTNAME BRANCH PROJECTURL\n" >&2
+		exit 1
+	fi
+
+	# :command.whitelist_filter
+	if [[ -n ${args['version']} ]] && [[ ! ${args['version']} =~ ^(15|16|17)$ ]]; then
+		printf "%s\n" "version must be one of: 15, 16, 17" >&2
 		exit 1
 	fi
 
