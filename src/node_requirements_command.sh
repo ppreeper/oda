@@ -6,6 +6,8 @@ CN=''
 [ -n "$UC" ] && CN=$UC || CN=$VC
 FN="wkhtmltox_${vers}.${CN}_amd64.deb"
 
+sudo bash -c "groupadd -g 1001 odoo && useradd -ms /usr/sbin/nologin -g 1001 -u 1001 odoo"
+
 # PostgreSQL Repo
 sudo wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O /etc/apt/trusted.gpg.d/pgdg.gpg.asc
 echo "deb http://apt.postgresql.org/pub/repos/apt/ ${CN}-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
