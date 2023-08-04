@@ -11,7 +11,7 @@ sudo apt-get install -y --no-install-recommends python3 python3-pip python3-setu
 sudo apt-get install -y --no-install-recommends \
   bzip2 ca-certificates curl dirmngr fonts-liberation fonts-noto fonts-noto-cjk fonts-noto-mono \
   gnupg gsfonts inetutils-ping libgnutls-dane0 libgts-bin libpaper-utils locales nfs-common \
-  postgresql-client-15 shared-mime-info unzip xz-utils zip \
+  postgresql-client-15 qemu-guest-agent shared-mime-info unzip xz-utils zip \
   python3-babel python3-chardet python3-cryptography python3-cups python3-dateutil \
   python3-decorator python3-docutils python3-feedparser python3-freezegun python3-geoip2 \
   python3-gevent python3-greenlet python3-html2text python3-idna python3-jinja2 \
