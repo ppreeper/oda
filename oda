@@ -1107,6 +1107,7 @@ oda_node_usage() {
 	printf "  %s   restart odoo server\n" "restart     "
 	printf "  %s   mount project and odoo to system\n" "mount       "
 	printf "  %s   Backup database filestore and addons\n" "backup      "
+	printf "  %s   Restore database and filestore or addons\n" "restore     "
 	printf "  %s   install requirements to run Odoo (RUN THIS FIRST)\n" "requirements"
 	printf "  %s   install systemd startup script\n" "systemd     "
 	printf "  %s   direct rsyslog to logger\n" "logger      "
@@ -1289,6 +1290,43 @@ oda_node_backup_usage() {
 		# :command.usage_examples
 		printf "%s\n" "Examples:"
 		printf "  oda backup\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_node_restore_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda node restore - Restore database and filestore or addons\n"
+		echo
+
+	else
+		printf "oda node restore - Restore database and filestore or addons\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda node restore FILE...\n"
+	printf "  oda node restore --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+		# :command.usage_args
+		printf "%s\n" "Arguments:"
+
+		# :argument.usage
+		printf "  %s\n" "FILE..."
+		printf "    Path to backup file\n"
 		echo
 
 	fi
@@ -2390,6 +2428,17 @@ oda_node_backup_command() {
 	BASE=/opt/odoo
 	cd ${BASE}
 	sudo -u odoo python3 -B /usr/local/bin/oda_db.py -b
+}
+
+# :command.function
+oda_node_restore_command() {
+	# src/node_restore_command.sh
+	BASE=/opt/odoo
+	cd ${BASE}
+	for bfile in ${args[file]}
+	do
+		sudo -u odoo python3 -B /usr/local/bin/oda_db.py -r -d "${bfile}"
+	done
 }
 
 # :command.function
@@ -4508,6 +4557,13 @@ oda_node_parse_requirements() {
 			shift $#
 			;;
 
+		restore)
+			action="restore"
+			shift
+			oda_node_restore_parse_requirements "$@"
+			shift $#
+			;;
+
 		requirements)
 			action="requirements"
 			shift
@@ -4823,6 +4879,62 @@ oda_node_backup_parse_requirements() {
 
 		esac
 	done
+
+}
+
+# :command.parse_requirements
+oda_node_restore_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_node_restore_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="node restore"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_repeatable
+
+				if [[ -z ${args['file']+x} ]]; then
+					args['file']="\"$1\""
+					shift
+				else
+					args['file']="${args[file]} \"$1\""
+					shift
+				fi
+
+				;;
+
+		esac
+	done
+
+	# :command.required_args_filter
+	if [[ -z ${args['file']+x} ]]; then
+		printf "missing required argument: FILE\nusage: oda node restore FILE...\n" >&2
+		exit 1
+	fi
 
 }
 
@@ -5722,6 +5834,7 @@ run() {
 		"node restart") oda_node_restart_command ;;
 		"node mount") oda_node_mount_command ;;
 		"node backup") oda_node_backup_command ;;
+		"node restore") oda_node_restore_command ;;
 		"node requirements") oda_node_requirements_command ;;
 		"node systemd") oda_node_systemd_command ;;
 		"node logger") oda_node_logger_command ;;

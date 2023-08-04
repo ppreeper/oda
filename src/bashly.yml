@@ -353,6 +353,13 @@ commands:
         help: Backup database filestore and addons
         examples:
           - oda backup
+      - name: restore
+        help: Restore database and filestore or addons
+        args:
+          - name: file
+            help: Path to backup file
+            required: true
+            repeatable: true
       - name: requirements
         help: install requirements to run Odoo (RUN THIS FIRST)
         args:
