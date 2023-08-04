@@ -1,3 +1,5 @@
+BASE=/opt/odoo
+cd ${BASE}
 read -r -p "Are you sure you want to reset the database? [YES/N] " response
 if [[ "$response" =~ ^(YES)$ ]]; then
   read -r -p "Are you **really** sure you want to reset the database? [YES/N] " response

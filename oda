@@ -2404,6 +2404,8 @@ oda_node_logger_command() {
 # :command.function
 oda_node_project_reset_command() {
 	# src/node_project_reset_command.sh
+	BASE=/opt/odoo
+	cd ${BASE}
 	read -r -p "Are you sure you want to reset the database? [YES/N] " response
 	if [[ "$response" =~ ^(YES)$ ]]; then
 		read -r -p "Are you **really** sure you want to reset the database? [YES/N] " response
