@@ -2161,6 +2161,14 @@ oda_node_backup_command() {
 # :command.function
 oda_node_requirements_command() {
 	# src/node_requirements_command.sh
+	REPO="https://github.com/wkhtmltopdf/packaging"
+	vers=$(git ls-remote --tags ${REPO} | grep "refs/tags.*[0-9]$" | awk '{print $2}' | sed 's/refs\/tags\///' | sort -V | uniq | tail -1)
+	VC=$(grep ^VERSION_CODENAME /etc/os-release | awk -F'=' '{print $2}')
+	UC=$(grep ^UBUNTU_CODENAME /etc/os-release | awk -F'=' '{print $2}')
+	CN=''
+	[ -n "$UC" ] && CN=$UC || CN=$VC
+	FN="wkhtmltox_${vers}.${CN}_amd64.deb"
+
 	# PostgreSQL Repo
 	sudo wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O /etc/apt/trusted.gpg.d/pgdg.gpg.asc
 	echo 'deb http://apt.postgresql.org/pub/repos/apt/ jammy-pgdg main' | sudo tee /etc/apt/sources.list.d/pgdg.list
@@ -2188,7 +2196,7 @@ oda_node_requirements_command() {
 		python3-xlwt python3-zeep
 
 	# install wkhtmltopdf
-	wget -q https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-3/wkhtmltox_0.12.6.1-3.jammy_amd64.deb -O wkhtmltox.deb
+	wget -qc ${REPO}/releases/download/${vers}/${FN} -O wkhtmltox.deb
 	sudo apt-get install -y --no-install-recommends ./wkhtmltox.deb
 	rm -rf wkhtmltox.deb
 
