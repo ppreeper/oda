@@ -1,2 +1,2 @@
-mkdir -p /share/projects/${args[projectname]}/${args[branch]}/{data,conf}
-git clone ${args[projecturl]} -b ${args[branch]} /share/projects/${args[projectname]}/${args[branch]}/addons
+sudo -u odoo mkdir -p /share/projects/${args[projectname]}/${args[branch]}/{data,conf}
+sudo -u odoo git clone ${args[projecturl]} -b ${args[branch]} /share/projects/${args[projectname]}/${args[branch]}/addons

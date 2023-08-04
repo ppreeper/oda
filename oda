@@ -2252,28 +2252,28 @@ oda_node_logger_command() {
 # :command.function
 oda_fs_odoo_init_command() {
 	# src/fs_odoo_init_command.sh
-	git clone https://github.com/odoo/odoo -b ${args[version]}.0 /share/odoo/${args[version]}.0/odoo
-	git clone https://github.com/odoo/enterprise -b ${args[version]}.0 /share/odoo/${args[version]}.0/enterprise
+	sudo -u odoo git clone https://github.com/odoo/odoo -b ${args[version]}.0 /share/odoo/${args[version]}.0/odoo
+	sudo -u odoo git clone https://github.com/odoo/enterprise -b ${args[version]}.0 /share/odoo/${args[version]}.0/enterprise
 }
 
 # :command.function
 oda_fs_odoo_update_command() {
 	# src/fs_odoo_update_command.sh
-	bash -c "cd /share/odoo/${args[version]}.0/odoo && git pull"
-	bash -c "cd /share/odoo/${args[version]}.0/enterprise && git pull"
+	sudo -u odoo bash -c "cd /share/odoo/${args[version]}.0/odoo && git pull"
+	sudo -u odoo bash -c "cd /share/odoo/${args[version]}.0/enterprise && git pull"
 }
 
 # :command.function
 oda_fs_project_init_command() {
 	# src/fs_project_init_command.sh
-	mkdir -p /share/projects/${args[projectname]}/${args[branch]}/{data,conf}
-	git clone ${args[projecturl]} -b ${args[branch]} /share/projects/${args[projectname]}/${args[branch]}/addons
+	sudo -u odoo mkdir -p /share/projects/${args[projectname]}/${args[branch]}/{data,conf}
+	sudo -u odoo git clone ${args[projecturl]} -b ${args[branch]} /share/projects/${args[projectname]}/${args[branch]}/addons
 }
 
 # :command.function
 oda_fs_project_update_command() {
 	# src/fs_project_update_command.sh
-	bash -c "cd /share/projects/${args[projectname]}/${args[branch]}/addons && git pull"
+	sudo -u odoo bash -c "cd /share/projects/${args[projectname]}/${args[branch]}/addons && git pull"
 }
 
 # :command.parse_requirements

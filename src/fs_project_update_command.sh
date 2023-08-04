@@ -1,1 +1,1 @@
-bash -c "cd /share/projects/${args[projectname]}/${args[branch]}/addons && git pull"
+sudo -u odoo bash -c "cd /share/projects/${args[projectname]}/${args[branch]}/addons && git pull"
