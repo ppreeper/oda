@@ -1,2 +1,3 @@
 BASE=/opt/odoo
-python3 -B ${BASE}/oda_db.py -b
+cd ${BASE}
+sudo -u odoo python3 -B ${BASE}/oda_db.py -b

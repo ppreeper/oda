@@ -2280,7 +2280,8 @@ oda_node_mount_command() {
 oda_node_backup_command() {
 	# src/node_backup_command.sh
 	BASE=/opt/odoo
-	python3 -B ${BASE}/oda_db.py -b
+	cd ${BASE}
+	sudo -u odoo python3 -B ${BASE}/oda_db.py -b
 }
 
 # :command.function
