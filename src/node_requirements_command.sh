@@ -59,9 +59,9 @@ sudo apt-get install -y --no-install-recommends \
   python3-xlwt python3-zeep
 
 # install wkhtmltopdf
-wget -qc ${REPO}/releases/download/${vers}/${FN} -O wkhtmltox.deb
-sudo apt-get install -y --no-install-recommends ./wkhtmltox.deb
-rm -rf wkhtmltox.deb
+wget -qc ${REPO}/releases/download/${vers}/${FN} -O ${HOME}/wkhtmltox.deb
+sudo apt-get install -y --no-install-recommends ${HOME}/wkhtmltox.deb
+rm -rf ${HOME}/wkhtmltox.deb
 
 # install additional python libraries
 sudo pip install --upgrade pip
