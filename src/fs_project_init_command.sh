@@ -15,8 +15,6 @@ db_name = ${args[projectname]}_${args[branch]}
 db_template = template0
 db_sslmode = disable
 list_db = False
-workers = 4
-max_cron_threads = 2
 proxy = True
 proxy_mode = True
 http_enable = True
@@ -27,6 +25,13 @@ syslog = True
 log_level = debug
 # log_handler = werkzeug:CRITICAL,odoo.api:DEBUG
 # log_db_level = warning
+workers = 4
+max_cron_threads = 2
+limit_memory_hard = 2684354560
+limit_memory_soft = 2147483648
+limit_request = 8192
+limit_time_cpu = 1200
+limit_time_real = 2400
 _EOF_
 }
 
