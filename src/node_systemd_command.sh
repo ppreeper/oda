@@ -1,5 +1,5 @@
 function systemd_config(){
-cat <<-_EOF_ | tee /etc/systemd/system/odoo.service > /dev/null
+cat <<-_EOF_ | sudo tee /etc/systemd/system/odoo.service > /dev/null
 [Unit]
 Description=Odoo
 After=network.target

@@ -25,6 +25,7 @@ cat <<-_EOF_ | tee /tmp/odoo_hosts.debian.tmpl > /dev/null
 #BEGINODOO
 ${args[fsip]} odoofs
 ${args[dbip]} db
+${args[loggerip]} logger
 #ENDODOO
 _EOF_
 

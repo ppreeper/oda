@@ -1107,6 +1107,7 @@ oda_node_usage() {
 	printf "  %s   install requirements to run Odoo (RUN THIS FIRST)\n" "requirements"
 	printf "  %s   install systemd startup script\n" "systemd     "
 	printf "  %s   direct rsyslog to logger\n" "logger      "
+	printf "  %s   manage mounted project\n" "project     "
 	echo
 
 	# :command.long_usage
@@ -1216,7 +1217,7 @@ oda_node_requirements_usage() {
 	fi
 
 	printf "%s\n" "Usage:"
-	printf "  oda node requirements FSIP DBIP\n"
+	printf "  oda node requirements FSIP DBIP LOGGERIP\n"
 	printf "  oda node requirements --help | -h\n"
 	echo
 
@@ -1240,6 +1241,11 @@ oda_node_requirements_usage() {
 		# :argument.usage
 		printf "  %s\n" "DBIP"
 		printf "    Odoo DB server IP address\n"
+		echo
+
+		# :argument.usage
+		printf "  %s\n" "LOGGERIP"
+		printf "    Log server IP address\n"
 		echo
 
 	fi
@@ -1294,6 +1300,99 @@ oda_node_logger_usage() {
 	# :command.long_usage
 	if [[ -n $long_usage ]]; then
 		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_node_project_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda node project - manage mounted project\n"
+		echo
+
+	else
+		printf "oda node project - manage mounted project\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda node project COMMAND\n"
+	printf "  oda node project [COMMAND] --help | -h\n"
+	echo
+	# :command.usage_commands
+	printf "%s\n" "Commands:"
+	printf "  %s   Drop database and filestore [CAUTION]\n" "reset"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_node_project_reset_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda node project reset - Drop database and filestore [CAUTION]\n"
+		echo
+
+	else
+		printf "oda node project reset - Drop database and filestore [CAUTION]\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda node project reset [OPTIONS]\n"
+	printf "  oda node project reset --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_flags
+		# :flag.usage
+		printf "  %s\n" "--host HOST"
+		printf "    Database Host\n"
+		printf "    Default: $(grep db_host conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')\n"
+		echo
+
+		# :flag.usage
+		printf "  %s\n" "--port PORT"
+		printf "    Database Port\n"
+		printf "    Default: $(grep db_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')\n"
+		echo
+
+		# :flag.usage
+		printf "  %s\n" "--user USERNAME"
+		printf "    Username\n"
+		printf "    Default: $(grep db_user conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')\n"
+		echo
+
+		# :flag.usage
+		printf "  %s\n" "--pass PASS"
+		printf "    Password\n"
+		printf "    Default: $(grep db_pass conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')\n"
+		echo
+
+		# :flag.usage
+		printf "  %s\n" "--name NAME"
+		printf "    Database Name\n"
+		printf "    Default: $(grep db_name conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')\n"
+		echo
 
 		# :command.usage_fixed_flags
 		printf "  %s\n" "--help, -h"
@@ -2169,6 +2268,9 @@ oda_node_mount_command() {
 
 	sudo sed -e '/#BEGINODOO/{:a; N; /\n#ENDODOO$/!ba; r /tmp/odoo_fstab' -e 'd;}' -i /etc/fstab
 	sudo rm -f /tmp/odoo_fstab
+
+	sudo umount ${BASE}/{addons,conf,data,backups,odoo,enterprise}
+	sudo mount ${BASE}/{addons,conf,data,backups,odoo,enterprise}
 }
 
 # :command.function
@@ -2208,6 +2310,7 @@ oda_node_requirements_command() {
 	#BEGINODOO
 	${args[fsip]} odoofs
 	${args[dbip]} db
+	${args[loggerip]} logger
 	#ENDODOO
 	_EOF_
 
@@ -2260,7 +2363,7 @@ oda_node_requirements_command() {
 oda_node_systemd_command() {
 	# src/node_systemd_command.sh
 	function systemd_config(){
-	cat <<-_EOF_ | tee /etc/systemd/system/odoo.service > /dev/null
+	cat <<-_EOF_ | sudo tee /etc/systemd/system/odoo.service > /dev/null
 	[Unit]
 	Description=Odoo
 	After=network.target
@@ -2287,11 +2390,32 @@ oda_node_systemd_command() {
 # :command.function
 oda_node_logger_command() {
 	# src/node_logger_command.sh
-	cat <<-_EOF_ | tee /etc/rsyslog.d/99-logger.conf > /dev/null
+	cat <<-_EOF_ | sudo tee /etc/rsyslog.d/99-logger.conf > /dev/null
 	*.*;auth,authpriv.none    @logger:514
 	_EOF_
 
 	sudo systemctl restart rsyslog.service
+}
+
+# :command.function
+oda_node_project_reset_command() {
+	# src/node_project_reset_command.sh
+	echo "# this file is located in 'src/node_project_reset_command.sh'"
+	echo "# code for 'oda node project reset' goes here"
+	echo "# you can edit it freely and regenerate (it will not be overwritten)"
+	inspect_args
+
+	read -r -p "Are you sure you want to reset the database? [YES/N] " response
+	if [[ "$response" =~ ^(YES)$ ]]; then
+		read -r -p "Are you **really** sure you want to reset the database? [YES/N] " response
+		if [[ "$response" =~ ^(YES)$ ]]; then
+			echo "Resetting project"
+			sudo systemctl stop odoo.service
+			rm -rf /opt/odoo/data/* > /dev/null
+			PGPASSWORD=${args[--pass]} dropdb -U ${args[--user]} -h ${args[--host]} -p ${args[--port]} -w -f ${args[--name]} >/dev/null
+			echo "Project reset"
+		fi
+	fi
 }
 
 # :command.function
@@ -4275,6 +4399,13 @@ oda_node_parse_requirements() {
 			shift $#
 			;;
 
+		project)
+			action="project"
+			shift
+			oda_node_project_parse_requirements "$@"
+			shift $#
+			;;
+
 		# :command.command_fallback
 		"")
 			oda_node_usage >&2
@@ -4475,6 +4606,10 @@ oda_node_requirements_parse_requirements() {
 
 					args['dbip']=$1
 					shift
+				elif [[ -z ${args['loggerip']+x} ]]; then
+
+					args['loggerip']=$1
+					shift
 				else
 					printf "invalid argument: %s\n" "$key" >&2
 					exit 1
@@ -4487,11 +4622,15 @@ oda_node_requirements_parse_requirements() {
 
 	# :command.required_args_filter
 	if [[ -z ${args['fsip']+x} ]]; then
-		printf "missing required argument: FSIP\nusage: oda node requirements FSIP DBIP\n" >&2
+		printf "missing required argument: FSIP\nusage: oda node requirements FSIP DBIP LOGGERIP\n" >&2
 		exit 1
 	fi
 	if [[ -z ${args['dbip']+x} ]]; then
-		printf "missing required argument: DBIP\nusage: oda node requirements FSIP DBIP\n" >&2
+		printf "missing required argument: DBIP\nusage: oda node requirements FSIP DBIP LOGGERIP\n" >&2
+		exit 1
+	fi
+	if [[ -z ${args['loggerip']+x} ]]; then
+		printf "missing required argument: LOGGERIP\nusage: oda node requirements FSIP DBIP LOGGERIP\n" >&2
 		exit 1
 	fi
 
@@ -4582,6 +4721,198 @@ oda_node_logger_parse_requirements() {
 
 		esac
 	done
+
+}
+
+# :command.parse_requirements
+oda_node_project_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_node_project_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action=${1:-}
+
+	case $action in
+		-*) ;;
+
+		reset)
+			action="reset"
+			shift
+			oda_node_project_reset_parse_requirements "$@"
+			shift $#
+			;;
+
+		# :command.command_fallback
+		"")
+			oda_node_project_usage >&2
+			exit 1
+			;;
+
+		*)
+			printf "invalid command: %s\n" "$action" >&2
+			exit 1
+			;;
+
+	esac
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				printf "invalid argument: %s\n" "$key" >&2
+				exit 1
+
+				;;
+
+		esac
+	done
+
+}
+
+# :command.parse_requirements
+oda_node_project_reset_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_node_project_reset_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="node project reset"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+			# :flag.case
+			--host)
+
+				# :flag.case_arg
+				if [[ -n ${2+x} ]]; then
+
+					args['--host']="$2"
+					shift
+					shift
+				else
+					printf "%s\n" "--host requires an argument: --host HOST" >&2
+					exit 1
+				fi
+				;;
+
+			# :flag.case
+			--port)
+
+				# :flag.case_arg
+				if [[ -n ${2+x} ]]; then
+
+					args['--port']="$2"
+					shift
+					shift
+				else
+					printf "%s\n" "--port requires an argument: --port PORT" >&2
+					exit 1
+				fi
+				;;
+
+			# :flag.case
+			--user)
+
+				# :flag.case_arg
+				if [[ -n ${2+x} ]]; then
+
+					args['--user']="$2"
+					shift
+					shift
+				else
+					printf "%s\n" "--user requires an argument: --user USERNAME" >&2
+					exit 1
+				fi
+				;;
+
+			# :flag.case
+			--pass)
+
+				# :flag.case_arg
+				if [[ -n ${2+x} ]]; then
+
+					args['--pass']="$2"
+					shift
+					shift
+				else
+					printf "%s\n" "--pass requires an argument: --pass PASS" >&2
+					exit 1
+				fi
+				;;
+
+			# :flag.case
+			--name)
+
+				# :flag.case_arg
+				if [[ -n ${2+x} ]]; then
+
+					args['--name']="$2"
+					shift
+					shift
+				else
+					printf "%s\n" "--name requires an argument: --name NAME" >&2
+					exit 1
+				fi
+				;;
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				printf "invalid argument: %s\n" "$key" >&2
+				exit 1
+
+				;;
+
+		esac
+	done
+
+	# :command.default_assignments
+	[[ -n ${args['--host']:-} ]] || args['--host']="$(grep db_host conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
+	[[ -n ${args['--port']:-} ]] || args['--port']="$(grep db_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
+	[[ -n ${args['--user']:-} ]] || args['--user']="$(grep db_user conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
+	[[ -n ${args['--pass']:-} ]] || args['--pass']="$(grep db_pass conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
+	[[ -n ${args['--name']:-} ]] || args['--name']="$(grep db_name conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
 
 }
 
@@ -5129,6 +5460,8 @@ run() {
 		"node requirements") oda_node_requirements_command ;;
 		"node systemd") oda_node_systemd_command ;;
 		"node logger") oda_node_logger_command ;;
+		"node project") oda_node_project_command ;;
+		"node project reset") oda_node_project_reset_command ;;
 		"fs") oda_fs_command ;;
 		"fs odoo") oda_fs_odoo_command ;;
 		"fs odoo init") oda_fs_odoo_init_command ;;

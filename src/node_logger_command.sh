@@ -1,4 +1,4 @@
-cat <<-_EOF_ | tee /etc/rsyslog.d/99-logger.conf > /dev/null
+cat <<-_EOF_ | sudo tee /etc/rsyslog.d/99-logger.conf > /dev/null
 *.*;auth,authpriv.none    @logger:514
 _EOF_
 
