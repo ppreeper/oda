@@ -6,7 +6,8 @@ CN=''
 [ -n "$UC" ] && CN=$UC || CN=$VC
 FN="wkhtmltox_${vers}.${CN}_amd64.deb"
 
-sudo bash -c "groupadd -g 1001 odoo && useradd -ms /usr/sbin/nologin -g 1001 -u 1001 odoo"
+sudo bash -c "groupadd -g 1001 odoo"
+sudo bash -c "useradd -ms /usr/sbin/nologin -g 1001 -u 1001 odoo"
 
 # setup fstab
 sudo sed -e '/#BEGINODOO/{:a; N; /\n#ENDODOO$/!ba; echo ""' -e 'd;}' -i /etc/fstab
@@ -17,6 +18,16 @@ echo "#ENDODOO" | sudo tee -a /etc/fstab
 sudo sed -e '/#BEGINODOO/{:a; N; /\n#ENDODOO$/!ba; echo ""' -e 'd;}' -i /etc/cloud/templates/hosts.debian.tmpl
 echo "#BEGINODOO" | sudo tee -a /etc/cloud/templates/hosts.debian.tmpl
 echo "#ENDODOO" | sudo tee -a /etc/cloud/templates/hosts.debian.tmpl
+
+cat <<-_EOF_ | tee /tmp/odoo_hosts.debian.tmpl > /dev/null
+#BEGINODOO
+${args[fsip]} odoofs
+${args[dbip]} db
+#ENDODOO
+_EOF_
+
+sudo sed -e '/#BEGINODOO/{:a; N; /\n#ENDODOO$/!ba; r /tmp/odoo_hosts.debian.tmpl' -e 'd;}' -i /etc/cloud/templates/hosts.debian.tmpl
+sudo rm -f /tmp/odoo_hosts.debian.tmpl
 
 # PostgreSQL Repo
 sudo wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O /etc/apt/trusted.gpg.d/pgdg.gpg.asc
