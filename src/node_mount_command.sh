@@ -7,7 +7,8 @@ ROPTS="ro,async,noatime"
 WOPTS="rw,sync,relatime"
 
 sudo systemctl stop odoo.service
-sudo mkdir -p ${BASE}/{addons,conf,data,backups,odoo,enterprise}
+# mkdir mount directories
+sudo bash -c "mkdir -p ${BASE}/{addons,conf,data,backups,odoo,enterprise} && chown odoo:odoo ${BASE}"
 
 cat <<-_EOF_ | tee /tmp/odoo_fstab > /dev/null
 #BEGINODOO
@@ -22,5 +23,5 @@ odoofs:${PSHARE}/${args[projectname]}/${args[branch]}/data ${BASE}/data nfs4 ${W
 #ENDODOO
 _EOF_
 
-sudo sed -e '/#BEGINODOO/{:a; N; /\n#ENDODOO$/!ba; r/tmp/odoo_fstab' -e 'd;}' -i /etc/fstab
+sudo sed -e '/#BEGINODOO/{:a; N; /\n#ENDODOO$/!ba; r /tmp/odoo_fstab' -e 'd;}' -i /etc/fstab
 sudo rm -f /tmp/odoo_fstab
