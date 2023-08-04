@@ -6,6 +6,7 @@ COPTS="rsize=8192,wsize=8192,timeo=15"
 ROPTS="ro,async,noatime"
 WOPTS="rw,sync,relatime"
 
+# stop odoo service
 sudo systemctl stop odoo.service
 # mkdir mount directories
 sudo bash -c "mkdir -p ${BASE}/{addons,conf,data,backups,odoo,enterprise} && chown odoo:odoo ${BASE}"
@@ -28,3 +29,5 @@ sudo rm -f /tmp/odoo_fstab
 
 sudo umount ${BASE}/{addons,conf,data,backups,odoo,enterprise}
 sudo mount -a
+# restart odoo service
+sudo systemctl stop odoo.service

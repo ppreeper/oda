@@ -2249,6 +2249,7 @@ oda_node_mount_command() {
 	ROPTS="ro,async,noatime"
 	WOPTS="rw,sync,relatime"
 
+	# stop odoo service
 	sudo systemctl stop odoo.service
 	# mkdir mount directories
 	sudo bash -c "mkdir -p ${BASE}/{addons,conf,data,backups,odoo,enterprise} && chown odoo:odoo ${BASE}"
@@ -2271,7 +2272,8 @@ oda_node_mount_command() {
 
 	sudo umount ${BASE}/{addons,conf,data,backups,odoo,enterprise}
 	sudo mount -a
-
+	# restart odoo service
+	sudo systemctl stop odoo.service
 }
 
 # :command.function
