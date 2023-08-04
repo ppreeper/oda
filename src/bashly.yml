@@ -347,6 +347,8 @@ commands:
         help: Backup database filestore and addons
         examples:
           - oda backup
+      - name: requirements
+        help: install requirements to run Odoo (RUN THIS FIRST)
       - name: systemd
         help: install systemd startup script
       - name: logger

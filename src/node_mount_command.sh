@@ -7,6 +7,7 @@ ROPTS="ro,async,noatime"
 WOPTS="rw,sync,relatime"
 
 sudo systemctl stop odoo.service
+sudo mkdir -p ${BASE}/{addons,conf,data,backups,odoo,enterprise}
 
 cat <<-_EOF_ | tee /tmp/odoo_fstab > /dev/null
 #BEGINODOO
