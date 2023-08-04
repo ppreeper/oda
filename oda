@@ -1367,31 +1367,31 @@ oda_node_project_reset_usage() {
 		# :flag.usage
 		printf "  %s\n" "--host HOST"
 		printf "    Database Host\n"
-		printf "    Default: $(grep db_host conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')\n"
+		printf "    Default: $(grep db_host /opt/odoo/conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')\n"
 		echo
 
 		# :flag.usage
 		printf "  %s\n" "--port PORT"
 		printf "    Database Port\n"
-		printf "    Default: $(grep db_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')\n"
+		printf "    Default: $(grep db_port /opt/odoo/conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')\n"
 		echo
 
 		# :flag.usage
 		printf "  %s\n" "--user USERNAME"
 		printf "    Username\n"
-		printf "    Default: $(grep db_user conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')\n"
+		printf "    Default: $(grep db_user /opt/odoo/conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')\n"
 		echo
 
 		# :flag.usage
 		printf "  %s\n" "--pass PASS"
 		printf "    Password\n"
-		printf "    Default: $(grep db_pass conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')\n"
+		printf "    Default: $(grep db_pass /opt/odoo/conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')\n"
 		echo
 
 		# :flag.usage
 		printf "  %s\n" "--name NAME"
 		printf "    Database Name\n"
-		printf "    Default: $(grep db_name conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')\n"
+		printf "    Default: $(grep db_name /opt/odoo/conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')\n"
 		echo
 
 		# :command.usage_fixed_flags
@@ -4909,11 +4909,11 @@ oda_node_project_reset_parse_requirements() {
 	done
 
 	# :command.default_assignments
-	[[ -n ${args['--host']:-} ]] || args['--host']="$(grep db_host conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
-	[[ -n ${args['--port']:-} ]] || args['--port']="$(grep db_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
-	[[ -n ${args['--user']:-} ]] || args['--user']="$(grep db_user conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
-	[[ -n ${args['--pass']:-} ]] || args['--pass']="$(grep db_pass conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
-	[[ -n ${args['--name']:-} ]] || args['--name']="$(grep db_name conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
+	[[ -n ${args['--host']:-} ]] || args['--host']="$(grep db_host /opt/odoo/conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
+	[[ -n ${args['--port']:-} ]] || args['--port']="$(grep db_port /opt/odoo/conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
+	[[ -n ${args['--user']:-} ]] || args['--user']="$(grep db_user /opt/odoo/conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
+	[[ -n ${args['--pass']:-} ]] || args['--pass']="$(grep db_pass /opt/odoo/conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
+	[[ -n ${args['--name']:-} ]] || args['--name']="$(grep db_name /opt/odoo/conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
 
 }
 

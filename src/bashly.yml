@@ -372,23 +372,23 @@ commands:
               - long: "--host"
                 help: Database Host
                 arg: host
-                default: $(grep db_host conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+                default: $(grep db_host /opt/odoo/conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
               - long: "--port"
                 help: Database Port
                 arg: port
-                default: $(grep db_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+                default: $(grep db_port /opt/odoo/conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
               - long: "--user"
                 help: Username
                 arg: username
-                default: $(grep db_user conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+                default: $(grep db_user /opt/odoo/conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
               - long: "--pass"
                 help: Password
                 arg: pass
-                default: $(grep db_pass conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+                default: $(grep db_pass /opt/odoo/conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
               - long: "--name"
                 help: Database Name
                 arg: name
-                default: $(grep db_name conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+                default: $(grep db_name /opt/odoo/conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
 
   - name: fs
     help: odoofs server management commands
