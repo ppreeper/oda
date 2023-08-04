@@ -1216,7 +1216,7 @@ oda_node_requirements_usage() {
 	fi
 
 	printf "%s\n" "Usage:"
-	printf "  oda node requirements\n"
+	printf "  oda node requirements FSIP DBIP\n"
 	printf "  oda node requirements --help | -h\n"
 	echo
 
@@ -1227,6 +1227,19 @@ oda_node_requirements_usage() {
 		# :command.usage_fixed_flags
 		printf "  %s\n" "--help, -h"
 		printf "    Show this help\n"
+		echo
+
+		# :command.usage_args
+		printf "%s\n" "Arguments:"
+
+		# :argument.usage
+		printf "  %s\n" "FSIP"
+		printf "    Odoo FS server IP address\n"
+		echo
+
+		# :argument.usage
+		printf "  %s\n" "DBIP"
+		printf "    Odoo DB server IP address\n"
 		echo
 
 	fi
@@ -4452,13 +4465,33 @@ oda_node_requirements_parse_requirements() {
 			*)
 				# :command.parse_requirements_case
 				# :command.parse_requirements_case_simple
-				printf "invalid argument: %s\n" "$key" >&2
-				exit 1
+				if [[ -z ${args['fsip']+x} ]]; then
+
+					args['fsip']=$1
+					shift
+				elif [[ -z ${args['dbip']+x} ]]; then
+
+					args['dbip']=$1
+					shift
+				else
+					printf "invalid argument: %s\n" "$key" >&2
+					exit 1
+				fi
 
 				;;
 
 		esac
 	done
+
+	# :command.required_args_filter
+	if [[ -z ${args['fsip']+x} ]]; then
+		printf "missing required argument: FSIP\nusage: oda node requirements FSIP DBIP\n" >&2
+		exit 1
+	fi
+	if [[ -z ${args['dbip']+x} ]]; then
+		printf "missing required argument: DBIP\nusage: oda node requirements FSIP DBIP\n" >&2
+		exit 1
+	fi
 
 }
 

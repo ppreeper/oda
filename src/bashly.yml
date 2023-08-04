@@ -349,6 +349,13 @@ commands:
           - oda backup
       - name: requirements
         help: install requirements to run Odoo (RUN THIS FIRST)
+        args:
+          - name: fsip
+            help: Odoo FS server IP address
+            required: true
+          - name: dbip
+            help: Odoo DB server IP address
+            required: true
       - name: systemd
         help: install systemd startup script
       - name: logger
