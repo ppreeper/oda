@@ -8,7 +8,7 @@ FN="wkhtmltox_${vers}.${CN}_amd64.deb"
 
 # PostgreSQL Repo
 sudo wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O /etc/apt/trusted.gpg.d/pgdg.gpg.asc
-echo 'deb http://apt.postgresql.org/pub/repos/apt/ ${CN}-pgdg main' | sudo tee /etc/apt/sources.list.d/pgdg.list
+echo "deb http://apt.postgresql.org/pub/repos/apt/ ${CN}-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
 
 # update system
 sudo bash -c "apt-get update -y && apt-get dist-upgrade -y && apt-get autoremove -y && apt-get autoclean -y"
