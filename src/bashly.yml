@@ -227,6 +227,7 @@ commands:
             allowed:
               - "15"
               - "16"
+              - "17"
           - name: oport
             help: Odoo Port
             default: "8069"
@@ -252,6 +253,7 @@ commands:
             allowed:
               - "15"
               - "16"
+              - "17"
           - name: project
             help: name of the project
             required: true
@@ -334,6 +336,7 @@ commands:
             allowed:
               - "15"
               - "16"
+              - "17"
           - name: projectname
             help: Odoo Project
             required: true
@@ -364,6 +367,7 @@ commands:
                 allowed:
                   - "15"
                   - "16"
+                  - "17"
           - name: update
             help: update Odoo source repository
             args:
@@ -373,6 +377,7 @@ commands:
                 allowed:
                   - "15"
                   - "16"
+                  - "17"
       - name: project
         help: project repo management
         commands:

@@ -864,7 +864,7 @@ oda_project_init_usage() {
 		# :argument.usage
 		printf "  %s\n" "VERSION"
 		printf "    Odoo Version\n"
-		printf "    Allowed: 15, 16\n"
+		printf "    Allowed: 15, 16, 17\n"
 		echo
 
 		# :argument.usage
@@ -921,7 +921,7 @@ oda_project_branch_usage() {
 		# :argument.usage
 		printf "  %s\n" "VERSION"
 		printf "    Odoo Version\n"
-		printf "    Allowed: 15, 16\n"
+		printf "    Allowed: 15, 16, 17\n"
 		echo
 
 		# :argument.usage
@@ -1152,7 +1152,7 @@ oda_node_mount_usage() {
 		# :argument.usage
 		printf "  %s\n" "VERSION"
 		printf "    Odoo Version\n"
-		printf "    Allowed: 15, 16\n"
+		printf "    Allowed: 15, 16, 17\n"
 		echo
 
 		# :argument.usage
@@ -1360,7 +1360,7 @@ oda_fs_odoo_init_usage() {
 		# :argument.usage
 		printf "  %s\n" "VERSION"
 		printf "    Odoo Version\n"
-		printf "    Allowed: 15, 16\n"
+		printf "    Allowed: 15, 16, 17\n"
 		echo
 
 	fi
@@ -1398,7 +1398,7 @@ oda_fs_odoo_update_usage() {
 		# :argument.usage
 		printf "  %s\n" "VERSION"
 		printf "    Odoo Version\n"
-		printf "    Allowed: 15, 16\n"
+		printf "    Allowed: 15, 16, 17\n"
 		echo
 
 	fi
@@ -3688,8 +3688,8 @@ oda_project_init_parse_requirements() {
 	[[ -n ${args['pgport']:-} ]] || args['pgport']="5432"
 
 	# :command.whitelist_filter
-	if [[ -n ${args['version']} ]] && [[ ! ${args['version']} =~ ^(15|16)$ ]]; then
-		printf "%s\n" "version must be one of: 15, 16" >&2
+	if [[ -n ${args['version']} ]] && [[ ! ${args['version']} =~ ^(15|16|17)$ ]]; then
+		printf "%s\n" "version must be one of: 15, 16, 17" >&2
 		exit 1
 	fi
 
@@ -3790,8 +3790,8 @@ oda_project_branch_parse_requirements() {
 	[[ -n ${args['pgport']:-} ]] || args['pgport']="5432"
 
 	# :command.whitelist_filter
-	if [[ -n ${args['version']} ]] && [[ ! ${args['version']} =~ ^(15|16)$ ]]; then
-		printf "%s\n" "version must be one of: 15, 16" >&2
+	if [[ -n ${args['version']} ]] && [[ ! ${args['version']} =~ ^(15|16|17)$ ]]; then
+		printf "%s\n" "version must be one of: 15, 16, 17" >&2
 		exit 1
 	fi
 
@@ -4206,8 +4206,8 @@ oda_node_mount_parse_requirements() {
 	fi
 
 	# :command.whitelist_filter
-	if [[ -n ${args['version']} ]] && [[ ! ${args['version']} =~ ^(15|16)$ ]]; then
-		printf "%s\n" "version must be one of: 15, 16" >&2
+	if [[ -n ${args['version']} ]] && [[ ! ${args['version']} =~ ^(15|16|17)$ ]]; then
+		printf "%s\n" "version must be one of: 15, 16, 17" >&2
 		exit 1
 	fi
 
@@ -4548,8 +4548,8 @@ oda_fs_odoo_init_parse_requirements() {
 	fi
 
 	# :command.whitelist_filter
-	if [[ -n ${args['version']} ]] && [[ ! ${args['version']} =~ ^(15|16)$ ]]; then
-		printf "%s\n" "version must be one of: 15, 16" >&2
+	if [[ -n ${args['version']} ]] && [[ ! ${args['version']} =~ ^(15|16|17)$ ]]; then
+		printf "%s\n" "version must be one of: 15, 16, 17" >&2
 		exit 1
 	fi
 
@@ -4610,8 +4610,8 @@ oda_fs_odoo_update_parse_requirements() {
 	fi
 
 	# :command.whitelist_filter
-	if [[ -n ${args['version']} ]] && [[ ! ${args['version']} =~ ^(15|16)$ ]]; then
-		printf "%s\n" "version must be one of: 15, 16" >&2
+	if [[ -n ${args['version']} ]] && [[ ! ${args['version']} =~ ^(15|16|17)$ ]]; then
+		printf "%s\n" "version must be one of: 15, 16, 17" >&2
 		exit 1
 	fi
 
