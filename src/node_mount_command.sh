@@ -27,4 +27,4 @@ sudo sed -e '/#BEGINODOO/{:a; N; /\n#ENDODOO$/!ba; r /tmp/odoo_fstab' -e 'd;}' -
 sudo rm -f /tmp/odoo_fstab
 
 sudo umount ${BASE}/{addons,conf,data,backups,odoo,enterprise}
-sudo mount ${BASE}/{addons,conf,data,backups,odoo,enterprise}
+sudo mount -a

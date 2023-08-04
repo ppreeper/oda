@@ -2270,7 +2270,8 @@ oda_node_mount_command() {
 	sudo rm -f /tmp/odoo_fstab
 
 	sudo umount ${BASE}/{addons,conf,data,backups,odoo,enterprise}
-	sudo mount ${BASE}/{addons,conf,data,backups,odoo,enterprise}
+	sudo mount -a
+
 }
 
 # :command.function
