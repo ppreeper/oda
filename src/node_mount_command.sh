@@ -6,6 +6,8 @@ COPTS="rsize=8192,wsize=8192,timeo=15"
 ROPTS="ro,async,noatime"
 WOPTS="rw,sync,relatime"
 
+sudo systemctl stop odoo.service
+
 cat <<-_EOF_ | tee /tmp/odoo_fstab > /dev/null
 #BEGINODOO
 odoofs:${BSHARE} ${BASE}/backups nfs4 ${WOPTS},${COPTS} 0 0
