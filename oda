@@ -2189,8 +2189,10 @@ oda_node_requirements_command() {
 	[ -n "$UC" ] && CN=$UC || CN=$VC
 	FN="wkhtmltox_${vers}.${CN}_amd64.deb"
 
-	sudo bash -c "groupadd -g 1001 odoo"
-	sudo bash -c "useradd -ms /usr/sbin/nologin -g 1001 -u 1001 odoo"
+	sudo bash -c "groupadd -f -g 1001 odoo"
+	if [ -f $(grep "^odoo:" /etc/passwd) ]; then
+		sudo bash -c "useradd -ms /usr/sbin/nologin -g 1001 -u 1001 odoo"
+	fi
 
 	# setup fstab
 	sudo sed -e '/#BEGINODOO/{:a; N; /\n#ENDODOO$/!ba; echo ""' -e 'd;}' -i /etc/fstab
