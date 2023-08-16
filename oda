@@ -34,12 +34,12 @@ oda_usage() {
 	echo
 	# :command.usage_commands
 	printf "%s\n" "Commands:"
+	printf "  %s   additional config options\n" "config  "
 	printf "  %s   Start the instance\n" "start   "
 	printf "  %s   Stop the instance\n" "stop    "
 	printf "  %s   Restart the instance\n" "restart "
 	printf "  %s   Follow the logs\n" "logs    "
 	printf "  %s   Generates an Odoo module skeleton in addons\n" "scaffold"
-	printf "  %s   Setup vscode settings and launch json files\n" "vscode  "
 	printf "  %s   initialize the database\n" "init    "
 	printf "  %s   Install module(s)\n" "install "
 	printf "  %s   Upgrade module(s)\n" "upgrade "
@@ -51,6 +51,7 @@ oda_usage() {
 	printf "  %s   Project level commands [CAUTION]\n" "project "
 	printf "  %s   node management commands\n" "node    "
 	printf "  %s   odoofs server management commands\n" "fs      "
+	printf "  %s   manage remote servers via ssh commands\n" "remote  "
 	echo
 
 	# :command.long_usage
@@ -72,6 +73,68 @@ oda_usage() {
 		printf "  %s\n" "POD"
 		printf "    Odoo instance\n"
 		printf "    Default: ${PWD##*/}\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_config_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda config - additional config options\n"
+		echo
+
+	else
+		printf "oda config - additional config options\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda config COMMAND\n"
+	printf "  oda config [COMMAND] --help | -h\n"
+	echo
+	# :command.usage_commands
+	printf "%s\n" "Commands:"
+	printf "  %s   Setup vscode settings and launch json files\n" "vscode"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_config_vscode_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda config vscode - Setup vscode settings and launch json files\n"
+		echo
+
+	else
+		printf "oda config vscode - Setup vscode settings and launch json files\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda config vscode\n"
+	printf "  oda config vscode --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
 		echo
 
 	fi
@@ -250,35 +313,6 @@ oda_scaffold_usage() {
 		# :command.usage_examples
 		printf "%s\n" "Examples:"
 		printf "  oda scaffold module_ext\n"
-		echo
-
-	fi
-}
-
-# :command.usage
-oda_vscode_usage() {
-	if [[ -n $long_usage ]]; then
-		printf "oda vscode - Setup vscode settings and launch json files\n"
-		echo
-
-	else
-		printf "oda vscode - Setup vscode settings and launch json files\n"
-		echo
-
-	fi
-
-	printf "%s\n" "Usage:"
-	printf "  oda vscode\n"
-	printf "  oda vscode --help | -h\n"
-	echo
-
-	# :command.long_usage
-	if [[ -n $long_usage ]]; then
-		printf "%s\n" "Options:"
-
-		# :command.usage_fixed_flags
-		printf "  %s\n" "--help, -h"
-		printf "    Show this help\n"
 		echo
 
 	fi
@@ -1803,6 +1837,402 @@ oda_fs_project_update_usage() {
 	fi
 }
 
+# :command.usage
+oda_remote_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda remote - manage remote servers via ssh commands\n"
+		echo
+
+	else
+		printf "oda remote - manage remote servers via ssh commands\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda remote COMMAND\n"
+	printf "  oda remote [COMMAND] --help | -h\n"
+	echo
+	# :command.usage_commands
+	printf "%s\n" "Commands:"
+	printf "  %s   manage odoo repositories on odoofs\n" "odoo   "
+	printf "  %s   manage project code on odoofs\n" "project"
+	printf "  %s   mounts project on target node\n" "mount  "
+	printf "  %s   start odoo service on target node\n" "start  "
+	printf "  %s   stop odoo service on target node\n" "stop   "
+	printf "  %s   restart odoo service on target node\n" "restart"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_remote_odoo_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda remote odoo - manage odoo repositories on odoofs\n"
+		echo
+
+	else
+		printf "oda remote odoo - manage odoo repositories on odoofs\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda remote odoo COMMAND\n"
+	printf "  oda remote odoo [COMMAND] --help | -h\n"
+	echo
+	# :command.usage_commands
+	printf "%s\n" "Commands:"
+	printf "  %s   pull latest odoo code\n" "update"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_remote_odoo_update_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda remote odoo update - pull latest odoo code\n"
+		echo
+
+	else
+		printf "oda remote odoo update - pull latest odoo code\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda remote odoo update VERSION\n"
+	printf "  oda remote odoo update --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+		# :command.usage_args
+		printf "%s\n" "Arguments:"
+
+		# :argument.usage
+		printf "  %s\n" "VERSION"
+		printf "\n"
+		printf "    Allowed: 15, 16, 17\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_remote_project_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda remote project - manage project code on odoofs\n"
+		echo
+
+	else
+		printf "oda remote project - manage project code on odoofs\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda remote project COMMAND\n"
+	printf "  oda remote project [COMMAND] --help | -h\n"
+	echo
+	# :command.usage_commands
+	printf "%s\n" "Commands:"
+	printf "  %s   initialize the project and git clone from project repo\n" "init  "
+	printf "  %s   git pull update from project repo\n" "update"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_remote_project_init_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda remote project init - initialize the project and git clone from project repo\n"
+		echo
+
+	else
+		printf "oda remote project init - initialize the project and git clone from project repo\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda remote project init VERSION PROJECT BRANCH URL\n"
+	printf "  oda remote project init --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+		# :command.usage_args
+		printf "%s\n" "Arguments:"
+
+		# :argument.usage
+		printf "  %s\n" "VERSION"
+		printf "\n"
+		printf "    Allowed: 15, 16, 17\n"
+		echo
+
+		# :argument.usage
+		printf "  %s\n" "PROJECT"
+		printf "\n"
+		echo
+
+		# :argument.usage
+		printf "  %s\n" "BRANCH"
+		printf "\n"
+		echo
+
+		# :argument.usage
+		printf "  %s\n" "URL"
+		printf "\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_remote_project_update_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda remote project update - git pull update from project repo\n"
+		echo
+
+	else
+		printf "oda remote project update - git pull update from project repo\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda remote project update PROJECT BRANCH\n"
+	printf "  oda remote project update --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+		# :command.usage_args
+		printf "%s\n" "Arguments:"
+
+		# :argument.usage
+		printf "  %s\n" "PROJECT"
+		printf "\n"
+		echo
+
+		# :argument.usage
+		printf "  %s\n" "BRANCH"
+		printf "\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_remote_mount_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda remote mount - mounts project on target node\n"
+		echo
+
+	else
+		printf "oda remote mount - mounts project on target node\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda remote mount NODE PROJECT BRANCH\n"
+	printf "  oda remote mount --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+		# :command.usage_args
+		printf "%s\n" "Arguments:"
+
+		# :argument.usage
+		printf "  %s\n" "NODE"
+		printf "\n"
+		echo
+
+		# :argument.usage
+		printf "  %s\n" "PROJECT"
+		printf "\n"
+		echo
+
+		# :argument.usage
+		printf "  %s\n" "BRANCH"
+		printf "\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_remote_start_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda remote start - start odoo service on target node\n"
+		echo
+
+	else
+		printf "oda remote start - start odoo service on target node\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda remote start NODE\n"
+	printf "  oda remote start --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+		# :command.usage_args
+		printf "%s\n" "Arguments:"
+
+		# :argument.usage
+		printf "  %s\n" "NODE"
+		printf "\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_remote_stop_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda remote stop - stop odoo service on target node\n"
+		echo
+
+	else
+		printf "oda remote stop - stop odoo service on target node\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda remote stop NODE\n"
+	printf "  oda remote stop --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+		# :command.usage_args
+		printf "%s\n" "Arguments:"
+
+		# :argument.usage
+		printf "  %s\n" "NODE"
+		printf "\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_remote_restart_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda remote restart - restart odoo service on target node\n"
+		echo
+
+	else
+		printf "oda remote restart - restart odoo service on target node\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda remote restart NODE\n"
+	printf "  oda remote restart --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+		# :command.usage_args
+		printf "%s\n" "Arguments:"
+
+		# :argument.usage
+		printf "  %s\n" "NODE"
+		printf "\n"
+		echo
+
+	fi
+}
+
 # :command.normalize_input
 normalize_input() {
 	local arg flags
@@ -1856,6 +2286,17 @@ inspect_args() {
 }
 
 # :command.command_functions
+
+# :command.function
+oda_config_vscode_command() {
+	# src/config_vscode_command.sh
+	echo "# this file is located in 'src/config_vscode_command.sh'"
+	echo "# code for 'oda config vscode' goes here"
+	echo "# you can edit it freely and regenerate (it will not be overwritten)"
+	inspect_args
+
+}
+
 # :command.function
 oda_start_command() {
 	# src/start_command.sh
@@ -1903,63 +2344,6 @@ oda_logs_command() {
 oda_scaffold_command() {
 	# src/scaffold_command.sh
 	../${POD}/odoo/odoo-bin scaffold ${args[module]} ../${POD}/addons-custom/.
-}
-
-# :command.function
-oda_vscode_command() {
-	# src/vscode_command.sh
-	if [ -z $ODOO_PORT ]; then
-		if [[ -f ".envrc" ]]; then
-			export ODOO_PORT=$(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
-		else
-			export ODOO_PORT=$(grep http_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
-		fi
-	fi
-
-	function launch_json(){
-	[ -z ${2} ] && export PORT=8069 || export PORT=${2}
-	cat <<-_EOF_ | tee .vscode/launch.json > /dev/null
-	{
-		"version": "0.2.0",
-		"configurations": [
-			{
-				"name": "Launch",
-				"type": "python",
-				"request": "launch",
-				"stopOnEntry": false,
-				"python": "\${command:python.interpreterPath}",
-				"program": "\${workspaceRoot}/odoo/odoo-bin",
-				"args": ["-c", "\${workspaceRoot}/conf/odoo.conf","-p","$ODOO_PORT"],
-				"cwd": "\${workspaceRoot}",
-				"env": {},
-				"envFile": "\${workspaceFolder}/.env",
-				"console": "integratedTerminal"
-			}
-		]
-	}
-	_EOF_
-	}
-
-	function settings_json(){
-	[ -z ${2} ] && export PORT=8069 || export PORT=${2}
-	cat <<-_EOF_ | tee .vscode/settings.json > /dev/null
-	{
-		"python.analysis.extraPaths": ["odoo", "enterprise"],
-		"python.linting.pylintEnabled": true,
-		"python.linting.enabled": true,
-		"python.terminal.executeInFileDir": true,
-		"python.formatting.provider": "yapf",
-		"python.formatting.yapfArgs": [
-			"--style",
-			"{allow_split_before_dict_value=False,force_multiline_dict=True,split_before_closing_bracket=True,join_multiple_lines=False}"
-		]
-	}
-	_EOF_
-	}
-
-	mkdir -p .vscode
-	settings_json
-	launch_json
 }
 
 # :command.function
@@ -2641,6 +3025,76 @@ oda_fs_project_update_command() {
 	sudo -u odoo bash -c "cd /share/projects/${args[projectname]}/${args[branch]}/addons && git pull"
 }
 
+# :command.function
+oda_remote_odoo_update_command() {
+	# src/remote_odoo_update_command.sh
+	echo "# this file is located in 'src/remote_odoo_update_command.sh'"
+	echo "# code for 'oda remote odoo update' goes here"
+	echo "# you can edit it freely and regenerate (it will not be overwritten)"
+	inspect_args
+
+}
+
+# :command.function
+oda_remote_project_init_command() {
+	# src/remote_project_init_command.sh
+	echo "# this file is located in 'src/remote_project_init_command.sh'"
+	echo "# code for 'oda remote project init' goes here"
+	echo "# you can edit it freely and regenerate (it will not be overwritten)"
+	inspect_args
+
+}
+
+# :command.function
+oda_remote_project_update_command() {
+	# src/remote_project_update_command.sh
+	echo "# this file is located in 'src/remote_project_update_command.sh'"
+	echo "# code for 'oda remote project update' goes here"
+	echo "# you can edit it freely and regenerate (it will not be overwritten)"
+	inspect_args
+
+}
+
+# :command.function
+oda_remote_mount_command() {
+	# src/remote_mount_command.sh
+	echo "# this file is located in 'src/remote_mount_command.sh'"
+	echo "# code for 'oda remote mount' goes here"
+	echo "# you can edit it freely and regenerate (it will not be overwritten)"
+	inspect_args
+
+}
+
+# :command.function
+oda_remote_start_command() {
+	# src/remote_start_command.sh
+	echo "# this file is located in 'src/remote_start_command.sh'"
+	echo "# code for 'oda remote start' goes here"
+	echo "# you can edit it freely and regenerate (it will not be overwritten)"
+	inspect_args
+
+}
+
+# :command.function
+oda_remote_stop_command() {
+	# src/remote_stop_command.sh
+	echo "# this file is located in 'src/remote_stop_command.sh'"
+	echo "# code for 'oda remote stop' goes here"
+	echo "# you can edit it freely and regenerate (it will not be overwritten)"
+	inspect_args
+
+}
+
+# :command.function
+oda_remote_restart_command() {
+	# src/remote_restart_command.sh
+	echo "# this file is located in 'src/remote_restart_command.sh'"
+	echo "# code for 'oda remote restart' goes here"
+	echo "# you can edit it freely and regenerate (it will not be overwritten)"
+	inspect_args
+
+}
+
 # :command.parse_requirements
 parse_requirements() {
 	# :command.fixed_flags_filter
@@ -2674,6 +3128,13 @@ parse_requirements() {
 	case $action in
 		-*) ;;
 
+		config)
+			action="config"
+			shift
+			oda_config_parse_requirements "$@"
+			shift $#
+			;;
+
 		start)
 			action="start"
 			shift
@@ -2706,13 +3167,6 @@ parse_requirements() {
 			action="scaffold"
 			shift
 			oda_scaffold_parse_requirements "$@"
-			shift $#
-			;;
-
-		vscode)
-			action="vscode"
-			shift
-			oda_vscode_parse_requirements "$@"
 			shift $#
 			;;
 
@@ -2793,6 +3247,13 @@ parse_requirements() {
 			shift $#
 			;;
 
+		remote)
+			action="remote"
+			shift
+			oda_remote_parse_requirements "$@"
+			shift $#
+			;;
+
 		# :command.command_fallback
 		"")
 			oda_usage >&2
@@ -2805,6 +3266,117 @@ parse_requirements() {
 			;;
 
 	esac
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				printf "invalid argument: %s\n" "$key" >&2
+				exit 1
+
+				;;
+
+		esac
+	done
+
+}
+
+# :command.parse_requirements
+oda_config_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_config_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action=${1:-}
+
+	case $action in
+		-*) ;;
+
+		vscode)
+			action="vscode"
+			shift
+			oda_config_vscode_parse_requirements "$@"
+			shift $#
+			;;
+
+		# :command.command_fallback
+		"")
+			oda_config_usage >&2
+			exit 1
+			;;
+
+		*)
+			printf "invalid command: %s\n" "$action" >&2
+			exit 1
+			;;
+
+	esac
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				printf "invalid argument: %s\n" "$key" >&2
+				exit 1
+
+				;;
+
+		esac
+	done
+
+}
+
+# :command.parse_requirements
+oda_config_vscode_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_config_vscode_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="config vscode"
 
 	# :command.parse_requirements_while
 	while [[ $# -gt 0 ]]; do
@@ -3058,50 +3630,6 @@ oda_scaffold_parse_requirements() {
 		printf "missing required argument: MODULE\nusage: oda scaffold MODULE\n" >&2
 		exit 1
 	fi
-
-}
-
-# :command.parse_requirements
-oda_vscode_parse_requirements() {
-	# :command.fixed_flags_filter
-	while [[ $# -gt 0 ]]; do
-		case "${1:-}" in
-			--help | -h)
-				long_usage=yes
-				oda_vscode_usage
-				exit
-				;;
-
-			*)
-				break
-				;;
-
-		esac
-	done
-
-	# :command.command_filter
-	action="vscode"
-
-	# :command.parse_requirements_while
-	while [[ $# -gt 0 ]]; do
-		key="$1"
-		case "$key" in
-
-			-?*)
-				printf "invalid option: %s\n" "$key" >&2
-				exit 1
-				;;
-
-			*)
-				# :command.parse_requirements_case
-				# :command.parse_requirements_case_simple
-				printf "invalid argument: %s\n" "$key" >&2
-				exit 1
-
-				;;
-
-		esac
-	done
 
 }
 
@@ -5786,6 +6314,701 @@ oda_fs_project_update_parse_requirements() {
 
 }
 
+# :command.parse_requirements
+oda_remote_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_remote_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action=${1:-}
+
+	case $action in
+		-*) ;;
+
+		odoo)
+			action="odoo"
+			shift
+			oda_remote_odoo_parse_requirements "$@"
+			shift $#
+			;;
+
+		project)
+			action="project"
+			shift
+			oda_remote_project_parse_requirements "$@"
+			shift $#
+			;;
+
+		mount)
+			action="mount"
+			shift
+			oda_remote_mount_parse_requirements "$@"
+			shift $#
+			;;
+
+		start)
+			action="start"
+			shift
+			oda_remote_start_parse_requirements "$@"
+			shift $#
+			;;
+
+		stop)
+			action="stop"
+			shift
+			oda_remote_stop_parse_requirements "$@"
+			shift $#
+			;;
+
+		restart)
+			action="restart"
+			shift
+			oda_remote_restart_parse_requirements "$@"
+			shift $#
+			;;
+
+		# :command.command_fallback
+		"")
+			oda_remote_usage >&2
+			exit 1
+			;;
+
+		*)
+			printf "invalid command: %s\n" "$action" >&2
+			exit 1
+			;;
+
+	esac
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				printf "invalid argument: %s\n" "$key" >&2
+				exit 1
+
+				;;
+
+		esac
+	done
+
+}
+
+# :command.parse_requirements
+oda_remote_odoo_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_remote_odoo_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action=${1:-}
+
+	case $action in
+		-*) ;;
+
+		update)
+			action="update"
+			shift
+			oda_remote_odoo_update_parse_requirements "$@"
+			shift $#
+			;;
+
+		# :command.command_fallback
+		"")
+			oda_remote_odoo_usage >&2
+			exit 1
+			;;
+
+		*)
+			printf "invalid command: %s\n" "$action" >&2
+			exit 1
+			;;
+
+	esac
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				printf "invalid argument: %s\n" "$key" >&2
+				exit 1
+
+				;;
+
+		esac
+	done
+
+}
+
+# :command.parse_requirements
+oda_remote_odoo_update_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_remote_odoo_update_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="remote odoo update"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				if [[ -z ${args['version']+x} ]]; then
+
+					args['version']=$1
+					shift
+				else
+					printf "invalid argument: %s\n" "$key" >&2
+					exit 1
+				fi
+
+				;;
+
+		esac
+	done
+
+	# :command.required_args_filter
+	if [[ -z ${args['version']+x} ]]; then
+		printf "missing required argument: VERSION\nusage: oda remote odoo update VERSION\n" >&2
+		exit 1
+	fi
+
+	# :command.whitelist_filter
+	if [[ -n ${args['version']} ]] && [[ ! ${args['version']} =~ ^(15|16|17)$ ]]; then
+		printf "%s\n" "version must be one of: 15, 16, 17" >&2
+		exit 1
+	fi
+
+}
+
+# :command.parse_requirements
+oda_remote_project_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_remote_project_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action=${1:-}
+
+	case $action in
+		-*) ;;
+
+		init)
+			action="init"
+			shift
+			oda_remote_project_init_parse_requirements "$@"
+			shift $#
+			;;
+
+		update)
+			action="update"
+			shift
+			oda_remote_project_update_parse_requirements "$@"
+			shift $#
+			;;
+
+		# :command.command_fallback
+		"")
+			oda_remote_project_usage >&2
+			exit 1
+			;;
+
+		*)
+			printf "invalid command: %s\n" "$action" >&2
+			exit 1
+			;;
+
+	esac
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				printf "invalid argument: %s\n" "$key" >&2
+				exit 1
+
+				;;
+
+		esac
+	done
+
+}
+
+# :command.parse_requirements
+oda_remote_project_init_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_remote_project_init_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="remote project init"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				if [[ -z ${args['version']+x} ]]; then
+
+					args['version']=$1
+					shift
+				elif [[ -z ${args['project']+x} ]]; then
+
+					args['project']=$1
+					shift
+				elif [[ -z ${args['branch']+x} ]]; then
+
+					args['branch']=$1
+					shift
+				elif [[ -z ${args['url']+x} ]]; then
+
+					args['url']=$1
+					shift
+				else
+					printf "invalid argument: %s\n" "$key" >&2
+					exit 1
+				fi
+
+				;;
+
+		esac
+	done
+
+	# :command.required_args_filter
+	if [[ -z ${args['version']+x} ]]; then
+		printf "missing required argument: VERSION\nusage: oda remote project init VERSION PROJECT BRANCH URL\n" >&2
+		exit 1
+	fi
+	if [[ -z ${args['project']+x} ]]; then
+		printf "missing required argument: PROJECT\nusage: oda remote project init VERSION PROJECT BRANCH URL\n" >&2
+		exit 1
+	fi
+	if [[ -z ${args['branch']+x} ]]; then
+		printf "missing required argument: BRANCH\nusage: oda remote project init VERSION PROJECT BRANCH URL\n" >&2
+		exit 1
+	fi
+	if [[ -z ${args['url']+x} ]]; then
+		printf "missing required argument: URL\nusage: oda remote project init VERSION PROJECT BRANCH URL\n" >&2
+		exit 1
+	fi
+
+	# :command.whitelist_filter
+	if [[ -n ${args['version']} ]] && [[ ! ${args['version']} =~ ^(15|16|17)$ ]]; then
+		printf "%s\n" "version must be one of: 15, 16, 17" >&2
+		exit 1
+	fi
+
+}
+
+# :command.parse_requirements
+oda_remote_project_update_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_remote_project_update_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="remote project update"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				if [[ -z ${args['project']+x} ]]; then
+
+					args['project']=$1
+					shift
+				elif [[ -z ${args['branch']+x} ]]; then
+
+					args['branch']=$1
+					shift
+				else
+					printf "invalid argument: %s\n" "$key" >&2
+					exit 1
+				fi
+
+				;;
+
+		esac
+	done
+
+	# :command.required_args_filter
+	if [[ -z ${args['project']+x} ]]; then
+		printf "missing required argument: PROJECT\nusage: oda remote project update PROJECT BRANCH\n" >&2
+		exit 1
+	fi
+	if [[ -z ${args['branch']+x} ]]; then
+		printf "missing required argument: BRANCH\nusage: oda remote project update PROJECT BRANCH\n" >&2
+		exit 1
+	fi
+
+}
+
+# :command.parse_requirements
+oda_remote_mount_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_remote_mount_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="remote mount"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				if [[ -z ${args['node']+x} ]]; then
+
+					args['node']=$1
+					shift
+				elif [[ -z ${args['project']+x} ]]; then
+
+					args['project']=$1
+					shift
+				elif [[ -z ${args['branch']+x} ]]; then
+
+					args['branch']=$1
+					shift
+				else
+					printf "invalid argument: %s\n" "$key" >&2
+					exit 1
+				fi
+
+				;;
+
+		esac
+	done
+
+	# :command.required_args_filter
+	if [[ -z ${args['node']+x} ]]; then
+		printf "missing required argument: NODE\nusage: oda remote mount NODE PROJECT BRANCH\n" >&2
+		exit 1
+	fi
+	if [[ -z ${args['project']+x} ]]; then
+		printf "missing required argument: PROJECT\nusage: oda remote mount NODE PROJECT BRANCH\n" >&2
+		exit 1
+	fi
+	if [[ -z ${args['branch']+x} ]]; then
+		printf "missing required argument: BRANCH\nusage: oda remote mount NODE PROJECT BRANCH\n" >&2
+		exit 1
+	fi
+
+}
+
+# :command.parse_requirements
+oda_remote_start_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_remote_start_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="remote start"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				if [[ -z ${args['node']+x} ]]; then
+
+					args['node']=$1
+					shift
+				else
+					printf "invalid argument: %s\n" "$key" >&2
+					exit 1
+				fi
+
+				;;
+
+		esac
+	done
+
+	# :command.required_args_filter
+	if [[ -z ${args['node']+x} ]]; then
+		printf "missing required argument: NODE\nusage: oda remote start NODE\n" >&2
+		exit 1
+	fi
+
+}
+
+# :command.parse_requirements
+oda_remote_stop_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_remote_stop_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="remote stop"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				if [[ -z ${args['node']+x} ]]; then
+
+					args['node']=$1
+					shift
+				else
+					printf "invalid argument: %s\n" "$key" >&2
+					exit 1
+				fi
+
+				;;
+
+		esac
+	done
+
+	# :command.required_args_filter
+	if [[ -z ${args['node']+x} ]]; then
+		printf "missing required argument: NODE\nusage: oda remote stop NODE\n" >&2
+		exit 1
+	fi
+
+}
+
+# :command.parse_requirements
+oda_remote_restart_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_remote_restart_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="remote restart"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				if [[ -z ${args['node']+x} ]]; then
+
+					args['node']=$1
+					shift
+				else
+					printf "invalid argument: %s\n" "$key" >&2
+					exit 1
+				fi
+
+				;;
+
+		esac
+	done
+
+	# :command.required_args_filter
+	if [[ -z ${args['node']+x} ]]; then
+		printf "missing required argument: NODE\nusage: oda remote restart NODE\n" >&2
+		exit 1
+	fi
+
+}
+
 # :command.initialize
 initialize() {
 	version="0.1.0"
@@ -5807,12 +7030,13 @@ run() {
 	parse_requirements "${input[@]}"
 
 	case "$action" in
+		"config") oda_config_command ;;
+		"config vscode") oda_config_vscode_command ;;
 		"start") oda_start_command ;;
 		"stop") oda_stop_command ;;
 		"restart") oda_restart_command ;;
 		"logs") oda_logs_command ;;
 		"scaffold") oda_scaffold_command ;;
-		"vscode") oda_vscode_command ;;
 		"init") oda_init_command ;;
 		"install") oda_install_command ;;
 		"upgrade") oda_upgrade_command ;;
@@ -5847,6 +7071,16 @@ run() {
 		"fs project") oda_fs_project_command ;;
 		"fs project init") oda_fs_project_init_command ;;
 		"fs project update") oda_fs_project_update_command ;;
+		"remote") oda_remote_command ;;
+		"remote odoo") oda_remote_odoo_command ;;
+		"remote odoo update") oda_remote_odoo_update_command ;;
+		"remote project") oda_remote_project_command ;;
+		"remote project init") oda_remote_project_init_command ;;
+		"remote project update") oda_remote_project_update_command ;;
+		"remote mount") oda_remote_mount_command ;;
+		"remote start") oda_remote_start_command ;;
+		"remote stop") oda_remote_stop_command ;;
+		"remote restart") oda_remote_restart_command ;;
 	esac
 }
 

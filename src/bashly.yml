@@ -8,6 +8,12 @@ environment_variables:
     default: ${PWD##*/}
 
 commands:
+  - name: config
+    help: additional config options
+    commands:
+      - name: vscode
+        help: Setup vscode settings and launch json files
+
   - name: start
     help: Start the instance
 
@@ -41,9 +47,6 @@ commands:
 
     examples:
       - oda scaffold module_ext
-
-  - name: vscode
-    help: Setup vscode settings and launch json files
 
   - name: init
     help: initialize the database
@@ -212,7 +215,6 @@ commands:
 
   - name: project
     help: Project level commands [CAUTION]
-
     commands:
       - name: init
         help: Create a new project specifying Odoo version, Odoo Port, PostgreSQL port
@@ -460,3 +462,68 @@ commands:
               - name: branch
                 help: Project Branch
                 required: true
+
+  - name: remote
+    help: manage remote servers via ssh commands
+    commands:
+      - name: odoo
+        help: manage odoo repositories on odoofs
+        commands:
+          - name: update
+            help: pull latest odoo code
+            args:
+              - name: version
+                required: true
+                allowed:
+                  - "15"
+                  - "16"
+                  - "17"
+      - name: project
+        help: manage project code on odoofs
+        commands:
+          - name: init
+            help: initialize the project and git clone from project repo
+            args:
+              - name: version
+                required: true
+                allowed:
+                  - "15"
+                  - "16"
+                  - "17"
+              - name: project
+                required: true
+              - name: branch
+                required: true
+              - name: url
+                required: true
+          - name: update
+            help: git pull update from project repo
+            args:
+              - name: project
+                required: true
+              - name: branch
+                required: true
+      - name: mount
+        help: mounts project on target node
+        args:
+          - name: node
+            required: true
+          - name: project
+            required: true
+          - name: branch
+            required: true
+      - name: start
+        help: start odoo service on target node
+        args:
+          - name: node
+            required: true
+      - name: stop
+        help: stop odoo service on target node
+        args:
+          - name: node
+            required: true
+      - name: restart
+        help: restart odoo service on target node
+        args:
+          - name: node
+            required: true

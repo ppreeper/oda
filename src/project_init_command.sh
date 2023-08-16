@@ -12,7 +12,7 @@ _EOF_
 function configfile(){
 cat <<-_EOF_ | tee conf/odoo.conf > /dev/null
 [options]
-addons_path = ./odoo/addons,./enterprise,./addons-purchased,./addons-custom
+addons_path = ./odoo/addons,./enterprise,./addons
 admin_passwd = adminadmin
 without_demo = all
 csv_internal_sep = ;
@@ -105,7 +105,7 @@ _EOF_
 
 envrc ${args[version]} ${args[oport]}
 direnv allow >/dev/null
-mkdir -p conf data backups addons-custom addons-purchased
+mkdir -p conf data backups addons
 ODOO_C=$(grep ODOO_C .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
 ODOO_E=$(grep ODOO_E .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
 if [ -L "odoo" ]; then rm -f odoo ; fi
