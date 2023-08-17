@@ -1921,7 +1921,7 @@ oda_remote_odoo_update_usage() {
 	fi
 
 	printf "%s\n" "Usage:"
-	printf "  oda remote odoo update VERSION\n"
+	printf "  oda remote odoo update VERSION [REMOTE]\n"
 	printf "  oda remote odoo update --help | -h\n"
 	echo
 
@@ -1941,6 +1941,12 @@ oda_remote_odoo_update_usage() {
 		printf "  %s\n" "VERSION"
 		printf "\n"
 		printf "    Allowed: 15, 16, 17\n"
+		echo
+
+		# :argument.usage
+		printf "  %s\n" "REMOTE"
+		printf "\n"
+		printf "    Default: odoofs\n"
 		echo
 
 	fi
@@ -2487,7 +2493,7 @@ oda_project_init_command() {
 	function configfile(){
 	cat <<-_EOF_ | tee conf/odoo.conf > /dev/null
 	[options]
-	addons_path = ./odoo/addons,./enterprise,./addons-purchased,./addons-custom
+	addons_path = ./odoo/addons,./enterprise,./addons
 	admin_passwd = adminadmin
 	without_demo = all
 	csv_internal_sep = ;
@@ -2580,7 +2586,7 @@ oda_project_init_command() {
 
 	envrc ${args[version]} ${args[oport]}
 	direnv allow >/dev/null
-	mkdir -p conf data backups addons-custom addons-purchased
+	mkdir -p conf data backups addons
 	ODOO_C=$(grep ODOO_C .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
 	ODOO_E=$(grep ODOO_E .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
 	if [ -L "odoo" ]; then rm -f odoo ; fi
@@ -2911,7 +2917,7 @@ oda_node_systemd_command() {
 	cat <<-_EOF_ | sudo tee /etc/systemd/system/odoo.service > /dev/null
 	[Unit]
 	Description=Odoo
-	After=network.target
+	After=remote-fs.target
 
 	[Service]
 	Type=simple
@@ -2923,7 +2929,7 @@ oda_node_systemd_command() {
 	StandardOutput=journal+console
 
 	[Install]
-	WantedBy=multi-user.target
+	WantedBy=remote-fs.target
 	_EOF_
 	}
 
@@ -3028,11 +3034,7 @@ oda_fs_project_update_command() {
 # :command.function
 oda_remote_odoo_update_command() {
 	# src/remote_odoo_update_command.sh
-	echo "# this file is located in 'src/remote_odoo_update_command.sh'"
-	echo "# code for 'oda remote odoo update' goes here"
-	echo "# you can edit it freely and regenerate (it will not be overwritten)"
-	inspect_args
-
+	ssh ${args[remote]} oda fs odoo update ${args[version]}
 }
 
 # :command.function
@@ -6521,6 +6523,10 @@ oda_remote_odoo_update_parse_requirements() {
 
 					args['version']=$1
 					shift
+				elif [[ -z ${args['remote']+x} ]]; then
+
+					args['remote']=$1
+					shift
 				else
 					printf "invalid argument: %s\n" "$key" >&2
 					exit 1
@@ -6533,9 +6539,12 @@ oda_remote_odoo_update_parse_requirements() {
 
 	# :command.required_args_filter
 	if [[ -z ${args['version']+x} ]]; then
-		printf "missing required argument: VERSION\nusage: oda remote odoo update VERSION\n" >&2
+		printf "missing required argument: VERSION\nusage: oda remote odoo update VERSION [REMOTE]\n" >&2
 		exit 1
 	fi
+
+	# :command.default_assignments
+	[[ -n ${args['remote']:-} ]] || args['remote']="odoofs"
 
 	# :command.whitelist_filter
 	if [[ -n ${args['version']} ]] && [[ ! ${args['version']} =~ ^(15|16|17)$ ]]; then

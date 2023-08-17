@@ -478,6 +478,8 @@ commands:
                   - "15"
                   - "16"
                   - "17"
+              - name: remote
+                default: odoofs
       - name: project
         help: manage project code on odoofs
         commands:
