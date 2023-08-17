@@ -49,6 +49,7 @@ oda_usage() {
 	printf "  %s   Restore database and filestore or addons\n" "restore "
 	printf "  %s   Admin user management\n" "admin   "
 	printf "  %s   Project level commands [CAUTION]\n" "project "
+	printf "  %s   Odoo community and enterprise repository management\n" "repo    "
 	printf "  %s   node management commands\n" "node    "
 	printf "  %s   odoofs server management commands\n" "fs      "
 	printf "  %s   manage remote servers via ssh commands\n" "remote  "
@@ -893,6 +894,15 @@ oda_project_usage() {
 		printf "    Show this help\n"
 		echo
 
+		# :command.usage_environment_variables
+		printf "%s\n" "Environment Variables:"
+
+		# :environment_variable.usage
+		printf "  %s\n" "ODOOBASE"
+		printf "\n"
+		printf "    Default: ${HOME}/workspace/repos/odoo\n"
+		echo
+
 	fi
 }
 
@@ -909,7 +919,7 @@ oda_project_init_usage() {
 	fi
 
 	printf "%s\n" "Usage:"
-	printf "  oda project init VERSION [OPORT] [PGPORT]\n"
+	printf "  oda project init VERSION PROJECTNAME [OPORT] [PGPORT]\n"
 	printf "  oda project init --help | -h\n"
 	echo
 
@@ -929,6 +939,11 @@ oda_project_init_usage() {
 		printf "  %s\n" "VERSION"
 		printf "    Odoo Version\n"
 		printf "    Allowed: 15, 16, 17\n"
+		echo
+
+		# :argument.usage
+		printf "  %s\n" "PROJECTNAME"
+		printf "    name of the project\n"
 		echo
 
 		# :argument.usage
@@ -966,7 +981,7 @@ oda_project_branch_usage() {
 	fi
 
 	printf "%s\n" "Usage:"
-	printf "  oda project branch VERSION PROJECT URL BRANCH [OPORT] [PGPORT]\n"
+	printf "  oda project branch VERSION PROJECTNAME BRANCH URL [OPORT] [PGPORT]\n"
 	printf "  oda project branch --help | -h\n"
 	echo
 
@@ -989,18 +1004,18 @@ oda_project_branch_usage() {
 		echo
 
 		# :argument.usage
-		printf "  %s\n" "PROJECT"
+		printf "  %s\n" "PROJECTNAME"
 		printf "    name of the project\n"
-		echo
-
-		# :argument.usage
-		printf "  %s\n" "URL"
-		printf "    url of the repository\n"
 		echo
 
 		# :argument.usage
 		printf "  %s\n" "BRANCH"
 		printf "    branch to pull from the repository\n"
+		echo
+
+		# :argument.usage
+		printf "  %s\n" "URL"
+		printf "    url of the repository\n"
 		echo
 
 		# :argument.usage
@@ -1143,6 +1158,130 @@ oda_project_destroy_usage() {
 		# :command.usage_examples
 		printf "%s\n" "Examples:"
 		printf "  oda project destroy\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_repo_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda repo - Odoo community and enterprise repository management\n"
+		echo
+
+	else
+		printf "oda repo - Odoo community and enterprise repository management\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda repo COMMAND\n"
+	printf "  oda repo [COMMAND] --help | -h\n"
+	echo
+	# :command.usage_commands
+	printf "%s\n" "Commands:"
+	printf "  %s   initialize Odoo source repository\n" "init  "
+	printf "  %s   update Odoo source repository\n" "update"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+		# :command.usage_environment_variables
+		printf "%s\n" "Environment Variables:"
+
+		# :environment_variable.usage
+		printf "  %s\n" "ODOOBASE"
+		printf "\n"
+		printf "    Default: ${HOME}/workspace/repos/odoo\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_repo_init_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda repo init - initialize Odoo source repository\n"
+		echo
+
+	else
+		printf "oda repo init - initialize Odoo source repository\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda repo init VERSION [GITBRANCH]\n"
+	printf "  oda repo init --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+		# :command.usage_args
+		printf "%s\n" "Arguments:"
+
+		# :argument.usage
+		printf "  %s\n" "VERSION"
+		printf "    Odoo Version\n"
+		printf "    Allowed: 15, 16, 17\n"
+		echo
+
+		# :argument.usage
+		printf "  %s\n" "GITBRANCH"
+		printf "    Odoo branch\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_repo_update_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda repo update - update Odoo source repository\n"
+		echo
+
+	else
+		printf "oda repo update - update Odoo source repository\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda repo update VERSION\n"
+	printf "  oda repo update --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+		# :command.usage_args
+		printf "%s\n" "Arguments:"
+
+		# :argument.usage
+		printf "  %s\n" "VERSION"
+		printf "    Odoo Version\n"
+		printf "    Allowed: 15, 16, 17\n"
 		echo
 
 	fi
@@ -2401,183 +2540,242 @@ oda_config_vscode_command() {
 # :command.function
 oda_config_pyright_command() {
 	# src/config_pyright_command.sh
-	echo "# this file is located in 'src/config_pyright_command.sh'"
-	echo "# code for 'oda config pyright' goes here"
-	echo "# you can edit it freely and regenerate (it will not be overwritten)"
-	inspect_args
-
+	function launch_json(){
+	cat <<-_EOF_ | tee pyrightconfig.json > /dev/null
+	{
+		"executionEnvironments": [
+			{
+				"root": "addons",
+				"extraPaths": ["odoo", "enterprise"]
+			}
+		]
+	}
+	_EOF_
+	}
 }
 
 # :command.function
 oda_start_command() {
 	# src/start_command.sh
-	if [ -z $ODOO_PORT ]; then
-		if [[ -f ".envrc" ]]; then
-			export ODOO_PORT=$(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
-		else
-			export ODOO_PORT=$(grep http_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+	if [[ -f "./conf/odoo.conf" ]]; then
+		if [ -z $ODOO_PORT ]; then
+			if [[ -f ".envrc" ]]; then
+				export ODOO_PORT=$(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
+			else
+				export ODOO_PORT=$(grep http_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+			fi
 		fi
+		truncate -s 0 odoo.log
+		nohup ../${POD}/odoo/odoo-bin -c conf/odoo.conf --http-port ${ODOO_PORT} > /dev/null 2>&1 & disown
+	else
+		echo "not in a project directory"
 	fi
-	truncate -s 0 odoo.log
-	nohup ../${POD}/odoo/odoo-bin -c conf/odoo.conf --http-port ${ODOO_PORT} > /dev/null 2>&1 & disown
 }
 
 # :command.function
 oda_stop_command() {
 	# src/stop_command.sh
-	pkill -f "${POD}/odoo/odoo-bin"
+	if [[ -f "./conf/odoo.conf" ]]; then
+		pkill -f "${POD}/odoo/odoo-bin"
+	else
+		echo "not in a project directory"
+	fi
 }
 
 # :command.function
 oda_restart_command() {
 	# src/restart_command.sh
-	if [ -z $ODOO_PORT ]; then
-		if [[ -f ".envrc" ]]; then
-			export ODOO_PORT=$(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
-		else
-			export ODOO_PORT=$(grep http_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+	if [[ -f "./conf/odoo.conf" ]]; then
+		if [ -z $ODOO_PORT ]; then
+			if [[ -f ".envrc" ]]; then
+				export ODOO_PORT=$(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
+			else
+				export ODOO_PORT=$(grep http_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+			fi
 		fi
+		pkill -f "${POD}/odoo/odoo-bin"
+		sleep 2
+		truncate -s 0 odoo.log
+		nohup ../${POD}/odoo/odoo-bin -c conf/odoo.conf --http-port ${ODOO_PORT} > /dev/null 2>&1 & disown
+	else
+		echo "not in a project directory"
 	fi
-	pkill -f "${POD}/odoo/odoo-bin"
-	sleep 2
-	truncate -s 0 odoo.log
-	nohup ../${POD}/odoo/odoo-bin -c conf/odoo.conf --http-port ${ODOO_PORT} > /dev/null 2>&1 & disown
 }
 
 # :command.function
 oda_logs_command() {
 	# src/logs_command.sh
-	LOG=$(grep logfile conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
-	tail -f ${LOG}
+	if [[ -f "./conf/odoo.conf" ]]; then
+		LOG=$(grep logfile ./conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+		tail -f ${LOG}
+	else
+		echo "not in a project directory"
+	fi
 }
 
 # :command.function
 oda_scaffold_command() {
 	# src/scaffold_command.sh
-	../${POD}/odoo/odoo-bin scaffold ${args[module]} ../${POD}/addons-custom/.
+	if [[ -f "./conf/odoo.conf" ]]; then
+		../${POD}/odoo/odoo-bin scaffold ${args[module]} ../${POD}/addons-custom/.
+	else
+		echo "not in a project directory"
+	fi
 }
 
 # :command.function
 oda_init_command() {
 	# src/init_command.sh
-	if [ -z $ODOO_PORT ]; then
-		if [[ -f ".envrc" ]]; then
-			export ODOO_PORT=$(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
-		else
-			export ODOO_PORT=$(grep http_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+	if [[ -f "./conf/odoo.conf" ]]; then
+		if [ -z $ODOO_PORT ]; then
+			if [[ -f ".envrc" ]]; then
+				export ODOO_PORT=$(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
+			else
+				export ODOO_PORT=$(grep http_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+			fi
 		fi
+		odoo/odoo-bin -c conf/odoo.conf --no-http --stop-after-init -d ${args[--name]} -i ${args[modules]}
+		pkill -f "${POD}/odoo/odoo-bin"
+		sleep 2
+		truncate -s 0 odoo.log
+		nohup ../${POD}/odoo/odoo-bin -c conf/odoo.conf --http-port ${ODOO_PORT} > /dev/null 2>&1 & disown
+	else
+		echo "not in a project directory"
 	fi
-	odoo/odoo-bin -c conf/odoo.conf --no-http --stop-after-init -d ${args[--name]} -i ${args[modules]}
-	pkill -f "${POD}/odoo/odoo-bin"
-	sleep 2
-	truncate -s 0 odoo.log
-	nohup ../${POD}/odoo/odoo-bin -c conf/odoo.conf --http-port ${ODOO_PORT} > /dev/null 2>&1 & disown
-
 }
 
 # :command.function
 oda_install_command() {
 	# src/install_command.sh
-	if [ -z $ODOO_PORT ]; then
-		if [[ -f ".envrc" ]]; then
-			export ODOO_PORT=$(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
-		else
-			export ODOO_PORT=$(grep http_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+	if [[ -f "./conf/odoo.conf" ]]; then
+		if [ -z $ODOO_PORT ]; then
+			if [[ -f ".envrc" ]]; then
+				export ODOO_PORT=$(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
+			else
+				export ODOO_PORT=$(grep http_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+			fi
 		fi
+		odoo/odoo-bin -c conf/odoo.conf --no-http --stop-after-init -d ${args[--name]} -i ${args[modules]}
+		pkill -f "${POD}/odoo/odoo-bin"
+		sleep 2
+		truncate -s 0 odoo.log
+		nohup ../${POD}/odoo/odoo-bin -c conf/odoo.conf --http-port ${ODOO_PORT} > /dev/null 2>&1 & disown
+	else
+		echo "not in a project directory"
 	fi
-	odoo/odoo-bin -c conf/odoo.conf --no-http --stop-after-init -d ${args[--name]} -i ${args[modules]}
-	pkill -f "${POD}/odoo/odoo-bin"
-	sleep 2
-	truncate -s 0 odoo.log
-	nohup ../${POD}/odoo/odoo-bin -c conf/odoo.conf --http-port ${ODOO_PORT} > /dev/null 2>&1 & disown
-
 }
 
 # :command.function
 oda_upgrade_command() {
 	# src/upgrade_command.sh
-	if [ -z $ODOO_PORT ]; then
-		if [[ -f ".envrc" ]]; then
-			export ODOO_PORT=$(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
-		else
-			export ODOO_PORT=$(grep http_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+	if [[ -f "./conf/odoo.conf" ]]; then
+		if [ -z $ODOO_PORT ]; then
+			if [[ -f ".envrc" ]]; then
+				export ODOO_PORT=$(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
+			else
+				export ODOO_PORT=$(grep http_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+			fi
 		fi
+		odoo/odoo-bin -c conf/odoo.conf --no-http --stop-after-init -d ${args[--name]} -u ${args[modules]}
+		pkill -f "${POD}/odoo/odoo-bin"
+		sleep 2
+		truncate -s 0 odoo.log
+		nohup ../${POD}/odoo/odoo-bin -c conf/odoo.conf --http-port ${ODOO_PORT} > /dev/null 2>&1 & disown
+	else
+		echo "not in a project directory"
 	fi
-	odoo/odoo-bin -c conf/odoo.conf --no-http --stop-after-init -d ${args[--name]} -u ${args[modules]}
-	pkill -f "${POD}/odoo/odoo-bin"
-	sleep 2
-	truncate -s 0 odoo.log
-	nohup ../${POD}/odoo/odoo-bin -c conf/odoo.conf --http-port ${ODOO_PORT} > /dev/null 2>&1 & disown
-
 }
 
 # :command.function
 oda_psql_command() {
 	# src/psql_command.sh
-	psql postgres://${args[--user]}:${args[--pass]}@${args[--host]}:${args[--port]}/${args[--name]}
+	if [[ -f "./conf/odoo.conf" ]]; then
+		psql postgres://${args[--user]}:${args[--pass]}@${args[--host]}:${args[--port]}/${args[--name]}
+	else
+		echo "not in a project directory"
+	fi
 }
 
 # :command.function
 oda_query_command() {
 	# src/query_command.sh
-	if [ -z $ODOO_PORT ]; then
-		if [[ -f ".envrc" ]]; then
-			export ODOO_PORT=$(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
-		else
-			export ODOO_PORT=$(grep http_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+	if [[ -f "./conf/odoo.conf" ]]; then
+		if [ -z $ODOO_PORT ]; then
+			if [[ -f ".envrc" ]]; then
+				export ODOO_PORT=$(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
+			else
+				export ODOO_PORT=$(grep http_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+			fi
 		fi
+
+		EXEC="odooquery -host localhost -port ${ODOO_PORT} -d ${args[--db_name]} -U ${args[-U]} -P ${args[-P]} -model ${args[model]}"
+		[ -z ${args[--filter]} ] || EXEC="${EXEC} -filter \"${args[--filter]}\""
+		[ -z ${args[--fields]} ] || EXEC="${EXEC} -fields ${args[--fields]}"
+		[ -z ${args[--limit]} ] || EXEC="${EXEC} -limit ${args[--limit]}"
+		[ -z ${args[--offset]} ] || EXEC="${EXEC} -offset ${args[--offset]}"
+		[ -z ${args[--count]} ] || EXEC="${EXEC} -count"
+		${EXEC}
+	else
+		echo "not in a project directory"
 	fi
-
-	EXEC="odooquery -host localhost -port ${ODOO_PORT} -d ${args[--db_name]} -U ${args[-U]} -P ${args[-P]} -model ${args[model]}"
-	[ -z ${args[--filter]} ] || EXEC="${EXEC} -filter \"${args[--filter]}\""
-	[ -z ${args[--fields]} ] || EXEC="${EXEC} -fields ${args[--fields]}"
-	[ -z ${args[--limit]} ] || EXEC="${EXEC} -limit ${args[--limit]}"
-	[ -z ${args[--offset]} ] || EXEC="${EXEC} -offset ${args[--offset]}"
-	[ -z ${args[--count]} ] || EXEC="${EXEC} -count"
-	${EXEC}
-
 }
 
 # :command.function
 oda_backup_command() {
 	# src/backup_command.sh
-	BASE=`dirname "${0}"`
-	python3 -B ${BASE}/oda_db.py -b
+	if [[ -f "./conf/odoo.conf" ]]; then
+		BASE=`dirname "${0}"`
+		python3 -B ${BASE}/oda_db.py -b
+	else
+		echo "not in a project directory"
+	fi
 }
 
 # :command.function
 oda_restore_command() {
 	# src/restore_command.sh
-	BASE=`dirname "${0}"`
-	for bfile in ${args[file]}
-	do
-		python3 -B ${BASE}/oda_db.py -r -d "${bfile}"
-	done
+	if [[ -f "./conf/odoo.conf" ]]; then
+		BASE=`dirname "${0}"`
+		for bfile in ${args[file]}
+		do
+			python3 -B ${BASE}/oda_db.py -r -d "${bfile}"
+		done
+	else
+		echo "not in a project directory"
+	fi
 }
 
 # :command.function
 oda_admin_user_command() {
 	# src/admin_user_command.sh
-	if [ -z "${args[admin_name]}" ]; then
-		admin_user=$(psql postgres://${args[--db_user]}:${args[--db_pass]}@${args[--host]}:${args[--port]}/${args[--db_name]} -t -c "select login from res_users where id=2;")
-		echo "Odoo Admin username: $(echo $admin_user || awk '{print $1}')"
-	else
-		read -r -p "Are you sure you want to change the admin username to: ${args[admin_name]} [YES/N] " response
-		if [[ "$response" =~ ^(YES)$ ]]; then
-		echo "changing username to: ${args[admin_name]}"
-		admin_user=$(psql postgres://${args[--db_user]}:${args[--db_pass]}@${args[--host]}:${args[--port]}/${args[--db_name]} -t -c "update res_users set login='${args[admin_name]}' where id=2;")
+	if [[ -f "./conf/odoo.conf" ]]; then
+		if [ -z "${args[admin_name]}" ]; then
+			admin_user=$(psql postgres://${args[--db_user]}:${args[--db_pass]}@${args[--host]}:${args[--port]}/${args[--db_name]} -t -c "select login from res_users where id=2;")
+			echo "Odoo Admin username: $(echo $admin_user || awk '{print $1}')"
+		else
+			read -r -p "Are you sure you want to change the admin username to: ${args[admin_name]} [YES/N] " response
+			if [[ "$response" =~ ^(YES)$ ]]; then
+			echo "changing username to: ${args[admin_name]}"
+			admin_user=$(psql postgres://${args[--db_user]}:${args[--db_pass]}@${args[--host]}:${args[--port]}/${args[--db_name]} -t -c "update res_users set login='${args[admin_name]}' where id=2;")
+			fi
 		fi
+	else
+		echo "not in a project directory"
 	fi
 }
 
 # :command.function
 oda_admin_password_command() {
 	# src/admin_password_command.sh
-	read -r -p "Are you sure you want to change the admin password [YES/N] " response
-	if [[ "$response" =~ ^(YES)$ ]]; then
-		BASE=`dirname "${0}"`
-		admin_password=$(python3 -B ${BASE}/oda_db.py -p ${args[admin_password]})
-		psql postgres://${args[--db_user]}:${args[--db_pass]}@${args[--host]}:${args[--port]}/${args[--db_name]} -t -c "update res_users set password='${admin_password}' where id=2;" >/dev/null
+	if [[ -f "./conf/odoo.conf" ]]; then
+		read -r -p "Are you sure you want to change the admin password [YES/N] " response
+		if [[ "$response" =~ ^(YES)$ ]]; then
+			BASE=`dirname "${0}"`
+			admin_password=$(python3 -B ${BASE}/oda_db.py -p ${args[admin_password]})
+			psql postgres://${args[--db_user]}:${args[--db_pass]}@${args[--host]}:${args[--port]}/${args[--db_name]} -t -c "update res_users set password='${admin_password}' where id=2;" >/dev/null
+		fi
+	else
+		echo "not in a project directory"
 	fi
 }
 
@@ -2590,130 +2788,8 @@ oda_project_init_command() {
 	layout python3
 	export ODOO_V=${1}.0
 	export ODOO_PORT=${PORT}
-	export ODOO_C=${HOME}/workspace/repos/${1}.0/odoo
-	export ODOO_E=${HOME}/workspace/repos/${1}.0/enterprise
-	_EOF_
-	}
-
-	function configfile(){
-	cat <<-_EOF_ | tee conf/odoo.conf > /dev/null
-	[options]
-	addons_path = ./odoo/addons,./enterprise,./addons
-	admin_passwd = adminadmin
-	without_demo = all
-	csv_internal_sep = ;
-	data_dir = ./data
-	db_host = ${IPV4}
-	db_port = 5432
-	db_maxconn = 24
-	db_user = odoo${1}
-	db_password = odooodoo
-	db_name = ${POD}
-	db_template = template0
-	db_sslmode = disable
-	list_db = False
-	workers = 0
-	#max_cron_threads = 2
-	http_enable = True
-	http_interface =
-	http_port = 8069
-	reportgz = False
-	server_wide_modules = base,web
-	logfile = ./odoo.log
-	log_level = debug
-	logrotate = True
-	# log_handler = werkzeug:CRITICAL,odoo.api:DEBUG
-	# log_db_level = warning
-	_EOF_
-	}
-
-	function pipfile(){
-	cat <<-_EOF_ | tee Pipfile > /dev/null
-	[[source]]
-	url = "https://pypi.org/simple"
-	verify_ssl = true
-	name = "pypi"
-
-	[packages]
-	babel = "==2.9.1"
-	chardet = "==3.0.4"
-	cryptography = "==2.6.1"
-	decorator = "==4.4.2"
-	docutils = "==0.16"
-	ebaysdk = "==2.1.5"
-	freezegun = "==0.3.15"
-	gevent = "==21.8.0"
-	google-auth = "==2.17.*"
-	greenlet = "==1.1.*"
-	idna = "==2.8"
-	jinja2 = "==2.11.3"
-	libsass = "==0.18.0"
-	lxml = "==4.6.5"
-	markupsafe = "==1.1.0"
-	num2words = "==0.5.6"
-	ofxparse = "==0.21"
-	passlib = "==1.7.3"
-	pillow = "==9.0.1"
-	polib = "==1.1.0"
-	"pdfminer.six" = "*"
-	psutil = "==5.6.7"
-	psycopg2-binary = "2.9.5"
-	pydot = "==1.4.1"
-	pyopenssl = "==19.0.0"
-	pypdf2 = "==1.26.0"
-	pyserial = "==3.4"
-	python-dateutil = "==2.8.2"
-	python-stdnum = "==1.13"
-	pytz = "*"
-	pyusb = "==1.0.2"
-	qrcode = "==6.1"
-	reportlab = "==3.5.59"
-	requests = "==2.25.1"
-	urllib3 = "==1.26.5"
-	vobject = "==0.9.6.1"
-	werkzeug = "==2.0.3"
-	xlrd = "==1.2.0"
-	xlsxwriter = "==1.1.2"
-	xlwt = "==1.3.*"
-	zeep = "==3.4.0"
-	paramiko = "==2.12.0"
-
-	[dev-packages]
-	black="*"
-	yapf="*"
-	pylint="*"
-	pylint-odoo="*"
-
-	[requires]
-	python_version = "3"
-	_EOF_
-	}
-
-	envrc ${args[version]} ${args[oport]}
-	direnv allow >/dev/null
-	mkdir -p conf data backups addons
-	ODOO_C=$(grep ODOO_C .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
-	ODOO_E=$(grep ODOO_E .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
-	if [ -L "odoo" ]; then rm -f odoo ; fi
-	ln -f -s ${ODOO_C} odoo
-	if [ -L "enterprise" ]; then rm -f enterprise ; fi
-	ln -f -s ${ODOO_E} enterprise
-	configfile ${args[version]}
-	pipfile
-	printf "To install python dev dependencies run:\npipenv install --dev\n\n"
-}
-
-# :command.function
-oda_project_branch_command() {
-	# src/project_branch_command.sh
-	function envrc(){
-	[ -z ${2} ] && export PORT=8069 || export PORT=${2}
-	cat <<-_EOF_ | tee .envrc > /dev/null
-	layout python3
-	export ODOO_V=${1}.0
-	export ODOO_PORT=${PORT}
-	export ODOO_C=${HOME}/workspace/repos/${1}.0/odoo
-	export ODOO_E=${HOME}/workspace/repos/${1}.0/enterprise
+	export ODOO_C=${ODOOBASE}/${1}.0/odoo
+	export ODOO_E=${ODOOBASE}/${1}.0/enterprise
 	_EOF_
 	}
 
@@ -2811,7 +2887,132 @@ oda_project_branch_command() {
 	_EOF_
 	}
 
-	PDIR=${HOME}/workspace/odoo/${args[project]}_${args[branch]}
+	PDIR=${HOME}/workspace/odoo/${args[projectname]}
+	mkdir -p ${PDIR}
+	cd ${PDIR}
+	envrc ${args[version]} ${args[oport]}
+	direnv allow >/dev/null
+	mkdir -p conf data backups addons
+	ODOO_C=$(grep ODOO_C .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
+	ODOO_E=$(grep ODOO_E .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
+	if [ -L "odoo" ]; then rm -f odoo ; fi
+	ln -f -s ${ODOO_C} odoo
+	if [ -L "enterprise" ]; then rm -f enterprise ; fi
+	ln -f -s ${ODOO_E} enterprise
+	configfile ${args[version]} ${args[projectname]}
+	pipfile
+	printf "To install python dev dependencies run:\npipenv install --dev\n\n"
+}
+
+# :command.function
+oda_project_branch_command() {
+	# src/project_branch_command.sh
+	function envrc(){
+	[ -z ${2} ] && export PORT=8069 || export PORT=${2}
+	cat <<-_EOF_ | tee .envrc > /dev/null
+	layout python3
+	export ODOO_V=${1}.0
+	export ODOO_PORT=${PORT}
+	export ODOO_C=${ODOOBASE}/${1}.0/odoo
+	export ODOO_E=${ODOOBASE}/${1}.0/enterprise
+	_EOF_
+	}
+
+	function configfile(){
+	cat <<-_EOF_ | tee conf/odoo.conf > /dev/null
+	[options]
+	addons_path = ./odoo/addons,./enterprise,./addons
+	admin_passwd = adminadmin
+	without_demo = all
+	csv_internal_sep = ;
+	data_dir = ./data
+	db_host = ${IPV4}
+	db_port = 5432
+	db_maxconn = 24
+	db_user = odoo${1}
+	db_password = odooodoo
+	db_name = ${2}
+	db_template = template0
+	db_sslmode = disable
+	list_db = False
+	workers = 0
+	#max_cron_threads = 2
+	http_enable = True
+	http_interface =
+	http_port = 8069
+	reportgz = False
+	server_wide_modules = base,web
+	logfile = ./odoo.log
+	log_level = debug
+	logrotate = True
+	# log_handler = werkzeug:CRITICAL,odoo.api:DEBUG
+	# log_db_level = warning
+	_EOF_
+	}
+
+	function pipfile(){
+	cat <<-_EOF_ | tee Pipfile > /dev/null
+	[[source]]
+	url = "https://pypi.org/simple"
+	verify_ssl = true
+	name = "pypi"
+
+	[packages]
+	babel = "==2.9.1"
+	chardet = "==3.0.4"
+	cryptography = "==2.6.1"
+	decorator = "==4.4.2"
+	docutils = "==0.16"
+	ebaysdk = "==2.1.5"
+	freezegun = "==0.3.15"
+	gevent = "==21.8.0"
+	google-auth = "==2.17.*"
+	greenlet = "==1.1.*"
+	idna = "==2.8"
+	jinja2 = "==2.11.3"
+	libsass = "==0.18.0"
+	lxml = "==4.6.5"
+	markupsafe = "==1.1.0"
+	num2words = "==0.5.6"
+	ofxparse = "==0.21"
+	passlib = "==1.7.3"
+	pillow = "==9.0.1"
+	polib = "==1.1.0"
+	"pdfminer.six" = "*"
+	psutil = "==5.6.7"
+	psycopg2-binary = "2.9.5"
+	pydot = "==1.4.1"
+	pyopenssl = "==19.0.0"
+	pypdf2 = "==1.26.0"
+	pyserial = "==3.4"
+	python-dateutil = "==2.8.2"
+	python-stdnum = "==1.13"
+	pytz = "*"
+	pyusb = "==1.0.2"
+	qrcode = "==6.1"
+	reportlab = "==3.5.59"
+	requests = "==2.25.1"
+	urllib3 = "==1.26.5"
+	vobject = "==0.9.6.1"
+	werkzeug = "==2.0.3"
+	xlrd = "==1.2.0"
+	xlsxwriter = "==1.1.2"
+	xlwt = "==1.3.*"
+	zeep = "==3.4.0"
+	paramiko = "==2.12.0"
+
+	[dev-packages]
+	black="*"
+	yapf="*"
+	pylint="*"
+	pylint-odoo="*"
+
+	[requires]
+	python_version = "3"
+	_EOF_
+	}
+
+	PDIR=${HOME}/workspace/odoo/${args[projectname]}_${args[branch]}
 	mkdir -p ${PDIR}
 	cd ${PDIR}
 	envrc ${args[version]} ${args[oport]}
@@ -2824,7 +3025,7 @@ oda_project_branch_command() {
 	ln -f -s ${ODOO_C} odoo
 	if [ -L "enterprise" ]; then rm -f enterprise ; fi
 	ln -f -s ${ODOO_E} enterprise
-	configfile ${args[version]} ${args[project]}_${args[branch]}
+	configfile ${args[version]} ${args[projectname]}_${args[branch]}
 	pipfile
 	printf "To install python dev dependencies run:\npipenv install --dev\n\n"
 }
@@ -2859,6 +3060,22 @@ oda_project_destroy_command() {
 			echo "Project has been destroyed"
 		fi
 	fi
+}
+
+# :command.function
+oda_repo_init_command() {
+	# src/repo_init_command.sh
+	[ -z ${args[gitbranch]} ] && export BRANCH=${args[version]}.0 || export BRANCH=master
+
+	git clone https://github.com/odoo/odoo -b ${BRANCH} ${ODOOBASE}/${args[version]}.0/odoo
+	git clone https://github.com/odoo/enterprise -b ${BRANCH} ${ODOOBASE}/${args[version]}.0/enterprise
+}
+
+# :command.function
+oda_repo_update_command() {
+	# src/repo_update_command.sh
+	bash -c "cd ${ODOOBASE}/${args[version]}.0/odoo && git pull"
+	bash -c "cd ${ODOOBASE}/${args[version]}.0/enterprise && git pull"
 }
 
 # :command.function
@@ -3316,6 +3533,13 @@ parse_requirements() {
 			action="project"
 			shift
 			oda_project_parse_requirements "$@"
+			shift $#
+			;;
+
+		repo)
+			action="repo"
+			shift
+			oda_repo_parse_requirements "$@"
 			shift $#
 			;;
 
@@ -4663,6 +4887,10 @@ oda_project_parse_requirements() {
 		esac
 	done
 
+	# :command.environment_variables_filter
+	# :command.environment_variables_default
+	export ODOOBASE="${ODOOBASE:-${HOME}/workspace/repos/odoo}"
+
 	# :command.command_filter
 	action=${1:-}
 
@@ -4775,6 +5003,10 @@ oda_project_init_parse_requirements() {
 
 					args['version']=$1
 					shift
+				elif [[ -z ${args['projectname']+x} ]]; then
+
+					args['projectname']=$1
+					shift
 				elif [[ -z ${args['oport']+x} ]]; then
 
 					args['oport']=$1
@@ -4795,7 +5027,11 @@ oda_project_init_parse_requirements() {
 
 	# :command.required_args_filter
 	if [[ -z ${args['version']+x} ]]; then
-		printf "missing required argument: VERSION\nusage: oda project init VERSION [OPORT] [PGPORT]\n" >&2
+		printf "missing required argument: VERSION\nusage: oda project init VERSION PROJECTNAME [OPORT] [PGPORT]\n" >&2
+		exit 1
+	fi
+	if [[ -z ${args['projectname']+x} ]]; then
+		printf "missing required argument: PROJECTNAME\nusage: oda project init VERSION PROJECTNAME [OPORT] [PGPORT]\n" >&2
 		exit 1
 	fi
 
@@ -4853,17 +5089,17 @@ oda_project_branch_parse_requirements() {
 
 					args['version']=$1
 					shift
-				elif [[ -z ${args['project']+x} ]]; then
+				elif [[ -z ${args['projectname']+x} ]]; then
 
-					args['project']=$1
-					shift
-				elif [[ -z ${args['url']+x} ]]; then
-
-					args['url']=$1
+					args['projectname']=$1
 					shift
 				elif [[ -z ${args['branch']+x} ]]; then
 
 					args['branch']=$1
+					shift
+				elif [[ -z ${args['url']+x} ]]; then
+
+					args['url']=$1
 					shift
 				elif [[ -z ${args['oport']+x} ]]; then
 
@@ -4885,19 +5121,19 @@ oda_project_branch_parse_requirements() {
 
 	# :command.required_args_filter
 	if [[ -z ${args['version']+x} ]]; then
-		printf "missing required argument: VERSION\nusage: oda project branch VERSION PROJECT URL BRANCH [OPORT] [PGPORT]\n" >&2
+		printf "missing required argument: VERSION\nusage: oda project branch VERSION PROJECTNAME BRANCH URL [OPORT] [PGPORT]\n" >&2
 		exit 1
 	fi
-	if [[ -z ${args['project']+x} ]]; then
-		printf "missing required argument: PROJECT\nusage: oda project branch VERSION PROJECT URL BRANCH [OPORT] [PGPORT]\n" >&2
-		exit 1
-	fi
-	if [[ -z ${args['url']+x} ]]; then
-		printf "missing required argument: URL\nusage: oda project branch VERSION PROJECT URL BRANCH [OPORT] [PGPORT]\n" >&2
+	if [[ -z ${args['projectname']+x} ]]; then
+		printf "missing required argument: PROJECTNAME\nusage: oda project branch VERSION PROJECTNAME BRANCH URL [OPORT] [PGPORT]\n" >&2
 		exit 1
 	fi
 	if [[ -z ${args['branch']+x} ]]; then
-		printf "missing required argument: BRANCH\nusage: oda project branch VERSION PROJECT URL BRANCH [OPORT] [PGPORT]\n" >&2
+		printf "missing required argument: BRANCH\nusage: oda project branch VERSION PROJECTNAME BRANCH URL [OPORT] [PGPORT]\n" >&2
+		exit 1
+	fi
+	if [[ -z ${args['url']+x} ]]; then
+		printf "missing required argument: URL\nusage: oda project branch VERSION PROJECTNAME BRANCH URL [OPORT] [PGPORT]\n" >&2
 		exit 1
 	fi
 
@@ -5160,6 +5396,212 @@ oda_project_destroy_parse_requirements() {
 	[[ -n ${args['--user']:-} ]] || args['--user']="$(grep db_user conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
 	[[ -n ${args['--pass']:-} ]] || args['--pass']="$(grep db_pass conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
 	[[ -n ${args['--name']:-} ]] || args['--name']="$(grep db_name conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
+
+}
+
+# :command.parse_requirements
+oda_repo_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_repo_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.environment_variables_filter
+	# :command.environment_variables_default
+	export ODOOBASE="${ODOOBASE:-${HOME}/workspace/repos/odoo}"
+
+	# :command.command_filter
+	action=${1:-}
+
+	case $action in
+		-*) ;;
+
+		init)
+			action="init"
+			shift
+			oda_repo_init_parse_requirements "$@"
+			shift $#
+			;;
+
+		update)
+			action="update"
+			shift
+			oda_repo_update_parse_requirements "$@"
+			shift $#
+			;;
+
+		# :command.command_fallback
+		"")
+			oda_repo_usage >&2
+			exit 1
+			;;
+
+		*)
+			printf "invalid command: %s\n" "$action" >&2
+			exit 1
+			;;
+
+	esac
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				printf "invalid argument: %s\n" "$key" >&2
+				exit 1
+
+				;;
+
+		esac
+	done
+
+}
+
+# :command.parse_requirements
+oda_repo_init_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_repo_init_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="repo init"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				if [[ -z ${args['version']+x} ]]; then
+
+					args['version']=$1
+					shift
+				elif [[ -z ${args['gitbranch']+x} ]]; then
+
+					args['gitbranch']=$1
+					shift
+				else
+					printf "invalid argument: %s\n" "$key" >&2
+					exit 1
+				fi
+
+				;;
+
+		esac
+	done
+
+	# :command.required_args_filter
+	if [[ -z ${args['version']+x} ]]; then
+		printf "missing required argument: VERSION\nusage: oda repo init VERSION [GITBRANCH]\n" >&2
+		exit 1
+	fi
+
+	# :command.whitelist_filter
+	if [[ -n ${args['version']} ]] && [[ ! ${args['version']} =~ ^(15|16|17)$ ]]; then
+		printf "%s\n" "version must be one of: 15, 16, 17" >&2
+		exit 1
+	fi
+
+}
+
+# :command.parse_requirements
+oda_repo_update_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_repo_update_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="repo update"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				if [[ -z ${args['version']+x} ]]; then
+
+					args['version']=$1
+					shift
+				else
+					printf "invalid argument: %s\n" "$key" >&2
+					exit 1
+				fi
+
+				;;
+
+		esac
+	done
+
+	# :command.required_args_filter
+	if [[ -z ${args['version']+x} ]]; then
+		printf "missing required argument: VERSION\nusage: oda repo update VERSION\n" >&2
+		exit 1
+	fi
+
+	# :command.whitelist_filter
+	if [[ -n ${args['version']} ]] && [[ ! ${args['version']} =~ ^(15|16|17)$ ]]; then
+		printf "%s\n" "version must be one of: 15, 16, 17" >&2
+		exit 1
+	fi
 
 }
 
@@ -7225,6 +7667,9 @@ run() {
 		"project branch") oda_project_branch_command ;;
 		"project reset") oda_project_reset_command ;;
 		"project destroy") oda_project_destroy_command ;;
+		"repo") oda_repo_command ;;
+		"repo init") oda_repo_init_command ;;
+		"repo update") oda_repo_update_command ;;
 		"node") oda_node_command ;;
 		"node start") oda_node_start_command ;;
 		"node stop") oda_node_stop_command ;;

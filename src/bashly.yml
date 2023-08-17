@@ -217,6 +217,9 @@ commands:
 
   - name: project
     help: Project level commands [CAUTION]
+    environment_variables:
+      - name: odoobase
+        default: ${HOME}/workspace/repos/odoo
     commands:
       - name: init
         help: Create a new project specifying Odoo version, Odoo Port, PostgreSQL port
@@ -232,6 +235,9 @@ commands:
               - "15"
               - "16"
               - "17"
+          - name: projectname
+            help: name of the project
+            required: true
           - name: oport
             help: Odoo Port
             default: "8069"
@@ -258,14 +264,14 @@ commands:
               - "15"
               - "16"
               - "17"
-          - name: project
+          - name: projectname
             help: name of the project
-            required: true
-          - name: url
-            help: url of the repository
             required: true
           - name: branch
             help: branch to pull from the repository
+            required: true
+          - name: url
+            help: url of the repository
             required: true
           - name: oport
             help: Odoo Port
@@ -327,6 +333,35 @@ commands:
 
         examples:
           - oda project destroy
+
+  - name: repo
+    help: Odoo community and enterprise repository management
+    environment_variables:
+      - name: odoobase
+        default: ${HOME}/workspace/repos/odoo
+    commands:
+      - name: init
+        help: initialize Odoo source repository
+        args:
+          - name: version
+            help: Odoo Version
+            required: true
+            allowed:
+              - "15"
+              - "16"
+              - "17"
+          - name: gitbranch
+            help: Odoo branch
+      - name: update
+        help: update Odoo source repository
+        args:
+          - name: version
+            help: Odoo Version
+            required: true
+            allowed:
+              - "15"
+              - "16"
+              - "17"
 
   - name: node
     help: node management commands

@@ -4,8 +4,8 @@ cat <<-_EOF_ | tee .envrc > /dev/null
 layout python3
 export ODOO_V=${1}.0
 export ODOO_PORT=${PORT}
-export ODOO_C=${HOME}/workspace/repos/${1}.0/odoo
-export ODOO_E=${HOME}/workspace/repos/${1}.0/enterprise
+export ODOO_C=${ODOOBASE}/${1}.0/odoo
+export ODOO_E=${ODOOBASE}/${1}.0/enterprise
 _EOF_
 }
 
@@ -22,7 +22,7 @@ db_port = 5432
 db_maxconn = 24
 db_user = odoo${1}
 db_password = odooodoo
-db_name = ${POD}
+db_name = ${2}
 db_template = template0
 db_sslmode = disable
 list_db = False
@@ -103,6 +103,9 @@ python_version = "3"
 _EOF_
 }
 
+PDIR=${HOME}/workspace/odoo/${args[projectname]}
+mkdir -p ${PDIR}
+cd ${PDIR}
 envrc ${args[version]} ${args[oport]}
 direnv allow >/dev/null
 mkdir -p conf data backups addons
@@ -112,6 +115,6 @@ if [ -L "odoo" ]; then rm -f odoo ; fi
 ln -f -s ${ODOO_C} odoo
 if [ -L "enterprise" ]; then rm -f enterprise ; fi
 ln -f -s ${ODOO_E} enterprise
-configfile ${args[version]}
+configfile ${args[version]} ${args[projectname]}
 pipfile
 printf "To install python dev dependencies run:\npipenv install --dev\n\n"

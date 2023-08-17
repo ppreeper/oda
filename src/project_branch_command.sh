@@ -4,8 +4,8 @@ cat <<-_EOF_ | tee .envrc > /dev/null
 layout python3
 export ODOO_V=${1}.0
 export ODOO_PORT=${PORT}
-export ODOO_C=${HOME}/workspace/repos/${1}.0/odoo
-export ODOO_E=${HOME}/workspace/repos/${1}.0/enterprise
+export ODOO_C=${ODOOBASE}/${1}.0/odoo
+export ODOO_E=${ODOOBASE}/${1}.0/enterprise
 _EOF_
 }
 
@@ -103,7 +103,7 @@ python_version = "3"
 _EOF_
 }
 
-PDIR=${HOME}/workspace/odoo/${args[project]}_${args[branch]}
+PDIR=${HOME}/workspace/odoo/${args[projectname]}_${args[branch]}
 mkdir -p ${PDIR}
 cd ${PDIR}
 envrc ${args[version]} ${args[oport]}
@@ -116,6 +116,6 @@ if [ -L "odoo" ]; then rm -f odoo ; fi
 ln -f -s ${ODOO_C} odoo
 if [ -L "enterprise" ]; then rm -f enterprise ; fi
 ln -f -s ${ODOO_E} enterprise
-configfile ${args[version]} ${args[project]}_${args[branch]}
+configfile ${args[version]} ${args[projectname]}_${args[branch]}
 pipfile
 printf "To install python dev dependencies run:\npipenv install --dev\n\n"
