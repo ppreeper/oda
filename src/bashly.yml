@@ -13,6 +13,8 @@ commands:
     commands:
       - name: vscode
         help: Setup vscode settings and launch json files
+      - name: pyright
+        help: Setup pyright settings
 
   - name: start
     help: Start the instance

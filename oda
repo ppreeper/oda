@@ -96,7 +96,8 @@ oda_config_usage() {
 	echo
 	# :command.usage_commands
 	printf "%s\n" "Commands:"
-	printf "  %s   Setup vscode settings and launch json files\n" "vscode"
+	printf "  %s   Setup vscode settings and launch json files\n" "vscode "
+	printf "  %s   Setup pyright settings\n" "pyright"
 	echo
 
 	# :command.long_usage
@@ -126,6 +127,35 @@ oda_config_vscode_usage() {
 	printf "%s\n" "Usage:"
 	printf "  oda config vscode\n"
 	printf "  oda config vscode --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_config_pyright_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda config pyright - Setup pyright settings\n"
+		echo
+
+	else
+		printf "oda config pyright - Setup pyright settings\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda config pyright\n"
+	printf "  oda config pyright --help | -h\n"
 	echo
 
 	# :command.long_usage
@@ -2314,8 +2344,65 @@ inspect_args() {
 # :command.function
 oda_config_vscode_command() {
 	# src/config_vscode_command.sh
-	echo "# this file is located in 'src/config_vscode_command.sh'"
-	echo "# code for 'oda config vscode' goes here"
+	if [ -z $ODOO_PORT ]; then
+		if [[ -f ".envrc" ]]; then
+			export ODOO_PORT=$(grep ODOO_PORT .envrc | awk '{print $2}' | awk -F'=' '{print $2}')
+		else
+			export ODOO_PORT=$(grep http_port conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')
+		fi
+	fi
+
+	function launch_json(){
+	[ -z ${2} ] && export PORT=8069 || export PORT=${2}
+	cat <<-_EOF_ | tee .vscode/launch.json > /dev/null
+	{
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "Launch",
+				"type": "python",
+				"request": "launch",
+				"stopOnEntry": false,
+				"python": "\${command:python.interpreterPath}",
+				"program": "\${workspaceRoot}/odoo/odoo-bin",
+				"args": ["-c", "\${workspaceRoot}/conf/odoo.conf","-p","$ODOO_PORT"],
+				"cwd": "\${workspaceRoot}",
+				"env": {},
+				"envFile": "\${workspaceFolder}/.env",
+				"console": "integratedTerminal"
+			}
+		]
+	}
+	_EOF_
+	}
+
+	function settings_json(){
+	[ -z ${2} ] && export PORT=8069 || export PORT=${2}
+	cat <<-_EOF_ | tee .vscode/settings.json > /dev/null
+	{
+		"python.analysis.extraPaths": ["odoo", "enterprise"],
+		"python.linting.pylintEnabled": true,
+		"python.linting.enabled": true,
+		"python.terminal.executeInFileDir": true,
+		"python.formatting.provider": "yapf",
+		"python.formatting.yapfArgs": [
+			"--style",
+			"{allow_split_before_dict_value=False,force_multiline_dict=True,split_before_closing_bracket=True,join_multiple_lines=False}"
+		]
+	}
+	_EOF_
+	}
+
+	mkdir -p .vscode
+	settings_json
+	launch_json
+}
+
+# :command.function
+oda_config_pyright_command() {
+	# src/config_pyright_command.sh
+	echo "# this file is located in 'src/config_pyright_command.sh'"
+	echo "# code for 'oda config pyright' goes here"
 	echo "# you can edit it freely and regenerate (it will not be overwritten)"
 	inspect_args
 
@@ -3320,6 +3407,13 @@ oda_config_parse_requirements() {
 			shift $#
 			;;
 
+		pyright)
+			action="pyright"
+			shift
+			oda_config_pyright_parse_requirements "$@"
+			shift $#
+			;;
+
 		# :command.command_fallback
 		"")
 			oda_config_usage >&2
@@ -3376,6 +3470,50 @@ oda_config_vscode_parse_requirements() {
 
 	# :command.command_filter
 	action="config vscode"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				printf "invalid argument: %s\n" "$key" >&2
+				exit 1
+
+				;;
+
+		esac
+	done
+
+}
+
+# :command.parse_requirements
+oda_config_pyright_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_config_pyright_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="config pyright"
 
 	# :command.parse_requirements_while
 	while [[ $# -gt 0 ]]; do
@@ -7066,6 +7204,7 @@ run() {
 	case "$action" in
 		"config") oda_config_command ;;
 		"config vscode") oda_config_vscode_command ;;
+		"config pyright") oda_config_pyright_command ;;
 		"start") oda_start_command ;;
 		"stop") oda_stop_command ;;
 		"restart") oda_restart_command ;;
