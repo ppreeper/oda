@@ -2,7 +2,7 @@ function systemd_config(){
 cat <<-_EOF_ | sudo tee /etc/systemd/system/odoo.service > /dev/null
 [Unit]
 Description=Odoo
-After=network.target
+After=remote-fs.target
 
 [Service]
 Type=simple
@@ -14,7 +14,7 @@ ExecStart=/opt/odoo/odoo/odoo-bin -c /opt/odoo/conf/odoo.conf
 StandardOutput=journal+console
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=remote-fs.target
 _EOF_
 }
 
