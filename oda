@@ -2106,7 +2106,7 @@ oda_remote_mount_usage() {
 	fi
 
 	printf "%s\n" "Usage:"
-	printf "  oda remote mount NODE PROJECT BRANCH\n"
+	printf "  oda remote mount NODE VERSION PROJECTNAME BRANCH\n"
 	printf "  oda remote mount --help | -h\n"
 	echo
 
@@ -2128,7 +2128,13 @@ oda_remote_mount_usage() {
 		echo
 
 		# :argument.usage
-		printf "  %s\n" "PROJECT"
+		printf "  %s\n" "VERSION"
+		printf "\n"
+		printf "    Allowed: 15, 16, 17\n"
+		echo
+
+		# :argument.usage
+		printf "  %s\n" "PROJECTNAME"
 		printf "\n"
 		echo
 
@@ -3066,11 +3072,7 @@ oda_remote_project_update_command() {
 # :command.function
 oda_remote_mount_command() {
 	# src/remote_mount_command.sh
-	echo "# this file is located in 'src/remote_mount_command.sh'"
-	echo "# code for 'oda remote mount' goes here"
-	echo "# you can edit it freely and regenerate (it will not be overwritten)"
-	inspect_args
-
+	ssh ${args[node]} oda node mount ${args[version]} ${args[projectname]} ${args[branch]}
 }
 
 # :command.function
@@ -6825,9 +6827,13 @@ oda_remote_mount_parse_requirements() {
 
 					args['node']=$1
 					shift
-				elif [[ -z ${args['project']+x} ]]; then
+				elif [[ -z ${args['version']+x} ]]; then
 
-					args['project']=$1
+					args['version']=$1
+					shift
+				elif [[ -z ${args['projectname']+x} ]]; then
+
+					args['projectname']=$1
 					shift
 				elif [[ -z ${args['branch']+x} ]]; then
 
@@ -6845,15 +6851,25 @@ oda_remote_mount_parse_requirements() {
 
 	# :command.required_args_filter
 	if [[ -z ${args['node']+x} ]]; then
-		printf "missing required argument: NODE\nusage: oda remote mount NODE PROJECT BRANCH\n" >&2
+		printf "missing required argument: NODE\nusage: oda remote mount NODE VERSION PROJECTNAME BRANCH\n" >&2
 		exit 1
 	fi
-	if [[ -z ${args['project']+x} ]]; then
-		printf "missing required argument: PROJECT\nusage: oda remote mount NODE PROJECT BRANCH\n" >&2
+	if [[ -z ${args['version']+x} ]]; then
+		printf "missing required argument: VERSION\nusage: oda remote mount NODE VERSION PROJECTNAME BRANCH\n" >&2
+		exit 1
+	fi
+	if [[ -z ${args['projectname']+x} ]]; then
+		printf "missing required argument: PROJECTNAME\nusage: oda remote mount NODE VERSION PROJECTNAME BRANCH\n" >&2
 		exit 1
 	fi
 	if [[ -z ${args['branch']+x} ]]; then
-		printf "missing required argument: BRANCH\nusage: oda remote mount NODE PROJECT BRANCH\n" >&2
+		printf "missing required argument: BRANCH\nusage: oda remote mount NODE VERSION PROJECTNAME BRANCH\n" >&2
+		exit 1
+	fi
+
+	# :command.whitelist_filter
+	if [[ -n ${args['version']} ]] && [[ ! ${args['version']} =~ ^(15|16|17)$ ]]; then
+		printf "%s\n" "version must be one of: 15, 16, 17" >&2
 		exit 1
 	fi
 

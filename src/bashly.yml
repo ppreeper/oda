@@ -514,7 +514,13 @@ commands:
         args:
           - name: node
             required: true
-          - name: project
+          - name: version
+            required: true
+            allowed:
+              - "15"
+              - "16"
+              - "17"
+          - name: projectname
             required: true
           - name: branch
             required: true
