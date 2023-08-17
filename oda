@@ -1999,7 +1999,7 @@ oda_remote_project_init_usage() {
 	fi
 
 	printf "%s\n" "Usage:"
-	printf "  oda remote project init VERSION PROJECT BRANCH URL\n"
+	printf "  oda remote project init VERSION PROJECTNAME BRANCH PROJECTURL [REMOTE]\n"
 	printf "  oda remote project init --help | -h\n"
 	echo
 
@@ -2022,7 +2022,7 @@ oda_remote_project_init_usage() {
 		echo
 
 		# :argument.usage
-		printf "  %s\n" "PROJECT"
+		printf "  %s\n" "PROJECTNAME"
 		printf "\n"
 		echo
 
@@ -2032,8 +2032,14 @@ oda_remote_project_init_usage() {
 		echo
 
 		# :argument.usage
-		printf "  %s\n" "URL"
+		printf "  %s\n" "PROJECTURL"
 		printf "\n"
+		echo
+
+		# :argument.usage
+		printf "  %s\n" "REMOTE"
+		printf "\n"
+		printf "    Default: odoofs\n"
 		echo
 
 	fi
@@ -2052,7 +2058,7 @@ oda_remote_project_update_usage() {
 	fi
 
 	printf "%s\n" "Usage:"
-	printf "  oda remote project update PROJECT BRANCH\n"
+	printf "  oda remote project update PROJECTNAME BRANCH [REMOTE]\n"
 	printf "  oda remote project update --help | -h\n"
 	echo
 
@@ -2069,13 +2075,19 @@ oda_remote_project_update_usage() {
 		printf "%s\n" "Arguments:"
 
 		# :argument.usage
-		printf "  %s\n" "PROJECT"
+		printf "  %s\n" "PROJECTNAME"
 		printf "\n"
 		echo
 
 		# :argument.usage
 		printf "  %s\n" "BRANCH"
 		printf "\n"
+		echo
+
+		# :argument.usage
+		printf "  %s\n" "REMOTE"
+		printf "\n"
+		printf "    Default: odoofs\n"
 		echo
 
 	fi
@@ -3040,20 +3052,14 @@ oda_remote_odoo_update_command() {
 # :command.function
 oda_remote_project_init_command() {
 	# src/remote_project_init_command.sh
-	echo "# this file is located in 'src/remote_project_init_command.sh'"
-	echo "# code for 'oda remote project init' goes here"
-	echo "# you can edit it freely and regenerate (it will not be overwritten)"
-	inspect_args
+	ssh ${args[remote]} oda fs project init ${args[version]} ${args[projectname]} ${args[branch]} ${args[projecturl]}
 
 }
 
 # :command.function
 oda_remote_project_update_command() {
 	# src/remote_project_update_command.sh
-	echo "# this file is located in 'src/remote_project_update_command.sh'"
-	echo "# code for 'oda remote project update' goes here"
-	echo "# you can edit it freely and regenerate (it will not be overwritten)"
-	inspect_args
+	ssh ${args[remote]} oda fs project update ${args[projectname]} ${args[branch]}
 
 }
 
@@ -3070,30 +3076,19 @@ oda_remote_mount_command() {
 # :command.function
 oda_remote_start_command() {
 	# src/remote_start_command.sh
-	echo "# this file is located in 'src/remote_start_command.sh'"
-	echo "# code for 'oda remote start' goes here"
-	echo "# you can edit it freely and regenerate (it will not be overwritten)"
-	inspect_args
-
+	ssh ${args[node]} oda node start
 }
 
 # :command.function
 oda_remote_stop_command() {
 	# src/remote_stop_command.sh
-	echo "# this file is located in 'src/remote_stop_command.sh'"
-	echo "# code for 'oda remote stop' goes here"
-	echo "# you can edit it freely and regenerate (it will not be overwritten)"
-	inspect_args
-
+	ssh ${args[node]} oda node stop
 }
 
 # :command.function
 oda_remote_restart_command() {
 	# src/remote_restart_command.sh
-	echo "# this file is located in 'src/remote_restart_command.sh'"
-	echo "# code for 'oda remote restart' goes here"
-	echo "# you can edit it freely and regenerate (it will not be overwritten)"
-	inspect_args
+	ssh ${args[node]} oda node restart
 
 }
 
@@ -6666,17 +6661,21 @@ oda_remote_project_init_parse_requirements() {
 
 					args['version']=$1
 					shift
-				elif [[ -z ${args['project']+x} ]]; then
+				elif [[ -z ${args['projectname']+x} ]]; then
 
-					args['project']=$1
+					args['projectname']=$1
 					shift
 				elif [[ -z ${args['branch']+x} ]]; then
 
 					args['branch']=$1
 					shift
-				elif [[ -z ${args['url']+x} ]]; then
+				elif [[ -z ${args['projecturl']+x} ]]; then
 
-					args['url']=$1
+					args['projecturl']=$1
+					shift
+				elif [[ -z ${args['remote']+x} ]]; then
+
+					args['remote']=$1
 					shift
 				else
 					printf "invalid argument: %s\n" "$key" >&2
@@ -6690,21 +6689,24 @@ oda_remote_project_init_parse_requirements() {
 
 	# :command.required_args_filter
 	if [[ -z ${args['version']+x} ]]; then
-		printf "missing required argument: VERSION\nusage: oda remote project init VERSION PROJECT BRANCH URL\n" >&2
+		printf "missing required argument: VERSION\nusage: oda remote project init VERSION PROJECTNAME BRANCH PROJECTURL [REMOTE]\n" >&2
 		exit 1
 	fi
-	if [[ -z ${args['project']+x} ]]; then
-		printf "missing required argument: PROJECT\nusage: oda remote project init VERSION PROJECT BRANCH URL\n" >&2
+	if [[ -z ${args['projectname']+x} ]]; then
+		printf "missing required argument: PROJECTNAME\nusage: oda remote project init VERSION PROJECTNAME BRANCH PROJECTURL [REMOTE]\n" >&2
 		exit 1
 	fi
 	if [[ -z ${args['branch']+x} ]]; then
-		printf "missing required argument: BRANCH\nusage: oda remote project init VERSION PROJECT BRANCH URL\n" >&2
+		printf "missing required argument: BRANCH\nusage: oda remote project init VERSION PROJECTNAME BRANCH PROJECTURL [REMOTE]\n" >&2
 		exit 1
 	fi
-	if [[ -z ${args['url']+x} ]]; then
-		printf "missing required argument: URL\nusage: oda remote project init VERSION PROJECT BRANCH URL\n" >&2
+	if [[ -z ${args['projecturl']+x} ]]; then
+		printf "missing required argument: PROJECTURL\nusage: oda remote project init VERSION PROJECTNAME BRANCH PROJECTURL [REMOTE]\n" >&2
 		exit 1
 	fi
+
+	# :command.default_assignments
+	[[ -n ${args['remote']:-} ]] || args['remote']="odoofs"
 
 	# :command.whitelist_filter
 	if [[ -n ${args['version']} ]] && [[ ! ${args['version']} =~ ^(15|16|17)$ ]]; then
@@ -6748,13 +6750,17 @@ oda_remote_project_update_parse_requirements() {
 			*)
 				# :command.parse_requirements_case
 				# :command.parse_requirements_case_simple
-				if [[ -z ${args['project']+x} ]]; then
+				if [[ -z ${args['projectname']+x} ]]; then
 
-					args['project']=$1
+					args['projectname']=$1
 					shift
 				elif [[ -z ${args['branch']+x} ]]; then
 
 					args['branch']=$1
+					shift
+				elif [[ -z ${args['remote']+x} ]]; then
+
+					args['remote']=$1
 					shift
 				else
 					printf "invalid argument: %s\n" "$key" >&2
@@ -6767,14 +6773,17 @@ oda_remote_project_update_parse_requirements() {
 	done
 
 	# :command.required_args_filter
-	if [[ -z ${args['project']+x} ]]; then
-		printf "missing required argument: PROJECT\nusage: oda remote project update PROJECT BRANCH\n" >&2
+	if [[ -z ${args['projectname']+x} ]]; then
+		printf "missing required argument: PROJECTNAME\nusage: oda remote project update PROJECTNAME BRANCH [REMOTE]\n" >&2
 		exit 1
 	fi
 	if [[ -z ${args['branch']+x} ]]; then
-		printf "missing required argument: BRANCH\nusage: oda remote project update PROJECT BRANCH\n" >&2
+		printf "missing required argument: BRANCH\nusage: oda remote project update PROJECTNAME BRANCH [REMOTE]\n" >&2
 		exit 1
 	fi
+
+	# :command.default_assignments
+	[[ -n ${args['remote']:-} ]] || args['remote']="odoofs"
 
 }
 

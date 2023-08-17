@@ -492,19 +492,23 @@ commands:
                   - "15"
                   - "16"
                   - "17"
-              - name: project
+              - name: projectname
                 required: true
               - name: branch
                 required: true
-              - name: url
+              - name: projecturl
                 required: true
+              - name: remote
+                default: odoofs
           - name: update
             help: git pull update from project repo
             args:
-              - name: project
+              - name: projectname
                 required: true
               - name: branch
                 required: true
+              - name: remote
+                default: odoofs
       - name: mount
         help: mounts project on target node
         args:
