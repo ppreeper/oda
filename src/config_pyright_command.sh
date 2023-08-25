@@ -1,4 +1,3 @@
-function launch_json(){
 cat <<-_EOF_ | tee pyrightconfig.json > /dev/null
 {
   "executionEnvironments": [
@@ -9,4 +8,3 @@ cat <<-_EOF_ | tee pyrightconfig.json > /dev/null
   ]
 }
 _EOF_
-}

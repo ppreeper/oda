@@ -2540,7 +2540,6 @@ oda_config_vscode_command() {
 # :command.function
 oda_config_pyright_command() {
 	# src/config_pyright_command.sh
-	function launch_json(){
 	cat <<-_EOF_ | tee pyrightconfig.json > /dev/null
 	{
 		"executionEnvironments": [
@@ -2551,7 +2550,7 @@ oda_config_pyright_command() {
 		]
 	}
 	_EOF_
-	}
+
 }
 
 # :command.function
