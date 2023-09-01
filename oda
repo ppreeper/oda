@@ -2026,6 +2026,8 @@ oda_remote_usage() {
 	printf "%s\n" "Commands:"
 	printf "  %s   manage odoo repositories on odoofs\n" "odoo   "
 	printf "  %s   manage project code on odoofs\n" "project"
+	printf "  %s   backup project on target node\n" "backup "
+	printf "  %s   mounts project on target node\n" "restore"
 	printf "  %s   mounts project on target node\n" "mount  "
 	printf "  %s   start odoo service on target node\n" "start  "
 	printf "  %s   stop odoo service on target node\n" "stop   "
@@ -2257,6 +2259,91 @@ oda_remote_project_update_usage() {
 		printf "  %s\n" "REMOTE"
 		printf "\n"
 		printf "    Default: odoofs\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_remote_backup_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda remote backup - backup project on target node\n"
+		echo
+
+	else
+		printf "oda remote backup - backup project on target node\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda remote backup NODE\n"
+	printf "  oda remote backup --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+		# :command.usage_args
+		printf "%s\n" "Arguments:"
+
+		# :argument.usage
+		printf "  %s\n" "NODE"
+		printf "\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_remote_restore_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda remote restore - mounts project on target node\n"
+		echo
+
+	else
+		printf "oda remote restore - mounts project on target node\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda remote restore NODE [REMOTEFS] FILE...\n"
+	printf "  oda remote restore --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+		# :command.usage_args
+		printf "%s\n" "Arguments:"
+
+		# :argument.usage
+		printf "  %s\n" "NODE"
+		printf "\n"
+		echo
+
+		# :argument.usage
+		printf "  %s\n" "REMOTEFS"
+		printf "\n"
+		printf "    Default: odoofs\n"
+		echo
+
+		# :argument.usage
+		printf "  %s\n" "FILE..."
+		printf "    Path to backup file\n"
 		echo
 
 	fi
@@ -3370,6 +3457,62 @@ oda_remote_project_update_command() {
 	# src/remote_project_update_command.sh
 	ssh ${args[remote]} oda fs project update ${args[projectname]} ${args[branch]}
 
+}
+
+# :command.function
+oda_remote_backup_command() {
+	# src/remote_backup_command.sh
+	echo "# this file is located in 'src/remote_backup_command.sh'"
+	echo "# code for 'oda remote backup' goes here"
+	echo "# you can edit it freely and regenerate (it will not be overwritten)"
+	inspect_args
+
+	# what project is the node attached to
+	# cmd
+	# PROJECT=$(ssh ${args[node]} -- cat /etc/fstab | grep addons | awk '{print $1}' | awk -F':' '{print $2}' | sed 's,/addons$,,')
+	# returns
+	# /share/projects/quest15/issue_285
+
+	ssh ${args[node]} oda node backup
+}
+
+# :command.function
+oda_remote_restore_command() {
+	# src/remote_restore_command.sh
+	echo "# this file is located in 'src/remote_restore_command.sh'"
+	echo "# code for 'oda remote restore' goes here"
+	echo "# you can edit it freely and regenerate (it will not be overwritten)"
+	inspect_args
+
+	echo ${args[node]}
+	echo ${args[remote]}
+	echo ${args[file]}
+
+	# DUMP_FILE="backups/2023_08_14_04_13_58_Dec30data.tar.zst"
+	# PROJECT=$(ssh ${args[node]} -- cat /etc/fstab | grep addons | awk '{print $1}' | awk -F':' '{print $2}' | sed 's,/addons$,,')
+
+	# restore filestore on odoofs
+	# DUMP_FILE="backups/2023_08_14_04_13_58_Dec30data.tar.zst"
+	# DB="quest15issue_285"
+	# echo sudo -u odoo rm -rf ${PROJECT}/data/*
+	# echo sudo -u odoo mkdir -p ${PROJECT}/data/filestore/${DB}
+	# echo sudo -u odoo tar -axf /share/${DUMP_FILE} -C ${PROJECT}/data/filestore/${DB} --strip-components=2 ./filestore
+
+	# echo ssh ${args[remote]} sudo -u odoo rm -rf ${PROJECT}/data/*
+
+	# if [[ -f "./conf/odoo.conf" ]]; then
+	#   BASE=`dirname "${0}"`
+	#   for bfile in ${args[file]}
+	#   do
+	#     if [[ ${args[--remote]} == 1 ]]; then
+	#       python3 -B ${BASE}/oda_db.py --remote -r -d "${bfile}"
+	#     else
+	#       python3 -B ${BASE}/oda_db.py -r -d "${bfile}"
+	#     fi
+	#   done
+	# else
+	#   echo "not in a project directory"
+	# fi
 }
 
 # :command.function
@@ -6930,6 +7073,20 @@ oda_remote_parse_requirements() {
 			shift $#
 			;;
 
+		backup)
+			action="backup"
+			shift
+			oda_remote_backup_parse_requirements "$@"
+			shift $#
+			;;
+
+		restore)
+			action="restore"
+			shift
+			oda_remote_restore_parse_requirements "$@"
+			shift $#
+			;;
+
 		mount)
 			action="mount"
 			shift
@@ -7369,6 +7526,133 @@ oda_remote_project_update_parse_requirements() {
 }
 
 # :command.parse_requirements
+oda_remote_backup_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_remote_backup_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="remote backup"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				if [[ -z ${args['node']+x} ]]; then
+
+					args['node']=$1
+					shift
+				else
+					printf "invalid argument: %s\n" "$key" >&2
+					exit 1
+				fi
+
+				;;
+
+		esac
+	done
+
+	# :command.required_args_filter
+	if [[ -z ${args['node']+x} ]]; then
+		printf "missing required argument: NODE\nusage: oda remote backup NODE\n" >&2
+		exit 1
+	fi
+
+}
+
+# :command.parse_requirements
+oda_remote_restore_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_remote_restore_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="remote restore"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_repeatable
+
+				if [[ -z ${args['node']+x} ]]; then
+					args['node']=$1
+					shift
+
+				elif [[ -z ${args['remotefs']+x} ]]; then
+					args['remotefs']=$1
+					shift
+
+				elif [[ -z ${args['file']+x} ]]; then
+					args['file']="\"$1\""
+					shift
+				else
+					args['file']="${args[file]} \"$1\""
+					shift
+				fi
+
+				;;
+
+		esac
+	done
+
+	# :command.required_args_filter
+	if [[ -z ${args['node']+x} ]]; then
+		printf "missing required argument: NODE\nusage: oda remote restore NODE [REMOTEFS] FILE...\n" >&2
+		exit 1
+	fi
+	if [[ -z ${args['file']+x} ]]; then
+		printf "missing required argument: FILE\nusage: oda remote restore NODE [REMOTEFS] FILE...\n" >&2
+		exit 1
+	fi
+
+	# :command.default_assignments
+	[[ -n ${args['remotefs']:-} ]] || args['remotefs']="odoofs"
+
+}
+
+# :command.parse_requirements
 oda_remote_mount_parse_requirements() {
 	# :command.fixed_flags_filter
 	while [[ $# -gt 0 ]]; do
@@ -7694,6 +7978,8 @@ run() {
 		"remote project") oda_remote_project_command ;;
 		"remote project init") oda_remote_project_init_command ;;
 		"remote project update") oda_remote_project_update_command ;;
+		"remote backup") oda_remote_backup_command ;;
+		"remote restore") oda_remote_restore_command ;;
 		"remote mount") oda_remote_mount_command ;;
 		"remote start") oda_remote_start_command ;;
 		"remote stop") oda_remote_stop_command ;;

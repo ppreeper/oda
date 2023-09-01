@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+from tabnanny import check
 import time
 import json
 import logging
@@ -28,6 +29,209 @@ from odoo.tools import find_pg_tool, exec_pg_environ
 _logger = logging.getLogger(__name__)
 
 
+# Backup
+
+
+def dump_db_manifest(cr):
+    pg_version = "%d.%d" % divmod(cr._obj.connection.server_version / 100, 100)
+    cr.execute(
+        "SELECT name, latest_version FROM ir_module_module WHERE state = 'installed'"
+    )
+    modules = dict(cr.fetchall())
+    manifest = {
+        "odoo_dump": "1",
+        "db_name": cr.dbname,
+        "version": odoo.release.version,
+        "version_info": odoo.release.version_info,
+        "major_version": odoo.release.major_version,
+        "pg_version": pg_version,
+        "modules": modules,
+    }
+    return manifest
+
+
+def _dump_addons_tar(addons, bkp_name, bkp_dest="./bkpdir"):
+    cwd = os.getcwd()
+    for addon in addons:
+        folder = addon.replace(cwd + "/", "")
+        dir = os.listdir(folder)
+        if len(dir) != 0:
+            tar_cmd = "tar"
+            bkp_file = f"{bkp_name}_{folder}.tar.zst"
+            file_path = os.path.join(bkp_dest, bkp_file)
+            tar_args = ["ahcf", file_path, "-C", folder, "."]
+            # print([tar_cmd, *tar_args])
+            r = subprocess.run(
+                [tar_cmd, *tar_args],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.STDOUT,
+            )
+            if r.returncode != 0:
+                raise Exception(f"could not backup addons {addon}")
+            return file_path
+
+
+def _dump_db_tar(db_name, bkp_name, bkp_dest="./backups"):
+    bkp_file = f"{bkp_name}.tar.zst"
+    dump_dir = os.path.abspath(os.path.join(bkp_dest, bkp_name))
+    file_path = os.path.join(bkp_dest, bkp_file)
+
+    # create dump_dir
+    try:
+        os.mkdir(dump_dir)
+    except FileExistsError as e:
+        pass
+
+    # postgresql database
+    pg_cmd = [
+        find_pg_tool("pg_dump"),
+        "--no-owner",
+        "--file",
+        os.path.join(dump_dir, "dump.sql"),
+        db_name,
+    ]
+    r = subprocess.run(
+        pg_cmd,
+        env=exec_pg_environ(),
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.STDOUT,
+        check=True,
+    )
+    if r.returncode != 0:
+        raise Exception(f"could not backup postgresql database {db_name}")
+
+    # manifest.json
+    with open(os.path.join(dump_dir, "manifest.json"), "w") as fh:
+        db = odoo.sql_db.db_connect(db_name)
+        with db.cursor() as cr:
+            json.dump(dump_db_manifest(cr), fh, indent=4)
+
+    # filestore
+    filestore = odoo.tools.config.filestore(db_name)
+    filestore_back = os.path.join(dump_dir, "filestore")
+    if os.path.exists(filestore):
+        try:
+            os.symlink(filestore, filestore_back, target_is_directory=True)
+        except FileExistsError as e:
+            pass
+
+    # create tar archive
+    tar_cmd = ["tar", "achf", os.path.abspath(file_path), "-C", dump_dir, "."]
+    r = subprocess.run(
+        tar_cmd,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.STDOUT,
+    )
+    if r.returncode != 0:
+        raise Exception(f"could not backup database {db_name}")
+
+    # cleanup dump_dir
+    if os.path.exists(dump_dir):
+        shutil.rmtree(dump_dir)
+    return file_path
+
+
+# Restore
+
+
+def _restore_addons_tar(bkp_file, addons=""):
+    dest = addons if addons != "" else bkp_file.split("_")[-1:][0].split(".")[0]
+    if os.path.isdir(dest):
+        shutil.rmtree(dest)
+    if not os.path.exists(dest):
+        os.makedirs(dest)
+    tar_cmd = "tar"
+    tar_args = ["axf", bkp_file, "-C", dest, "."]
+    r = subprocess.run(
+        [tar_cmd, *tar_args],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.STDOUT,
+    )
+    if r.returncode != 0:
+        raise Exception(f"could not restore addons {dest}")
+
+
+def _restore_db_tar(
+    db_name,
+    bkp_file,
+    remote=False,
+    copy=True,
+    neutralize_database=False,
+):
+    # drop postgresql database
+    exp_drop(db_name)
+
+    # create new postgresql database
+    _create_empty_database(db_name)
+
+    # restore postgresql database
+    tarpg_cmd = ["tar", "Oaxvf", bkp_file, "./dump.sql"]
+    pg_cmd = [find_pg_tool("psql"), "--dbname", db_name, "-q"]
+    tarpg = subprocess.Popen(
+        tarpg_cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+    pg = subprocess.Popen(
+        pg_cmd,
+        env=exec_pg_environ(),
+        stdin=tarpg.stdout,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    tarpg.stdout.close()
+    pg.communicate()
+    if pg.returncode != 0:
+        raise Exception(f"could not backup postgresql database {db_name}")
+
+    if not remote:
+        # restore filestore
+        # restore filestore: cleanup dump_dir
+        data_dir = odoo.tools.config["data_dir"]
+        ddirs = os.listdir(data_dir)
+        if len(ddirs) != 0:
+            for ddir in ddirs:
+                shutil.rmtree(os.path.join(data_dir, ddir))
+        # restore filestore: get filestore directory
+        filestore = odoo.tools.config.filestore(db_name)
+        # restore filestore: make dir
+        try:
+            os.makedirs(filestore, exist_ok=True)
+        except FileExistsError as e:
+            pass
+        # restore filestore: extract from archive
+        tar_cmd = [
+            "tar",
+            "axf",
+            bkp_file,
+            "-C",
+            filestore,
+            "--strip-components=2",
+            "./filestore",
+        ]
+        tar = subprocess.run(
+            tar_cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT,
+        )
+        if tar.returncode != 0:
+            raise Exception(f"could not restore filestore for {db_name}")
+
+    # odoo database registry
+    registry = odoo.modules.registry.Registry.new(db_name)
+    with registry.cursor() as cr:
+        env = odoo.api.Environment(cr, SUPERUSER_ID, {})
+        if copy:
+            # change database.uuid if a copy (default)
+            # if it's a copy of a database, force generation of a new dbuuid
+            env["ir.config_parameter"].init(force=True)
+        if neutralize_database:
+            # neutralize (remove all modules) if needed
+            odoo.modules.neutralize.neutralize_database(cr)
+    return
+
+
+# Helpers
 class DatabaseExists(Warning):
     pass
 
@@ -124,175 +328,6 @@ def exp_drop(db_name):
     return True
 
 
-def dump_db_manifest(cr):
-    pg_version = "%d.%d" % divmod(cr._obj.connection.server_version / 100, 100)
-    cr.execute(
-        "SELECT name, latest_version FROM ir_module_module WHERE state = 'installed'"
-    )
-    modules = dict(cr.fetchall())
-    manifest = {
-        "odoo_dump": "1",
-        "db_name": cr.dbname,
-        "version": odoo.release.version,
-        "version_info": odoo.release.version_info,
-        "major_version": odoo.release.major_version,
-        "pg_version": pg_version,
-        "modules": modules,
-    }
-    return manifest
-
-
-def _dump_db(
-    db_name,
-    bkp_name,
-    folder="./backups",
-    conf_file="./conf/odoo.conf",
-    backup_format="zip",
-):
-    """Dump database `db` into file-like object `stream` if stream is None
-    return a file object with the dump"""
-    bkp_file = f"{bkp_name}.zip"
-    file_path = os.path.join(folder, bkp_file)
-    with open(file_path, "wb") as stream:
-        _logger.info("DUMP DB: %s format %s", db_name, backup_format)
-
-        cmd = [find_pg_tool("pg_dump"), "--no-owner", db_name]
-        env = exec_pg_environ()
-
-        if backup_format == "zip":
-            with tempfile.TemporaryDirectory() as dump_dir:
-                filestore = odoo.tools.config.filestore(db_name)
-                if os.path.exists(filestore):
-                    shutil.copytree(filestore, os.path.join(dump_dir, "filestore"))
-                with open(os.path.join(dump_dir, "manifest.json"), "w") as fh:
-                    db = odoo.sql_db.db_connect(db_name)
-                    with db.cursor() as cr:
-                        json.dump(dump_db_manifest(cr), fh, indent=4)
-                cmd.insert(-1, "--file=" + os.path.join(dump_dir, "dump.sql"))
-                subprocess.run(
-                    cmd,
-                    env=env,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.STDOUT,
-                    check=True,
-                )
-                if stream:
-                    odoo.tools.osutil.zip_dir(
-                        dump_dir,
-                        stream,
-                        include_dir=False,
-                        fnct_sort=lambda file_name: file_name != "dump.sql",
-                    )
-                else:
-                    t = tempfile.TemporaryFile()
-                    odoo.tools.osutil.zip_dir(
-                        dump_dir,
-                        t,
-                        include_dir=False,
-                        fnct_sort=lambda file_name: file_name != "dump.sql",
-                    )
-                    t.seek(0)
-                    return t
-        else:
-            cmd.insert(-1, "--format=c")
-            stdout = subprocess.Popen(
-                cmd, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE
-            ).stdout
-            if stream:
-                shutil.copyfileobj(stdout, stream)
-            else:
-                return stdout
-        return file_path
-
-
-def _dump_addons(
-    addons,
-    bkp_name,
-    bkp_dir="./backups",
-):
-    cwd = os.getcwd()
-    for addon in addons:
-        folder = addon.replace(cwd + "/", "")
-        dir = os.listdir(folder)
-        if len(dir) != 0:
-            bkp_file = f"{bkp_name}_{folder}.zip"
-            file_path = os.path.join(bkp_dir, bkp_file)
-            with open(file_path, "wb") as stream:
-                odoo.tools.osutil.zip_dir(folder, file_path, include_dir=False)
-            return file_path
-
-
-def _restore_db(db, dump_file, copy=False, neutralize_database=False):
-    _logger.info("RESTORING DB: %s", db)
-
-    exp_drop(db)
-    _create_empty_database(db)
-
-    filestore_path = None
-    with tempfile.TemporaryDirectory() as dump_dir:
-        if zipfile.is_zipfile(dump_file):
-            # v8 format
-            with zipfile.ZipFile(dump_file, "r") as z:
-                # only extract known members!
-                filestore = [m for m in z.namelist() if m.startswith("filestore/")]
-                z.extractall(dump_dir, ["dump.sql"] + filestore)
-
-                if filestore:
-                    filestore_path = os.path.join(dump_dir, "filestore")
-
-            pg_cmd = "psql"
-            pg_args = ["-q", "-f", os.path.join(dump_dir, "dump.sql")]
-        else:
-            # <= 7.0 format (raw pg_dump output)
-            pg_cmd = "pg_restore"
-            pg_args = ["--no-owner", dump_file]
-
-        r = subprocess.run(
-            [find_pg_tool(pg_cmd), "--dbname=" + db, *pg_args],
-            env=exec_pg_environ(),
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.STDOUT,
-        )
-        if r.returncode != 0:
-            raise Exception("Couldn't restore database")
-
-        registry = odoo.modules.registry.Registry.new(db)
-        with registry.cursor() as cr:
-            env = odoo.api.Environment(cr, SUPERUSER_ID, {})
-            if copy:
-                # if it's a copy of a database, force generation of a new dbuuid
-                env["ir.config_parameter"].init(force=True)
-            if neutralize_database:
-                odoo.modules.neutralize.neutralize_database(cr)
-
-            if filestore_path:
-                filestore_dest = env["ir.attachment"]._filestore()
-                shutil.move(filestore_path, filestore_dest)
-
-    _logger.info("RESTORE DB: %s", db)
-
-def _restore_conf(dump_file):
-    dest = dump_file.split("_")[-1:][0].split(".")[0]
-    print(dest)
-    # if os.path.isdir(dest):
-    #     shutil.rmtree(dest)
-    # if not os.path.exists(dest):
-    #     os.makedirs(dest)
-    # with zipfile.ZipFile(dump_file, "r") as z:
-    #     z.extractall(dest,["odoo.conf"])
-    return
-
-def _restore_addons(dump_file, addons=""):
-    cwd = os.getcwd()
-    dest = addons if addons != "" else dump_file.split("_")[-1:][0].split(".")[0]
-    if os.path.isdir(dest):
-        shutil.rmtree(dest)
-    if not os.path.exists(dest):
-        os.makedirs(dest)
-    with zipfile.ZipFile(dump_file, "r") as z:
-        z.extractall(dest)
-
-
 def list_dbs(force=False):
     if not odoo.tools.config["list_db"] and not force:
         raise odoo.exceptions.AccessDenied()
@@ -320,6 +355,7 @@ def list_dbs(force=False):
     return res
 
 
+# Admin password
 def change_password(new_password):
     new_password = new_password.strip()
     if new_password == "":
@@ -328,6 +364,9 @@ def change_password(new_password):
     pw_hash = ctx.hash(new_password)
     print(pw_hash)
     return
+
+
+# =============================================================================
 
 
 def main():
@@ -345,6 +384,7 @@ def main():
     argParser.add_argument(
         "-r", "--restore", action="store_true", help="restore database"
     )
+    argParser.add_argument("-s", "--remote", action="store_true", help="remote restore")
     argParser.add_argument(
         "-d", "--dump_file", action="store", help="database dump file"
     )
@@ -378,8 +418,11 @@ def main():
 
     if args.backup:
         bkp_name = f"{time.strftime('%Y_%m_%d_%H_%M_%S')}_{db_name}"
-        print(_dump_db(db_name, bkp_name, args.destfolder, args.config))
-        print(_dump_addons(addons, bkp_name, args.destfolder))
+        # main database and filestore
+        print(_dump_db_tar(db_name, bkp_name, args.destfolder))
+        # addons
+        # print(_dump_addons(addons, bkp_name, args.destfolder))
+        print(_dump_addons_tar(addons, bkp_name, args.destfolder))
         return
 
     if args.restore and args.dump_file is None or args.dump_file == "":
@@ -391,11 +434,16 @@ def main():
         bfile = os.path.splitext(os.path.basename(dump_file))[0].split("_")
         if len(bfile) == 7:
             print(f"restore from dump file {dump_file}")
-            _restore_db(db_name, dump_file)
-            _restore_conf(dump_file)
+            _restore_db_tar(db_name, dump_file, args.remote)
+            # if args.remote:
+            #     _restore_db_remote(db_name, dump_file)
+            # else:
+            #     _restore_db(db_name, dump_file)
+            # _restore_conf(dump_file)
         elif len(bfile) == 8:
             print(f"restore addons file {dump_file}")
-            _restore_addons(dump_file)
+            # _restore_addons(dump_file)
+            _restore_addons_tar(dump_file)
         else:
             print("invalid backup filename")
         return

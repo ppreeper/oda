@@ -546,6 +546,22 @@ commands:
                 required: true
               - name: remote
                 default: odoofs
+      - name: backup
+        help: backup project on target node
+        args:
+          - name: node
+            required: true
+      - name: restore
+        help: mounts project on target node
+        args:
+          - name: node
+            required: true
+          - name: remotefs
+            default: odoofs
+          - name: file
+            help: Path to backup file
+            required: true
+            repeatable: true
       - name: mount
         help: mounts project on target node
         args:
