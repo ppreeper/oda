@@ -9,6 +9,8 @@ import sys
 import shutil
 import subprocess
 import tempfile
+
+# from tkinter import W
 import zipfile
 
 sys.path.append("odoo")
@@ -158,77 +160,81 @@ def _restore_db_tar(
     copy=True,
     neutralize_database=False,
 ):
-    print(db_name,bkp_file,remote,copy,neutralize_database)
     # drop postgresql database
-    # exp_drop(db_name)
+    _drop_database(db_name)
+    if not remote:
+        _drop_filestore(db_name)
 
     # create new postgresql database
-    # _create_empty_database(db_name)
+    _create_empty_database(db_name)
 
     # restore postgresql database
-    # tarpg_cmd = ["tar", "Oaxvf", bkp_file, "./dump.sql"]
-    # pg_cmd = [find_pg_tool("psql"), "--dbname", db_name, "-q"]
-    # tarpg = subprocess.Popen(
-    #     tarpg_cmd,
-    #     stdout=subprocess.PIPE,
-    #     stderr=subprocess.DEVNULL,
-    # )
-    # pg = subprocess.Popen(
-    #     pg_cmd,
-    #     env=exec_pg_environ(),
-    #     stdin=tarpg.stdout,
-    #     stdout=subprocess.DEVNULL,
-    #     stderr=subprocess.DEVNULL,
-    # )
-    # tarpg.stdout.close()
-    # pg.communicate()
-    # if pg.returncode != 0:
-    #     raise Exception(f"could not backup postgresql database {db_name}")
+    # print("restore postgresql database")
+    tarpg_cmd = ["tar", "Oaxvf", bkp_file, "./dump.sql"]
+    pg_cmd = [find_pg_tool("psql"), "--dbname", db_name, "-q"]
+    tarpg = subprocess.Popen(
+        tarpg_cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+    pg = subprocess.Popen(
+        pg_cmd,
+        env=exec_pg_environ(),
+        stdin=tarpg.stdout,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    tarpg.stdout.close()
+    pg.communicate()
+    if pg.returncode != 0:
+        raise Exception(f"could not backup postgresql database {db_name}")
 
-    # if not remote:
+    if not remote:
+        # print("restore filestore")
         # restore filestore
         # restore filestore: cleanup dump_dir
-        # data_dir = odoo.tools.config["data_dir"]
-        # ddirs = os.listdir(data_dir)
-        # if len(ddirs) != 0:
-        #     for ddir in ddirs:
-        #         shutil.rmtree(os.path.join(data_dir, ddir))
-        # # restore filestore: get filestore directory
-        # filestore = odoo.tools.config.filestore(db_name)
-        # # restore filestore: make dir
-        # try:
-        #     os.makedirs(filestore, exist_ok=True)
-        # except FileExistsError as e:
-        #     pass
-        # # restore filestore: extract from archive
-        # tar_cmd = [
-        #     "tar",
-        #     "axf",
-        #     bkp_file,
-        #     "-C",
-        #     filestore,
-        #     "--strip-components=2",
-        #     "./filestore",
-        # ]
-        # tar = subprocess.run(
-        #     tar_cmd,
-        #     stdout=subprocess.DEVNULL,
-        #     stderr=subprocess.STDOUT,
-        # )
-        # if tar.returncode != 0:
-        #     raise Exception(f"could not restore filestore for {db_name}")
+        data_dir = odoo.tools.config["data_dir"]
+        ddirs = os.listdir(data_dir)
+        if len(ddirs) != 0:
+            for ddir in ddirs:
+                shutil.rmtree(os.path.join(data_dir, ddir))
+        # restore filestore: get filestore directory
+        filestore = odoo.tools.config.filestore(db_name)
+        # restore filestore: make dir
+        try:
+            os.makedirs(filestore, exist_ok=True)
+        except FileExistsError as e:
+            pass
+        # restore filestore: extract from archive
+        tar_cmd = [
+            "tar",
+            "axf",
+            bkp_file,
+            "-C",
+            filestore,
+            "--strip-components=2",
+            "./filestore",
+        ]
+        tar = subprocess.run(
+            tar_cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT,
+        )
+        if tar.returncode != 0:
+            raise Exception(f"could not restore filestore for {db_name}")
 
     # odoo database registry
-    # registry = odoo.modules.registry.Registry.new(db_name)
-    # with registry.cursor() as cr:
-    #     env = odoo.api.Environment(cr, SUPERUSER_ID, {})
-    #     if copy:
-    #         # change database.uuid if a copy (default)
-    #         # if it's a copy of a database, force generation of a new dbuuid
-    #         env["ir.config_parameter"].init(force=True)
-    #     if neutralize_database:
-    #         # neutralize (remove all modules) if needed
-    #         odoo.modules.neutralize.neutralize_database(cr)
+    # print("odoo database registry")
+    registry = odoo.modules.registry.Registry.new(db_name)
+    with registry.cursor() as cr:
+        env = odoo.api.Environment(cr, SUPERUSER_ID, {})
+        if copy:
+            # change database.uuid if a copy (default)
+            # if it's a copy of a database, force generation of a new dbuuid
+            env["ir.config_parameter"].init(force=True)
+        if neutralize_database:
+            # neutralize (remove all modules) if needed
+            odoo.modules.neutralize.neutralize_database(cr)
     return
 
 
@@ -270,12 +276,6 @@ def _create_empty_database(name):
             cr.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
             if odoo.tools.config["unaccent"]:
                 cr.execute("CREATE EXTENSION IF NOT EXISTS unaccent")
-                # From PostgreSQL's point of view, making 'unaccent' immutable is incorrect
-                # because it depends on external data - see
-                # https://www.postgresql.org/message-id/flat/201012021544.oB2FiTn1041521@wwwmaster.postgresql.org#201012021544.oB2FiTn1041521@wwwmaster.postgresql.org
-                # But in the case of Odoo, we consider that those data don't
-                # change in the lifetime of a database. If they do change, all
-                # indexes created with this function become corrupted!
                 cr.execute("ALTER FUNCTION unaccent(text) IMMUTABLE")
     except psycopg2.Error as e:
         _logger.warning("Unable to create PostgreSQL extensions : %s", e)
@@ -285,8 +285,6 @@ def _drop_conn(cr, db_name):
     # Try to terminate all other connections that might prevent
     # dropping the database
     try:
-        # PostgreSQL 9.2 renamed pg_stat_activity.procpid to pid:
-        # http://www.postgresql.org/docs/9.2/static/release-9-2.html#AEN110389
         pid_col = "pid" if cr._cnx.server_version >= 90200 else "procpid"
 
         cr.execute(
@@ -301,7 +299,7 @@ def _drop_conn(cr, db_name):
         pass
 
 
-def exp_drop(db_name):
+def _drop_database(db_name):
     if db_name not in list_dbs(True):
         return False
     odoo.modules.registry.Registry.delete(db_name)
@@ -323,6 +321,12 @@ def exp_drop(db_name):
         else:
             _logger.info("DROP DB: %s", db_name)
 
+    return True
+
+
+def _drop_filestore(db_name):
+    if db_name not in list_dbs(True):
+        return False
     fs = odoo.tools.config.filestore(db_name)
     if os.path.exists(fs):
         shutil.rmtree(fs)
@@ -330,6 +334,7 @@ def exp_drop(db_name):
 
 
 def list_dbs(force=False):
+    print("list_dbs")
     if not odoo.tools.config["list_db"] and not force:
         raise odoo.exceptions.AccessDenied()
 
@@ -434,7 +439,7 @@ def main():
         fname = os.path.splitext(os.path.basename(dump_file))[0].split(".")[0]
         bfile = os.path.splitext(fname)[0].split("_")
         if len(bfile) >= 7:
-            if bfile[-1]=="addons":
+            if bfile[-1] == "addons":
                 print(f"restore addons file {dump_file}")
                 _restore_addons_tar(dump_file)
             else:

@@ -56,7 +56,7 @@ sudo apt-get install -y --no-install-recommends \
   python3-pytzdata python3-qrcode python3-renderpm python3-reportlab python3-reportlab-accel \
   python3-requests python3-rjsmin python3-serial python3-stdnum python3-urllib3 \
   python3-usb python3-vobject python3-werkzeug python3-xlrd python3-xlsxwriter \
-  python3-xlwt python3-zeep
+  python3-xlwt python3-zeep zstd
 
 # install wkhtmltopdf
 wget -qc ${REPO}/releases/download/${vers}/${FN} -O ${HOME}/wkhtmltox.deb
