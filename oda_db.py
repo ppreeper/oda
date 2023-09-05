@@ -158,76 +158,77 @@ def _restore_db_tar(
     copy=True,
     neutralize_database=False,
 ):
+    print(db_name,bkp_file,remote,copy,neutralize_database)
     # drop postgresql database
-    exp_drop(db_name)
+    # exp_drop(db_name)
 
     # create new postgresql database
-    _create_empty_database(db_name)
+    # _create_empty_database(db_name)
 
     # restore postgresql database
-    tarpg_cmd = ["tar", "Oaxvf", bkp_file, "./dump.sql"]
-    pg_cmd = [find_pg_tool("psql"), "--dbname", db_name, "-q"]
-    tarpg = subprocess.Popen(
-        tarpg_cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-    )
-    pg = subprocess.Popen(
-        pg_cmd,
-        env=exec_pg_environ(),
-        stdin=tarpg.stdout,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    tarpg.stdout.close()
-    pg.communicate()
-    if pg.returncode != 0:
-        raise Exception(f"could not backup postgresql database {db_name}")
+    # tarpg_cmd = ["tar", "Oaxvf", bkp_file, "./dump.sql"]
+    # pg_cmd = [find_pg_tool("psql"), "--dbname", db_name, "-q"]
+    # tarpg = subprocess.Popen(
+    #     tarpg_cmd,
+    #     stdout=subprocess.PIPE,
+    #     stderr=subprocess.DEVNULL,
+    # )
+    # pg = subprocess.Popen(
+    #     pg_cmd,
+    #     env=exec_pg_environ(),
+    #     stdin=tarpg.stdout,
+    #     stdout=subprocess.DEVNULL,
+    #     stderr=subprocess.DEVNULL,
+    # )
+    # tarpg.stdout.close()
+    # pg.communicate()
+    # if pg.returncode != 0:
+    #     raise Exception(f"could not backup postgresql database {db_name}")
 
-    if not remote:
+    # if not remote:
         # restore filestore
         # restore filestore: cleanup dump_dir
-        data_dir = odoo.tools.config["data_dir"]
-        ddirs = os.listdir(data_dir)
-        if len(ddirs) != 0:
-            for ddir in ddirs:
-                shutil.rmtree(os.path.join(data_dir, ddir))
-        # restore filestore: get filestore directory
-        filestore = odoo.tools.config.filestore(db_name)
-        # restore filestore: make dir
-        try:
-            os.makedirs(filestore, exist_ok=True)
-        except FileExistsError as e:
-            pass
-        # restore filestore: extract from archive
-        tar_cmd = [
-            "tar",
-            "axf",
-            bkp_file,
-            "-C",
-            filestore,
-            "--strip-components=2",
-            "./filestore",
-        ]
-        tar = subprocess.run(
-            tar_cmd,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.STDOUT,
-        )
-        if tar.returncode != 0:
-            raise Exception(f"could not restore filestore for {db_name}")
+        # data_dir = odoo.tools.config["data_dir"]
+        # ddirs = os.listdir(data_dir)
+        # if len(ddirs) != 0:
+        #     for ddir in ddirs:
+        #         shutil.rmtree(os.path.join(data_dir, ddir))
+        # # restore filestore: get filestore directory
+        # filestore = odoo.tools.config.filestore(db_name)
+        # # restore filestore: make dir
+        # try:
+        #     os.makedirs(filestore, exist_ok=True)
+        # except FileExistsError as e:
+        #     pass
+        # # restore filestore: extract from archive
+        # tar_cmd = [
+        #     "tar",
+        #     "axf",
+        #     bkp_file,
+        #     "-C",
+        #     filestore,
+        #     "--strip-components=2",
+        #     "./filestore",
+        # ]
+        # tar = subprocess.run(
+        #     tar_cmd,
+        #     stdout=subprocess.DEVNULL,
+        #     stderr=subprocess.STDOUT,
+        # )
+        # if tar.returncode != 0:
+        #     raise Exception(f"could not restore filestore for {db_name}")
 
     # odoo database registry
-    registry = odoo.modules.registry.Registry.new(db_name)
-    with registry.cursor() as cr:
-        env = odoo.api.Environment(cr, SUPERUSER_ID, {})
-        if copy:
-            # change database.uuid if a copy (default)
-            # if it's a copy of a database, force generation of a new dbuuid
-            env["ir.config_parameter"].init(force=True)
-        if neutralize_database:
-            # neutralize (remove all modules) if needed
-            odoo.modules.neutralize.neutralize_database(cr)
+    # registry = odoo.modules.registry.Registry.new(db_name)
+    # with registry.cursor() as cr:
+    #     env = odoo.api.Environment(cr, SUPERUSER_ID, {})
+    #     if copy:
+    #         # change database.uuid if a copy (default)
+    #         # if it's a copy of a database, force generation of a new dbuuid
+    #         env["ir.config_parameter"].init(force=True)
+    #     if neutralize_database:
+    #         # neutralize (remove all modules) if needed
+    #         odoo.modules.neutralize.neutralize_database(cr)
     return
 
 
