@@ -3,21 +3,27 @@ echo "# code for 'oda remote restore' goes here"
 echo "# you can edit it freely and regenerate (it will not be overwritten)"
 inspect_args
 
+REMOTE_FS=odoofs
 echo ${args[node]}
 echo ${args[remote]}
 echo ${args[file]}
 
-# DUMP_FILE="backups/2023_08_14_04_13_58_Dec30data.tar.zst"
-# PROJECT=$(ssh ${args[node]} -- cat /etc/fstab | grep addons | awk '{print $1}' | awk -F':' '{print $2}' | sed 's,/addons$,,')
 
-# restore filestore on odoofs
-# DUMP_FILE="backups/2023_08_14_04_13_58_Dec30data.tar.zst"
-# DB="quest15issue_285"
-# echo sudo -u odoo rm -rf ${PROJECT}/data/*
-# echo sudo -u odoo mkdir -p ${PROJECT}/data/filestore/${DB}
-# echo sudo -u odoo tar -axf /share/${DUMP_FILE} -C ${PROJECT}/data/filestore/${DB} --strip-components=2 ./filestore
+## Remote FS
+PROJECT=$(ssh ${args[node]} -- cat /etc/fstab | grep addons | awk '{print $1}' | awk -F':' '{print $2}' | sed 's,/addons$,,')
+DB=$(ssh ${args[node]} -- grep db_name /opt/odoo/conf/odoo.conf | sed 's/ //g' | awk -F'=' '{print $2}')
+# ssh ${REMOTE_FS} -- sudo -u odoo rm -rf ${PROJECT}/data/*
+# ssh ${REMOTE_FS} -- sudo -u odoo mkdir -p ${PROJECT}/data/filestore/${DB}
+# ssh ${REMOTE_FS} -- sudo -u odoo tar -axf /share/${args[file]} -C ${PROJECT}/data/filestore/${DB} --strip-components=2 ./filestore
 
-# echo ssh ${args[remote]} sudo -u odoo rm -rf ${PROJECT}/data/*
+
+## Node
+# stop service
+ssh ${args[node]} -- sudo systemctl stop odoo.service
+
+# restore db on node
+ssh ${args[node]} -- 'cd /opt/odoo && pwd && sudo -u odoo python3 -B /usr/local/bin/oda_db.py --remote -r -d ${args[file]}'
+
 
 
 # if [[ -f "./conf/odoo.conf" ]]; then

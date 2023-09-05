@@ -394,6 +394,8 @@ commands:
           - oda backup
       - name: restore
         help: Restore database and filestore or addons
+        flags:
+          - long: --remote
         args:
           - name: file
             help: Path to backup file
@@ -556,8 +558,6 @@ commands:
         args:
           - name: node
             required: true
-          - name: remotefs
-            default: odoofs
           - name: file
             help: Path to backup file
             required: true
