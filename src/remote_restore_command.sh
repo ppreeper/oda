@@ -22,9 +22,9 @@ DB=$(ssh ${args[node]} -- grep db_name /opt/odoo/conf/odoo.conf | sed 's/ //g' |
 ssh ${args[node]} -- sudo systemctl stop odoo.service
 
 # restore db on node
-ssh ${args[node]} -- 'cd /opt/odoo && pwd && sudo -u odoo python3 -B /usr/local/bin/oda_db.py --remote -r -d ${args[file]}'
+# ssh ${args[node]} -- 'cd /opt/odoo && pwd && sudo -u odoo python3 -B /usr/local/bin/oda_db.py --remote -r -d ${args[file]}'
 
-
+ssh ${args[node]} oda node restore --remote ${args[file]}
 
 # if [[ -f "./conf/odoo.conf" ]]; then
 #   BASE=`dirname "${0}"`

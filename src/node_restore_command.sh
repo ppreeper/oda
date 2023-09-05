@@ -1,3 +1,4 @@
+inspect_args
 [[ -z ${args[--remote]} ]] && REMOTE="" || REMOTE="--remote"
 BASE=/opt/odoo
 cd ${BASE}

@@ -3231,6 +3231,7 @@ oda_node_backup_command() {
 # :command.function
 oda_node_restore_command() {
 	# src/node_restore_command.sh
+	inspect_args
 	[[ -z ${args[--remote]} ]] && REMOTE="" || REMOTE="--remote"
 	BASE=/opt/odoo
 	cd ${BASE}
@@ -3489,7 +3490,9 @@ oda_remote_restore_command() {
 	ssh ${args[node]} -- sudo systemctl stop odoo.service
 
 	# restore db on node
-	ssh ${args[node]} -- 'cd /opt/odoo && pwd && sudo -u odoo python3 -B /usr/local/bin/oda_db.py --remote -r -d ${args[file]}'
+	# ssh ${args[node]} -- 'cd /opt/odoo && pwd && sudo -u odoo python3 -B /usr/local/bin/oda_db.py --remote -r -d ${args[file]}'
+
+	ssh ${args[node]} oda node restore --remote ${args[file]}
 
 	# if [[ -f "./conf/odoo.conf" ]]; then
 	#   BASE=`dirname "${0}"`
