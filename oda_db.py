@@ -432,6 +432,7 @@ def main():
     if args.restore and args.dump_file:
         dump_file = args.dump_file.strip('"')
         bfile = os.path.splitext(os.path.basename(dump_file))[0].split("_")
+        print(f"length of bfile {len(bfile)}")
         if len(bfile) == 7:
             print(f"restore from dump file {dump_file}")
             _restore_db_tar(db_name, dump_file, args.remote)
