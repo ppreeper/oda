@@ -421,7 +421,6 @@ def main():
         # main database and filestore
         print(_dump_db_tar(db_name, bkp_name, args.destfolder))
         # addons
-        # print(_dump_addons(addons, bkp_name, args.destfolder))
         print(_dump_addons_tar(addons, bkp_name, args.destfolder))
         return
 
@@ -435,14 +434,8 @@ def main():
         if len(bfile) == 7:
             print(f"restore from dump file {dump_file}")
             _restore_db_tar(db_name, dump_file, args.remote)
-            # if args.remote:
-            #     _restore_db_remote(db_name, dump_file)
-            # else:
-            #     _restore_db(db_name, dump_file)
-            # _restore_conf(dump_file)
         elif len(bfile) == 8:
             print(f"restore addons file {dump_file}")
-            # _restore_addons(dump_file)
             _restore_addons_tar(dump_file)
         else:
             print("invalid backup filename")
