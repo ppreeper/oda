@@ -98,6 +98,24 @@ commands:
     examples:
       - oda upgrade base,web
 
+  - name: manifest
+    help: export import module manifest
+    commands:
+      - name: export
+        help: export manifest.json
+      - name: import
+        help: import manifest.json
+        args:
+          - name: file
+            help: manifest file to read
+            default: manifest.json
+      - name: remote
+        help: download manifest from backup
+        args:
+          - name: file
+            help: backup file to read
+            required: true
+
   - name: psql
     help: Access the raw database
     flags:

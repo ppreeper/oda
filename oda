@@ -43,6 +43,7 @@ oda_usage() {
 	printf "  %s   initialize the database\n" "init    "
 	printf "  %s   Install module(s)\n" "install "
 	printf "  %s   Upgrade module(s)\n" "upgrade "
+	printf "  %s   export import module manifest\n" "manifest"
 	printf "  %s   Access the raw database\n" "psql    "
 	printf "  %s   Query the database\n" "query   "
 	printf "  %s   Backup database filestore and addons\n" "backup  "
@@ -492,6 +493,145 @@ oda_upgrade_usage() {
 		# :command.usage_examples
 		printf "%s\n" "Examples:"
 		printf "  oda upgrade base,web\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_manifest_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda manifest - export import module manifest\n"
+		echo
+
+	else
+		printf "oda manifest - export import module manifest\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda manifest COMMAND\n"
+	printf "  oda manifest [COMMAND] --help | -h\n"
+	echo
+	# :command.usage_commands
+	printf "%s\n" "Commands:"
+	printf "  %s   export manifest.json\n" "export"
+	printf "  %s   import manifest.json\n" "import"
+	printf "  %s   download manifest from backup\n" "remote"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_manifest_export_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda manifest export - export manifest.json\n"
+		echo
+
+	else
+		printf "oda manifest export - export manifest.json\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda manifest export\n"
+	printf "  oda manifest export --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_manifest_import_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda manifest import - import manifest.json\n"
+		echo
+
+	else
+		printf "oda manifest import - import manifest.json\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda manifest import [FILE]\n"
+	printf "  oda manifest import --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+		# :command.usage_args
+		printf "%s\n" "Arguments:"
+
+		# :argument.usage
+		printf "  %s\n" "FILE"
+		printf "    manifest file to read\n"
+		printf "    Default: manifest.json\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_manifest_remote_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda manifest remote - download manifest from backup\n"
+		echo
+
+	else
+		printf "oda manifest remote - download manifest from backup\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda manifest remote FILE\n"
+	printf "  oda manifest remote --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+		# :command.usage_args
+		printf "%s\n" "Arguments:"
+
+		# :argument.usage
+		printf "  %s\n" "FILE"
+		printf "    backup file to read\n"
 		echo
 
 	fi
@@ -2773,6 +2913,35 @@ oda_upgrade_command() {
 }
 
 # :command.function
+oda_manifest_export_command() {
+	# src/manifest_export_command.sh
+	if [[ -f "./conf/odoo.conf" ]]; then
+		BASE=`dirname "${0}"`
+		python3 -B ${BASE}/oda_db.py -e
+	else
+		echo "not in a project directory"
+	fi
+}
+
+# :command.function
+oda_manifest_import_command() {
+	# src/manifest_import_command.sh
+	if [[ -f "./conf/odoo.conf" ]]; then
+		BASE=`dirname "${0}"`
+		python3 -B ${BASE}/oda_db.py -i
+	else
+		echo "not in a project directory"
+	fi
+}
+
+# :command.function
+oda_manifest_remote_command() {
+	# src/manifest_remote_command.sh
+	REMOTE_FS=odoofs
+	ssh ${REMOTE_FS} tar Oaxf /share/${args[file]} ./manifest.json > manifest.json
+}
+
+# :command.function
 oda_psql_command() {
 	# src/psql_command.sh
 	if [[ -f "./conf/odoo.conf" ]]; then
@@ -3606,6 +3775,13 @@ parse_requirements() {
 			shift $#
 			;;
 
+		manifest)
+			action="manifest"
+			shift
+			oda_manifest_parse_requirements "$@"
+			shift $#
+			;;
+
 		psql)
 			action="psql"
 			shift
@@ -4317,6 +4493,240 @@ oda_upgrade_parse_requirements() {
 
 	# :command.default_assignments
 	[[ -n ${args['--name']:-} ]] || args['--name']="$(grep db_name conf/odoo.conf | awk -F'=' '{print $2}' | tr -d '[:space:]')"
+
+}
+
+# :command.parse_requirements
+oda_manifest_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_manifest_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action=${1:-}
+
+	case $action in
+		-*) ;;
+
+		export)
+			action="export"
+			shift
+			oda_manifest_export_parse_requirements "$@"
+			shift $#
+			;;
+
+		import)
+			action="import"
+			shift
+			oda_manifest_import_parse_requirements "$@"
+			shift $#
+			;;
+
+		remote)
+			action="remote"
+			shift
+			oda_manifest_remote_parse_requirements "$@"
+			shift $#
+			;;
+
+		# :command.command_fallback
+		"")
+			oda_manifest_usage >&2
+			exit 1
+			;;
+
+		*)
+			printf "invalid command: %s\n" "$action" >&2
+			exit 1
+			;;
+
+	esac
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				printf "invalid argument: %s\n" "$key" >&2
+				exit 1
+
+				;;
+
+		esac
+	done
+
+}
+
+# :command.parse_requirements
+oda_manifest_export_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_manifest_export_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="manifest export"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				printf "invalid argument: %s\n" "$key" >&2
+				exit 1
+
+				;;
+
+		esac
+	done
+
+}
+
+# :command.parse_requirements
+oda_manifest_import_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_manifest_import_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="manifest import"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				if [[ -z ${args['file']+x} ]]; then
+
+					args['file']=$1
+					shift
+				else
+					printf "invalid argument: %s\n" "$key" >&2
+					exit 1
+				fi
+
+				;;
+
+		esac
+	done
+
+	# :command.default_assignments
+	[[ -n ${args['file']:-} ]] || args['file']="manifest.json"
+
+}
+
+# :command.parse_requirements
+oda_manifest_remote_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_manifest_remote_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="manifest remote"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				if [[ -z ${args['file']+x} ]]; then
+
+					args['file']=$1
+					shift
+				else
+					printf "invalid argument: %s\n" "$key" >&2
+					exit 1
+				fi
+
+				;;
+
+		esac
+	done
+
+	# :command.required_args_filter
+	if [[ -z ${args['file']+x} ]]; then
+		printf "missing required argument: FILE\nusage: oda manifest remote FILE\n" >&2
+		exit 1
+	fi
 
 }
 
@@ -7908,6 +8318,10 @@ run() {
 		"init") oda_init_command ;;
 		"install") oda_install_command ;;
 		"upgrade") oda_upgrade_command ;;
+		"manifest") oda_manifest_command ;;
+		"manifest export") oda_manifest_export_command ;;
+		"manifest import") oda_manifest_import_command ;;
+		"manifest remote") oda_manifest_remote_command ;;
 		"psql") oda_psql_command ;;
 		"query") oda_query_command ;;
 		"backup") oda_backup_command ;;

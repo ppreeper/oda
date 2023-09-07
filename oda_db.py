@@ -52,6 +52,14 @@ def dump_db_manifest(cr):
     return manifest
 
 
+def export_manifest(db_name):
+    # manifest.json
+    with open(os.path.join(".", "manifest.json"), "w") as fh:
+        db = odoo.sql_db.db_connect(db_name)
+        with db.cursor() as cr:
+            json.dump(dump_db_manifest(cr), fh, indent=4)
+
+
 def _dump_addons_tar(addons, bkp_name, bkp_dest="./bkpdir"):
     cwd = os.getcwd()
     for addon in addons:
@@ -238,6 +246,26 @@ def _restore_db_tar(
     return
 
 
+def import_manifest(db_name, ifile="manifest.json"):
+    # manifest.json
+    # read file
+    f = open(ifile, "r")
+    data = json.load(f)
+    f.close()
+
+    # update ir_module_module table
+    db = odoo.sql_db.db_connect(db_name)
+    with db.cursor() as cr:
+        for i in data["modules"]:
+            cr.execute(
+                sql.SQL(
+                    f"""INSERT into ir_module_module (name,state) values ('{i}','installed') ON CONFLICT (name) DO UPDATE SET state=EXCLUDED.state;"""
+                )
+            )
+            # f"""INSERT into ir_module_module (name,state,latest_version) values ('{i}','installed','{data["modules"][i]}') ON CONFLICT (name) DO UPDATE SET state=EXCLUDED.state, latest_version=EXCLUDED.latest_version;"""
+    return
+
+
 # Helpers
 class DatabaseExists(Warning):
     pass
@@ -334,7 +362,6 @@ def _drop_filestore(db_name):
 
 
 def list_dbs(force=False):
-    print("list_dbs")
     if not odoo.tools.config["list_db"] and not force:
         raise odoo.exceptions.AccessDenied()
 
@@ -378,6 +405,15 @@ def change_password(new_password):
 def main():
     argParser = argparse.ArgumentParser()
     argParser.add_argument(
+        "-e", "--exp", action="store_true", help="export manifest.json"
+    )
+    argParser.add_argument(
+        "-i",
+        "--imp",
+        action="store_true",
+        help="import manifest.json",
+    )
+    argParser.add_argument(
         "-b", "--backup", action="store_true", help="backup database"
     )
     argParser.add_argument(
@@ -409,6 +445,17 @@ def main():
     odoo.tools.config._parse_config(["-c", args.config])
     db_name = odoo.tools.config["db_name"]
     addons = odoo.tools.config["addons_path"].split(",")[2:]
+
+    if args.exp and args.imp:
+        print("export or import not both")
+        return
+
+    if args.imp:
+        import_manifest(db_name)
+        return
+    if args.exp:
+        export_manifest(db_name)
+        return
 
     if not args.backup and not args.restore and not args.password:
         print(argParser.print_help())
