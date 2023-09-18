@@ -1,3 +1,6 @@
+[ -z ${ODOO_C} ] && export ODOO_C="odoo"
+[ -z ${ODOO_E} ] && export ODOO_E="enterprise"
+
 cat <<-_EOF_ | tee pyrightconfig.json > /dev/null
 {
   "venvPath": ".",
@@ -5,7 +8,11 @@ cat <<-_EOF_ | tee pyrightconfig.json > /dev/null
   "executionEnvironments": [
     {
       "root": ".",
-      "extraPaths": ["addons","odoo","odoo/odoo", "enterprise"]
+      "extraPaths": [
+        "${ODOO_C}",
+        "${ODOO_E}",
+        "addons"
+        ]
     }
   ]
 }

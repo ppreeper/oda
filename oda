@@ -2763,6 +2763,9 @@ oda_config_vscode_command() {
 # :command.function
 oda_config_pyright_command() {
 	# src/config_pyright_command.sh
+	[ -z ${ODOO_C} ] && export ODOO_C="odoo"
+	[ -z ${ODOO_E} ] && export ODOO_E="enterprise"
+
 	cat <<-_EOF_ | tee pyrightconfig.json > /dev/null
 	{
 		"venvPath": ".",
@@ -2770,7 +2773,11 @@ oda_config_pyright_command() {
 		"executionEnvironments": [
 			{
 				"root": ".",
-				"extraPaths": ["addons","odoo","odoo/odoo", "enterprise"]
+				"extraPaths": [
+					"${ODOO_C}",
+					"${ODOO_E}",
+					"addons"
+					]
 			}
 		]
 	}
