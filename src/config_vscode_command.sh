@@ -38,11 +38,7 @@ cat <<-_EOF_ | tee .vscode/settings.json > /dev/null
   "python.linting.pylintEnabled": true,
   "python.linting.enabled": true,
   "python.terminal.executeInFileDir": true,
-  "python.formatting.provider": "yapf",
-  "python.formatting.yapfArgs": [
-    "--style",
-    "{allow_split_before_dict_value=False,force_multiline_dict=True,split_before_closing_bracket=True,join_multiple_lines=False}"
-  ]
+  "python.formatting.provider": "black"
 }
 _EOF_
 }
