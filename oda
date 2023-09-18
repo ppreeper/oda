@@ -2769,10 +2769,12 @@ oda_config_pyright_command() {
 	# src/config_pyright_command.sh
 	cat <<-_EOF_ | tee pyrightconfig.json > /dev/null
 	{
+		"venvPath": ".",
+		"venv": ".direnv",
 		"executionEnvironments": [
 			{
-				"root": "addons",
-				"extraPaths": ["odoo", "enterprise"]
+				"root": ".",
+				"extraPaths": ["addons","odoo","odoo/odoo", "enterprise"]
 			}
 		]
 	}
@@ -2843,7 +2845,7 @@ oda_logs_command() {
 oda_scaffold_command() {
 	# src/scaffold_command.sh
 	if [[ -f "./conf/odoo.conf" ]]; then
-		../${POD}/odoo/odoo-bin scaffold ${args[module]} ../${POD}/addons-custom/.
+		../${POD}/odoo/odoo-bin scaffold ${args[module]} ../${POD}/addons/.
 	else
 		echo "not in a project directory"
 	fi
