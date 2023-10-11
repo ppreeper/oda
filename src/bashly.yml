@@ -390,6 +390,8 @@ commands:
         help: stop odoo server
       - name: restart
         help: restart odoo server
+      - name: logs
+        help: tail the logs
       - name: mount
         help: mount project and odoo to system
         args:
