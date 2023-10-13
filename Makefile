@@ -1,2 +1,2 @@
 build:
-	BASHLY_TAB_INDENT=1  podman run --rm -it --volume "${PWD}:/app" docker.io/dannyben/bashly generate
+	podman run --rm -it -e BASHLY_TAB_INDENT=1 -v "${PWD}:/app" docker.io/dannyben/bashly generate
