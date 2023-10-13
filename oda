@@ -3456,6 +3456,8 @@ oda_node_restore_command() {
 # :command.function
 oda_node_requirements_command() {
 	# src/node_requirements_command.sh
+	sudo bash -c "apt-get update -y"
+	sudo apt-get install -y wget git
 	REPO="https://github.com/wkhtmltopdf/packaging"
 	vers=$(git ls-remote --tags ${REPO} | grep "refs/tags.*[0-9]$" | awk '{print $2}' | sed 's/refs\/tags\///' | sort -V | uniq | tail -1)
 	VC=$(grep ^VERSION_CODENAME /etc/os-release | awk -F'=' '{print $2}')
@@ -3492,7 +3494,7 @@ oda_node_requirements_command() {
 
 	# install prerequisites
 	sudo bash -c "apt-get update -y"
-	sudo apt-get install -y wget nfs-common qemu-guest-agent
+	sudo apt-get install -y nfs-common qemu-guest-agent
 
 	# PostgreSQL Repo
 	sudo wget -qO /etc/apt/trusted.gpg.d/pgdg.gpg.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
