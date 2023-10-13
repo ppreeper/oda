@@ -1,1 +1,1 @@
-tail -f /var/log/syslog | grep "Odoo Server"
+bash -c 'tail -f /var/log/syslog | grep "Odoo Server"'
