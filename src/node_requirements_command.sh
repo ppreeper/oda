@@ -1,3 +1,5 @@
+sudo bash -c "apt-get update -y"
+sudo apt-get install -y wget git
 REPO="https://github.com/wkhtmltopdf/packaging"
 vers=$(git ls-remote --tags ${REPO} | grep "refs/tags.*[0-9]$" | awk '{print $2}' | sed 's/refs\/tags\///' | sort -V | uniq | tail -1)
 VC=$(grep ^VERSION_CODENAME /etc/os-release | awk -F'=' '{print $2}')
@@ -34,7 +36,7 @@ sudo rm -f /tmp/odoo_hosts.debian.tmpl
 
 # install prerequisites
 sudo bash -c "apt-get update -y"
-sudo apt-get install -y wget nfs-common qemu-guest-agent
+sudo apt-get install -y nfs-common qemu-guest-agent
 
 # PostgreSQL Repo
 sudo wget -qO /etc/apt/trusted.gpg.d/pgdg.gpg.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
