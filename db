@@ -2,7 +2,7 @@
 [ -z $DB_POD ] && export DB_POD=db15
 [ -z $DB_PORT ] && export DB_PORT=5432
 [ -z $DB_PASSWORD ] && export DB_PASSWORD=postgres
-[ -z $DB_USERS ] && export DB_USERS="odoo15 odoo16 odoo17"
+[ -z $DB_USERS ] && export DB_USERS="odoodev odoo15 odoo16 odoo17"
 [ -z $DB_USER_PASSWORD ] && export DB_USER_PASSWORD=odooodoo
 
 
@@ -45,3 +45,4 @@ case ${1} in
     ;;
   *) cli_help ;;
 esac
+
