@@ -1321,8 +1321,8 @@ oda_repo_usage() {
 	echo
 	# :command.usage_commands
 	printf "%s\n" "Commands:"
-	printf "  %s   initialize Odoo source repository\n" "init  "
-	printf "  %s   update Odoo source repository\n" "update"
+	printf "  %s   manage the Odoo base source repository\n" "base   "
+	printf "  %s   manage the Odoo branch version repository\n" "version"
 	echo
 
 	# :command.long_usage
@@ -1347,20 +1347,25 @@ oda_repo_usage() {
 }
 
 # :command.usage
-oda_repo_init_usage() {
+oda_repo_base_usage() {
 	if [[ -n $long_usage ]]; then
-		printf "oda repo init - initialize Odoo source repository\n"
+		printf "oda repo base - manage the Odoo base source repository\n"
 		echo
 
 	else
-		printf "oda repo init - initialize Odoo source repository\n"
+		printf "oda repo base - manage the Odoo base source repository\n"
 		echo
 
 	fi
 
 	printf "%s\n" "Usage:"
-	printf "  oda repo init VERSION [GITBRANCH]\n"
-	printf "  oda repo init --help | -h\n"
+	printf "  oda repo base COMMAND\n"
+	printf "  oda repo base [COMMAND] --help | -h\n"
+	echo
+	# :command.usage_commands
+	printf "%s\n" "Commands:"
+	printf "  %s   clone the Odoo source repository\n" "clone "
+	printf "  %s   update the Odoo source repository\n" "update"
 	echo
 
 	# :command.long_usage
@@ -1370,40 +1375,118 @@ oda_repo_init_usage() {
 		# :command.usage_fixed_flags
 		printf "  %s\n" "--help, -h"
 		printf "    Show this help\n"
-		echo
-
-		# :command.usage_args
-		printf "%s\n" "Arguments:"
-
-		# :argument.usage
-		printf "  %s\n" "VERSION"
-		printf "    Odoo Version\n"
-		printf "    Allowed: 15, 16, 17\n"
-		echo
-
-		# :argument.usage
-		printf "  %s\n" "GITBRANCH"
-		printf "    Odoo branch\n"
 		echo
 
 	fi
 }
 
 # :command.usage
-oda_repo_update_usage() {
+oda_repo_base_clone_usage() {
 	if [[ -n $long_usage ]]; then
-		printf "oda repo update - update Odoo source repository\n"
+		printf "oda repo base clone - clone the Odoo source repository\n"
 		echo
 
 	else
-		printf "oda repo update - update Odoo source repository\n"
+		printf "oda repo base clone - clone the Odoo source repository\n"
 		echo
 
 	fi
 
 	printf "%s\n" "Usage:"
-	printf "  oda repo update VERSION\n"
-	printf "  oda repo update --help | -h\n"
+	printf "  oda repo base clone\n"
+	printf "  oda repo base clone --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_repo_base_update_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda repo base update - update the Odoo source repository\n"
+		echo
+
+	else
+		printf "oda repo base update - update the Odoo source repository\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda repo base update\n"
+	printf "  oda repo base update --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_repo_version_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda repo version - manage the Odoo branch version repository\n"
+		echo
+
+	else
+		printf "oda repo version - manage the Odoo branch version repository\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda repo version COMMAND\n"
+	printf "  oda repo version [COMMAND] --help | -h\n"
+	echo
+	# :command.usage_commands
+	printf "%s\n" "Commands:"
+	printf "  %s   clone Odoo version repository\n" "clone "
+	printf "  %s   update Odoo version repository\n" "update"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_repo_version_clone_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda repo version clone - clone Odoo version repository\n"
+		echo
+
+	else
+		printf "oda repo version clone - clone Odoo version repository\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda repo version clone VERSION\n"
+	printf "  oda repo version clone --help | -h\n"
 	echo
 
 	# :command.long_usage
@@ -1421,7 +1504,43 @@ oda_repo_update_usage() {
 		# :argument.usage
 		printf "  %s\n" "VERSION"
 		printf "    Odoo Version\n"
-		printf "    Allowed: 15, 16, 17\n"
+		echo
+
+	fi
+}
+
+# :command.usage
+oda_repo_version_update_usage() {
+	if [[ -n $long_usage ]]; then
+		printf "oda repo version update - update Odoo version repository\n"
+		echo
+
+	else
+		printf "oda repo version update - update Odoo version repository\n"
+		echo
+
+	fi
+
+	printf "%s\n" "Usage:"
+	printf "  oda repo version update VERSION\n"
+	printf "  oda repo version update --help | -h\n"
+	echo
+
+	# :command.long_usage
+	if [[ -n $long_usage ]]; then
+		printf "%s\n" "Options:"
+
+		# :command.usage_fixed_flags
+		printf "  %s\n" "--help, -h"
+		printf "    Show this help\n"
+		echo
+
+		# :command.usage_args
+		printf "%s\n" "Arguments:"
+
+		# :argument.usage
+		printf "  %s\n" "VERSION"
+		printf "    Odoo Version\n"
 		echo
 
 	fi
@@ -3355,19 +3474,45 @@ oda_project_destroy_command() {
 }
 
 # :command.function
-oda_repo_init_command() {
-	# src/repo_init_command.sh
-	[ -z ${args[gitbranch]} ] && export BRANCH=${args[version]}.0 || export BRANCH=master
-
-	git clone https://github.com/odoo/odoo -b ${BRANCH} ${ODOOBASE}/${args[version]}.0/odoo
-	git clone https://github.com/odoo/enterprise -b ${BRANCH} ${ODOOBASE}/${args[version]}.0/enterprise
+oda_repo_base_clone_command() {
+	# src/repo_base_clone_command.sh
+	git clone https://github.com/odoo/odoo ${ODOOBASE}/odoo
+	git clone https://github.com/odoo/enterprise ${ODOOBASE}/enterprise
 }
 
 # :command.function
-oda_repo_update_command() {
-	# src/repo_update_command.sh
-	bash -c "cd ${ODOOBASE}/${args[version]}.0/odoo && git pull"
-	bash -c "cd ${ODOOBASE}/${args[version]}.0/enterprise && git pull"
+oda_repo_base_update_command() {
+	# src/repo_base_update_command.sh
+	cd ${ODOOBASE}/odoo/
+	git fetch origin && git checkout $(git branch -a | grep HEAD | awk '{print $3}' | awk -F'/' '{print $2}') && git pull
+
+	cd ${ODOOBASE}/enterprise/
+	git fetch origin && git checkout $(git branch -a | grep HEAD | awk '{print $3}' | awk -F'/' '{print $2}') && git pull
+
+}
+
+# :command.function
+oda_repo_version_clone_command() {
+	# src/repo_version_clone_command.sh
+	mkdir -p ${ODOOBASE}/${args[version]}
+	rsync -at --inplace --delete ${ODOOBASE}/odoo/ ${ODOOBASE}/${args[version]}/odoo/
+	rsync -at --inplace --delete ${ODOOBASE}/enterprise/ ${ODOOBASE}/${args[version]}/enterprise/
+
+	cd ${ODOOBASE}/${args[version]}/odoo/
+	git fetch origin && git checkout ${args[version]} && git pull
+
+	cd ${ODOOBASE}/${args[version]}/enterprise/
+	git fetch origin && git checkout ${args[version]} && git pull
+}
+
+# :command.function
+oda_repo_version_update_command() {
+	# src/repo_version_update_command.sh
+	cd ${ODOOBASE}/${args[version]}/odoo/
+	git fetch origin && git checkout ${args[version]} && git pull
+
+	cd ${ODOOBASE}/${args[version]}/enterprise/
+	git fetch origin && git checkout ${args[version]} && git pull
 }
 
 # :command.function
@@ -6070,17 +6215,17 @@ oda_repo_parse_requirements() {
 	case $action in
 		-*) ;;
 
-		init)
-			action="init"
+		base)
+			action="base"
 			shift
-			oda_repo_init_parse_requirements "$@"
+			oda_repo_base_parse_requirements "$@"
 			shift $#
 			;;
 
-		update)
-			action="update"
+		version)
+			action="version"
 			shift
-			oda_repo_update_parse_requirements "$@"
+			oda_repo_version_parse_requirements "$@"
 			shift $#
 			;;
 
@@ -6121,13 +6266,13 @@ oda_repo_parse_requirements() {
 }
 
 # :command.parse_requirements
-oda_repo_init_parse_requirements() {
+oda_repo_base_parse_requirements() {
 	# :command.fixed_flags_filter
 	while [[ $# -gt 0 ]]; do
 		case "${1:-}" in
 			--help | -h)
 				long_usage=yes
-				oda_repo_init_usage
+				oda_repo_base_usage
 				exit
 				;;
 
@@ -6139,7 +6284,243 @@ oda_repo_init_parse_requirements() {
 	done
 
 	# :command.command_filter
-	action="repo init"
+	action=${1:-}
+
+	case $action in
+		-*) ;;
+
+		clone)
+			action="clone"
+			shift
+			oda_repo_base_clone_parse_requirements "$@"
+			shift $#
+			;;
+
+		update)
+			action="update"
+			shift
+			oda_repo_base_update_parse_requirements "$@"
+			shift $#
+			;;
+
+		# :command.command_fallback
+		"")
+			oda_repo_base_usage >&2
+			exit 1
+			;;
+
+		*)
+			printf "invalid command: %s\n" "$action" >&2
+			exit 1
+			;;
+
+	esac
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				printf "invalid argument: %s\n" "$key" >&2
+				exit 1
+
+				;;
+
+		esac
+	done
+
+}
+
+# :command.parse_requirements
+oda_repo_base_clone_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_repo_base_clone_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="repo base clone"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				printf "invalid argument: %s\n" "$key" >&2
+				exit 1
+
+				;;
+
+		esac
+	done
+
+}
+
+# :command.parse_requirements
+oda_repo_base_update_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_repo_base_update_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="repo base update"
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				printf "invalid argument: %s\n" "$key" >&2
+				exit 1
+
+				;;
+
+		esac
+	done
+
+}
+
+# :command.parse_requirements
+oda_repo_version_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_repo_version_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action=${1:-}
+
+	case $action in
+		-*) ;;
+
+		clone)
+			action="clone"
+			shift
+			oda_repo_version_clone_parse_requirements "$@"
+			shift $#
+			;;
+
+		update)
+			action="update"
+			shift
+			oda_repo_version_update_parse_requirements "$@"
+			shift $#
+			;;
+
+		# :command.command_fallback
+		"")
+			oda_repo_version_usage >&2
+			exit 1
+			;;
+
+		*)
+			printf "invalid command: %s\n" "$action" >&2
+			exit 1
+			;;
+
+	esac
+
+	# :command.parse_requirements_while
+	while [[ $# -gt 0 ]]; do
+		key="$1"
+		case "$key" in
+
+			-?*)
+				printf "invalid option: %s\n" "$key" >&2
+				exit 1
+				;;
+
+			*)
+				# :command.parse_requirements_case
+				# :command.parse_requirements_case_simple
+				printf "invalid argument: %s\n" "$key" >&2
+				exit 1
+
+				;;
+
+		esac
+	done
+
+}
+
+# :command.parse_requirements
+oda_repo_version_clone_parse_requirements() {
+	# :command.fixed_flags_filter
+	while [[ $# -gt 0 ]]; do
+		case "${1:-}" in
+			--help | -h)
+				long_usage=yes
+				oda_repo_version_clone_usage
+				exit
+				;;
+
+			*)
+				break
+				;;
+
+		esac
+	done
+
+	# :command.command_filter
+	action="repo version clone"
 
 	# :command.parse_requirements_while
 	while [[ $# -gt 0 ]]; do
@@ -6158,10 +6539,6 @@ oda_repo_init_parse_requirements() {
 
 					args['version']=$1
 					shift
-				elif [[ -z ${args['gitbranch']+x} ]]; then
-
-					args['gitbranch']=$1
-					shift
 				else
 					printf "invalid argument: %s\n" "$key" >&2
 					exit 1
@@ -6174,26 +6551,20 @@ oda_repo_init_parse_requirements() {
 
 	# :command.required_args_filter
 	if [[ -z ${args['version']+x} ]]; then
-		printf "missing required argument: VERSION\nusage: oda repo init VERSION [GITBRANCH]\n" >&2
-		exit 1
-	fi
-
-	# :command.whitelist_filter
-	if [[ -n ${args['version']} ]] && [[ ! ${args['version']} =~ ^(15|16|17)$ ]]; then
-		printf "%s\n" "version must be one of: 15, 16, 17" >&2
+		printf "missing required argument: VERSION\nusage: oda repo version clone VERSION\n" >&2
 		exit 1
 	fi
 
 }
 
 # :command.parse_requirements
-oda_repo_update_parse_requirements() {
+oda_repo_version_update_parse_requirements() {
 	# :command.fixed_flags_filter
 	while [[ $# -gt 0 ]]; do
 		case "${1:-}" in
 			--help | -h)
 				long_usage=yes
-				oda_repo_update_usage
+				oda_repo_version_update_usage
 				exit
 				;;
 
@@ -6205,7 +6576,7 @@ oda_repo_update_parse_requirements() {
 	done
 
 	# :command.command_filter
-	action="repo update"
+	action="repo version update"
 
 	# :command.parse_requirements_while
 	while [[ $# -gt 0 ]]; do
@@ -6236,13 +6607,7 @@ oda_repo_update_parse_requirements() {
 
 	# :command.required_args_filter
 	if [[ -z ${args['version']+x} ]]; then
-		printf "missing required argument: VERSION\nusage: oda repo update VERSION\n" >&2
-		exit 1
-	fi
-
-	# :command.whitelist_filter
-	if [[ -n ${args['version']} ]] && [[ ! ${args['version']} =~ ^(15|16|17)$ ]]; then
-		printf "%s\n" "version must be one of: 15, 16, 17" >&2
+		printf "missing required argument: VERSION\nusage: oda repo version update VERSION\n" >&2
 		exit 1
 	fi
 
@@ -8507,8 +8872,12 @@ run() {
 		"project reset") oda_project_reset_command ;;
 		"project destroy") oda_project_destroy_command ;;
 		"repo") oda_repo_command ;;
-		"repo init") oda_repo_init_command ;;
-		"repo update") oda_repo_update_command ;;
+		"repo base") oda_repo_base_command ;;
+		"repo base clone") oda_repo_base_clone_command ;;
+		"repo base update") oda_repo_base_update_command ;;
+		"repo version") oda_repo_version_command ;;
+		"repo version clone") oda_repo_version_clone_command ;;
+		"repo version update") oda_repo_version_update_command ;;
 		"node") oda_node_command ;;
 		"node start") oda_node_start_command ;;
 		"node stop") oda_node_stop_command ;;

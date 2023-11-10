@@ -358,28 +358,28 @@ commands:
       - name: odoobase
         default: ${HOME}/workspace/repos/odoo
     commands:
-      - name: init
-        help: initialize Odoo source repository
-        args:
-          - name: version
-            help: Odoo Version
-            required: true
-            allowed:
-              - "15"
-              - "16"
-              - "17"
-          - name: gitbranch
-            help: Odoo branch
-      - name: update
-        help: update Odoo source repository
-        args:
-          - name: version
-            help: Odoo Version
-            required: true
-            allowed:
-              - "15"
-              - "16"
-              - "17"
+      - name: base
+        help: manage the Odoo base source repository
+        commands:
+          - name: clone
+            help: clone the Odoo source repository
+          - name: update
+            help: update the Odoo source repository
+      - name: version
+        help: manage the Odoo branch version repository
+        commands:
+          - name: clone
+            help: clone Odoo version repository
+            args:
+              - name: version
+                help: Odoo Version
+                required: true
+          - name: update
+            help: update Odoo version repository
+            args:
+              - name: version
+                help: Odoo Version
+                required: true
 
   - name: node
     help: node management commands
