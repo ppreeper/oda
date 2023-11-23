@@ -1104,6 +1104,36 @@ def project_reset():
     return
 
 
+# project hostsfile
+@check_project
+def project_hostsfile():
+    """Update /etc/hosts file with projectname"""
+    project = os.path.basename(CWD)
+    hostlines = []
+    begin = 0
+    end = 0
+    with open("/etc/hosts", "r", encoding="UTF-8") as hosts:
+        hostlines = hosts.readlines()
+        for idx, line in enumerate(hostlines):
+            print(idx, line)
+            if line.strip() == "#ODABEGIN":
+                print("found begin")
+                begin = idx
+            if line.strip() == "#ODAEND":
+                print("found end")
+                end = idx
+        print(begin, end)
+        if begin > end:
+            print("host file out of order")
+    print(hostlines[begin + 1 : end])
+
+    # Further file processing goes here
+    # check if filemarkers exist in /etc/hosts
+    # if not insert the markers
+    # lookup markers
+    # insert projectname.local
+
+
 # project rebuild
 @check_project
 def project_rebuild():
@@ -1431,6 +1461,9 @@ def main():
     # project reset
     project_subparser.add_parser("reset", help="reset")
 
+    # project hostsfile
+    project_subparser.add_parser("hostsfile", help="Update /etc/hosts file")
+
     # ===================
     # repo          Odoo community and enterprise repository management
     repo_parser = subparsers.add_parser(
@@ -1477,7 +1510,9 @@ def main():
     repo_branch_update_parser = repo_branch_subparser.add_parser(
         "update", help="update Odoo version repository"
     )
-    repo_branch_update_parser.add_argument("branch", help="branch name")
+    repo_branch_update_parser.add_argument(
+        "branch", help="branch name", choices=get_current_odoo_repos()
+    )
 
     parser.add_argument("--version", action="version", version=f"%(prog)s {SEMVER}")
 
@@ -1554,6 +1589,8 @@ def main():
             )
         elif args.project == "reset":
             project_reset()
+        elif args.project == "hostsfile":
+            project_hostsfile()
     elif args.command == "repo":
         if args.repo == "base":
             if args.base == "clone":
@@ -1561,9 +1598,9 @@ def main():
             elif args.base == "update":
                 repo_base_update()
         elif args.repo == "branch":
-            if args.odoobranch == "clone":
+            if args.odoobranch == "clone" and args.branch:
                 repo_branch_clone(args.branch)
-            elif args.odoobranch == "update":
+            elif args.odoobranch == "update" and args.branch:
                 repo_branch_update(args.branch)
 
 
