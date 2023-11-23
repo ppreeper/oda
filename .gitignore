@@ -127,6 +127,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.direnv/
 
 # Spyder project settings
 .spyderproject
@@ -160,3 +161,4 @@ cython_debug/
 #.idea/
 
 .vscode/
+odoo/
