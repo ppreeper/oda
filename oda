@@ -189,13 +189,21 @@ def gen_secret(name, password):
     return "---\n" + yaml_string
 
 
-def gen_service(name, port_list):
+def gen_service(name, port_list, node_port=0):
     """Generate a Service"""
     port_dict = []
     for port_tuple in port_list:
         port_name, port = port_tuple[0], port_tuple[1]
-        port_dict.append({"name": port_name, "port": port})
+        if node_port != 0:
+            port_dict.append({"name": port_name, "port": port, "nodePort": node_port})
+        else:
+            port_dict.append({"name": port_name, "port": port})
 
+    spec = ""
+    if node_port != 0:
+        spec = {"selector": {"app": name}, "ports": port_dict, "type": "NodePort"}
+    else:
+        spec = {"selector": {"app": name}, "ports": port_dict, "clusterIP": "None"}
     cfg = {
         "apiVersion": "v1",
         "kind": "Service",
@@ -203,7 +211,7 @@ def gen_service(name, port_list):
             "name": name,
             "labels": {"app": name},
         },
-        "spec": {"selector": {"app": name}, "ports": port_dict, "clusterIP": "None"},
+        "spec": spec,
     }
     yaml_string = yaml.dump(cfg)
     return "---\n" + yaml_string
@@ -587,7 +595,7 @@ def kube_gen_postgres(version):
             )
         )
         # service
-        postgres.write(gen_service("postgres", [["postgres", 5432]]))
+        postgres.write(gen_service("postgres", [["postgres", 5432]], 30432))
     return
 
 
