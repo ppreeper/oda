@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Odoo Administration DB tool for Servers"""
 import argparse
 from tabnanny import check
 import time
@@ -67,7 +68,7 @@ def _dump_addons_tar(addons, bkp_name, bkp_dest="./bkpdir"):
         dir = os.listdir(folder)
         if len(dir) != 0:
             tar_cmd = "tar"
-            bkp_file = f"{bkp_name}_{folder}.tar.zst"
+            bkp_file = f"{bkp_name}__{folder}.tar.zst"
             file_path = os.path.join(bkp_dest, bkp_file)
             tar_args = ["ahcf", file_path, "-C", folder, "."]
             # print([tar_cmd, *tar_args])
@@ -470,7 +471,7 @@ def main():
         return
 
     if args.backup:
-        bkp_name = f"{time.strftime('%Y_%m_%d_%H_%M_%S')}_{db_name}"
+        bkp_name = f"{time.strftime('%Y_%m_%d_%H_%M_%S')}__{db_name}"
         # main database and filestore
         print(_dump_db_tar(db_name, bkp_name, args.destfolder))
         # addons
@@ -484,14 +485,13 @@ def main():
     if args.restore and args.dump_file:
         dump_file = args.dump_file.strip('"')
         fname = os.path.splitext(os.path.basename(dump_file))[0].split(".")[0]
-        bfile = os.path.splitext(fname)[0].split("_")
-        if len(bfile) >= 7:
-            if bfile[-1] == "addons":
-                print(f"restore addons file {dump_file}")
-                _restore_addons_tar(dump_file)
-            else:
-                print(f"restore from dump file {dump_file}")
-                _restore_db_tar(db_name, dump_file, args.remote)
+        bfile = os.path.splitext(fname)[0].split("__")
+        if len(bfile) == 3 and bfile[-1] == "addons":
+            print(f"restore addons file {dump_file}")
+            _restore_addons_tar(dump_file)
+        elif len(bfile) == 2:
+            print(f"restore from dump file {dump_file}")
+            _restore_db_tar(db_name, dump_file, args.remote)
         else:
             print("invalid backup filename")
         return
