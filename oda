@@ -11,26 +11,33 @@ import argparse
 import os
 import sys
 import time
-from pathlib import Path
 import yaml
 from git import Repo
 from passlib.context import CryptContext
 from kubernetes import client, config, utils
 from kubernetes.stream import stream
 
+SEMVER = "0.1.0"
+# setup user homepath
+username = os.getenv("USER")
+sudouser = os.getenv("SUDO_USER")
+homepath = (
+    os.path.expanduser("~" + sudouser)
+    if username == "root"
+    else os.path.expanduser("~" + username)
+)
 # load kubernetes config
-config.load_kube_config()
+config.load_kube_config(config_file=os.path.join(homepath, ".kube", "config"))
 v1 = client.CoreV1Api()
 k8s_client = client.ApiClient()
 
-SEMVER = "0.1.0"
 # paths
-config_dir = os.path.join(Path.home(), ".config")
-local_dir = os.path.join(Path.home(), ".local")
+config_dir = os.path.join(homepath, ".config")
+local_dir = os.path.join(homepath, ".local")
 manifests = os.path.join(config_dir, "oda/manifests")
 storage = os.path.join(local_dir, "oda")
-repo_dir = os.path.join(Path.home(), "workspace/repos/odoo")
-project_dir = os.path.join(Path.home(), "workspace/odoo")
+repo_dir = os.path.join(homepath, "workspace/repos/odoo")
+project_dir = os.path.join(homepath, "workspace/odoo")
 CWD = os.getcwd()
 # images
 container_image = {"name": "odoobase", "image": "ghcr.io/ppreeper/odoobase"}
@@ -1113,33 +1120,49 @@ def project_reset():
 
 
 # project hostsfile
-@check_project
-def project_hostsfile():
-    """Update /etc/hosts file with projectname"""
-    project = os.path.basename(CWD)
-    hostlines = []
-    begin = 0
-    end = 0
-    with open("/etc/hosts", "r", encoding="UTF-8") as hosts:
-        hostlines = hosts.readlines()
-        for idx, line in enumerate(hostlines):
-            print(idx, line)
-            if line.strip() == "#ODABEGIN":
-                print("found begin")
-                begin = idx
-            if line.strip() == "#ODAEND":
-                print("found end")
-                end = idx
-        print(begin, end)
-        if begin > end:
-            print("host file out of order")
-    print(hostlines[begin + 1 : end])
+def get_idx(lines, search_term):
+    """Get line number"""
+    for idx, line in enumerate(lines):
+        if line.strip() == search_term:
+            return idx
+    return 0
 
-    # Further file processing goes here
-    # check if filemarkers exist in /etc/hosts
-    # if not insert the markers
-    # lookup markers
-    # insert projectname.local
+
+# @check_project
+def project_hostsfile(new_host=""):
+    """Update /etc/hosts file with projectname"""
+    readhostlines = []
+    with open("/etc/hosts", "r", encoding="UTF-8") as hosts:
+        readhostlines = hosts.readlines()
+
+    hostlines = []
+    for line in readhostlines:
+        hostlines.append(line.strip())
+
+    begin = get_idx(hostlines, "#ODABEGIN")
+    end = get_idx(hostlines, "#ODAEND")
+
+    if begin > end:
+        print("host file out of order, edit /etc/hosts manually")
+        return
+
+    if begin == 0 and end == 0:
+        hostlines.append("")
+        hostlines.append("#ODABEGIN")
+        hostlines.append("#ODAEND")
+    begin = get_idx(hostlines, "#ODABEGIN")
+    end = get_idx(hostlines, "#ODAEND")
+    entries = hostlines[begin + 1 : end]
+    entries.append(f"127.0.1.1 {new_host}.local")
+    entries = list(dict.fromkeys(entries))
+    entries.sort()
+    pre = hostlines[: begin + 1]
+    post = hostlines[end:]
+    new_hostlines = pre + entries + post
+
+    with open("/etc/hosts", "w", encoding="UTF-8") as hosts:
+        for line in new_hostlines:
+            hosts.write(line.strip() + "\n")
 
 
 # project rebuild
@@ -1470,7 +1493,9 @@ def main():
     project_subparser.add_parser("reset", help="reset")
 
     # project hostsfile
-    project_subparser.add_parser("hostsfile", help="Update /etc/hosts file")
+    project_subparser.add_parser(
+        "hostsfile", help="Update /etc/hosts file (Requires root access)"
+    )
 
     # ===================
     # repo          Odoo community and enterprise repository management
@@ -1598,7 +1623,10 @@ def main():
         elif args.project == "reset":
             project_reset()
         elif args.project == "hostsfile":
-            project_hostsfile()
+            if username == "root":
+                project_hostsfile(os.path.basename(CWD))
+            else:
+                print("not allowed: this requires root access")
     elif args.command == "repo":
         if args.repo == "base":
             if args.base == "clone":
