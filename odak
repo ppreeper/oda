@@ -5,15 +5,19 @@ It manages the Odoo source repositories in the workspace/repo/odoo directory
 """
 from shutil import copytree, rmtree
 import json
+import base64
 import subprocess
 import argparse
 import os
 import sys
 import time
+import yaml
 from git import Repo
 from passlib.context import CryptContext
+from kubernetes import client, config, utils
+from kubernetes.stream import stream
 
-SEMVER = "0.2.0"
+SEMVER = "0.1.0"
 # setup user homepath
 username = os.getenv("USER")
 sudouser = os.getenv("SUDO_USER")
@@ -22,20 +26,19 @@ homepath = (
     if username == "root"
     else os.path.expanduser("~" + username)
 )
+# load kubernetes config
+config.load_kube_config(config_file=os.path.join(homepath, ".kube", "config"))
+v1 = client.CoreV1Api()
+k8s_client = client.ApiClient()
 
 # paths
 config_dir = os.path.join(homepath, ".config")
 local_dir = os.path.join(homepath, ".local")
+manifests = os.path.join(config_dir, "oda/manifests")
+storage = os.path.join(local_dir, "oda")
 repo_dir = os.path.join(homepath, "workspace/repos/odoo")
 project_dir = os.path.join(homepath, "workspace/odoo")
 CWD = os.getcwd()
-
-DB_HOST = "db.local"
-DB_PORT = "5432"
-DB_PASS = "postgres"
-DB_USERNAME = "odoodev"
-DB_USERPASS = "odooodoo"
-
 # images
 container_image = {"name": "odoobase", "image": "ghcr.io/ppreeper/odoobase"}
 
@@ -46,6 +49,9 @@ def check_project(func, *args, **kwargs):
     def wrapper(*args, **kwargs):
         if not os.path.exists(os.path.join(CWD, "conf", "odoo.conf")):
             print("not in a project directory")
+            return
+        if not os.path.exists(os.path.join(CWD, f"{os.path.basename(CWD)}.yaml")):
+            print("no project manifest found")
             return
         func(*args, **kwargs)
 
@@ -73,20 +79,10 @@ def change_password(new_password):
     return pw_hash
 
 
-def get_odoo_conf(key, conf_file=os.path.join(CWD, "conf", "odoo.conf")):
+def get_odoo_conf(key):
     """get key value from odoo.conf"""
-    with open(conf_file, "r", encoding="UTF-8") as f:
-        lines = f.readlines()
-        for line in lines:
-            if line.startswith(key):
-                return line.split("=")[1].strip()
-    return
-
-
-def get_env(key):
-    """get key value from env"""
     with open(
-        os.path.join(CWD, ".env"),
+        os.path.join(CWD, "conf", "odoo.conf"),
         "r",
         encoding="UTF-8",
     ) as f:
@@ -107,49 +103,318 @@ def parse_multi(multi):
 
 def parse_modules(modules):
     """parse modules list"""
+    # mod_list = []
+    # for m in modules:
+    #     mod_list.extend(m.split(","))
     return ",".join(parse_multi(modules))
 
 
-def get_current_odoo_repos():
-    """Get Currently Copied Odoo Repos"""
-    dirnames = os.listdir(repo_dir)
-    dirnames = [dir for dir in dirnames if dir != "odoo"]
-    dirnames = [dir for dir in dirnames if dir != "enterprise"]
-    dirnames.sort()
-    return dirnames
+def get_pod(name):
+    """Get Pod from name"""
+    ret = v1.list_pod_for_all_namespaces(watch=False)
+    for pod in ret.items:
+        if pod.metadata.name.startswith(name):
+            return pod.metadata.name
 
 
-def get_current_odoo_projects():
-    """Get Current Odoo Projects"""
-    dirnames = os.listdir(project_dir)
-    dirnames = [dir for dir in dirnames if dir != "backups"]
-    dirnames.sort()
-    return dirnames
+def get_host_paths(manifest):
+    """Get PersistenVolume hostPath"""
+    host_paths = []
+    with open(manifest, "r", encoding="UTF-8") as file:
+        docs = yaml.safe_load_all(file)
+        for doc in docs:
+            if doc["kind"] == "Deployment":
+                vols = doc["spec"]["template"]["spec"]["volumes"]
+                for vol in vols:
+                    if vol["name"].startswith("odoo") or vol["name"].startswith(
+                        "enterprise"
+                    ):
+                        pvc_name = vol["persistentVolumeClaim"]["claimName"]
+                        pvcs = v1.list_namespaced_persistent_volume_claim(
+                            namespace="default"
+                        )
+                        pv_name = ""
+                        for pvc in pvcs.items:
+                            if pvc.metadata.name == pvc_name:
+                                pv_name = pvc.spec.volume_name
+                        pvs = v1.list_persistent_volume()
+                        for pv in pvs.items:
+                            if pv.metadata.name == pv_name:
+                                host_paths.append(pv.spec.host_path.path)
+
+    return host_paths
 
 
-def rmrf(data_dir):
-    """Remove Directory Contents"""
-    for filename in os.listdir(data_dir):
-        file_path = os.path.join(data_dir, filename)
-        try:
-            if os.path.isfile(file_path):
-                os.remove(file_path)
-            elif os.path.isdir(file_path):
-                rmtree(file_path)
-        except Exception as e:
-            raise OSError(f"Error deleting {file_path}") from e
+# ===================
+# ===================
+# kubenetes manifest generation
+def gen_pv(volume, acl, size, path):
+    """Generate a PersistentVolume"""
+    cfg = {
+        "apiVersion": "v1",
+        "kind": "PersistentVolume",
+        "metadata": {"name": f"{volume}-pv"},
+        "spec": {
+            "accessModes": [acl],
+            "capacity": {"storage": size},
+            "persistentVolumeReclaimPolicy": "Retain",
+            "hostPath": {"path": path},
+        },
+    }
+    yaml_string = yaml.dump(cfg)
+    return "---\n" + yaml_string
 
 
+def gen_pvc(volume, acl, size):
+    """Generate a PersistentVolumeClaim"""
+    cfg = {
+        "apiVersion": "v1",
+        "kind": "PersistentVolumeClaim",
+        "metadata": {"name": f"{volume}-pvc"},
+        "spec": {
+            "accessModes": [acl],
+            "resources": {"requests": {"storage": size}},
+            "volumeName": f"{volume}-pv",
+        },
+    }
+    yaml_string = yaml.dump(cfg)
+    return "---\n" + yaml_string
+
+
+def gen_secret(name, password):
+    """Generate a Secrets"""
+    cfg = {
+        "apiVersion": "v1",
+        "kind": "Secret",
+        "metadata": {"name": f"{name}-secret"},
+        "type": "Opaque",
+        "data": {
+            "password": base64.b64encode(bytes(password, "utf-8")).decode(),
+        },
+    }
+    yaml_string = yaml.dump(cfg)
+    return "---\n" + yaml_string
+
+
+def gen_service(name, port_list, node_port=0):
+    """Generate a Service"""
+    port_dict = []
+    for port_tuple in port_list:
+        port_name, port = port_tuple[0], port_tuple[1]
+        if node_port != 0:
+            port_dict.append({"name": port_name, "port": port, "nodePort": node_port})
+        else:
+            port_dict.append({"name": port_name, "port": port})
+
+    spec = ""
+    if node_port != 0:
+        spec = {"selector": {"app": name}, "ports": port_dict, "type": "NodePort"}
+    else:
+        spec = {"selector": {"app": name}, "ports": port_dict, "clusterIP": "None"}
+    cfg = {
+        "apiVersion": "v1",
+        "kind": "Service",
+        "metadata": {
+            "name": name,
+            "labels": {"app": name},
+        },
+        "spec": spec,
+    }
+    yaml_string = yaml.dump(cfg)
+    return "---\n" + yaml_string
+
+
+def gen_ingress(ingress, port_list):
+    """Generate Ingress to Service"""
+    port_dict = []
+    for port_tuple in port_list:
+        _, port, path, pathtype = port_tuple.items()
+        port_dict.append(
+            {
+                "path": path[1],
+                "pathType": pathtype[1],
+                "backend": {"service": {"name": ingress, "port": {"number": port[1]}}},
+            }
+        )
+    cfg = {
+        "apiVersion": "networking.k8s.io/v1",
+        "kind": "Ingress",
+        "metadata": {
+            "name": ingress,
+            "annotations": {"ingress.kubernetes.io/rewrite-target": "/"},
+        },
+        "spec": {"rules": [{"host": f"{ingress}.local", "http": {"paths": port_dict}}]},
+    }
+    yaml_string = yaml.dump(cfg)
+    return "---\n" + yaml_string
+
+
+def gen_deployment(deployment, image, version, ports, volumes, globalvols):
+    """Generate Deployment"""
+    port_dict = []
+    for port in ports:
+        port_dict.append({"containerPort": port})
+
+    volumemount_dict = []
+    volume_dict = []
+    for volume in volumes:
+        name, _, _ = volume.items()
+        volumemount_dict.append(
+            {"mountPath": f"/opt/odoo/{name[1]}", "name": f"{deployment}-{name[1]}"}
+        )
+        volume_dict.append(
+            {
+                "name": f"{deployment}-{name[1]}",
+                "persistentVolumeClaim": {"claimName": f"{deployment}-{name[1]}-pvc"},
+            }
+        )
+    for volume in globalvols:
+        name, path = volume.items()
+        volumemount_dict.append({"mountPath": path[1], "name": f"{name[1]}"})
+        volume_dict.append(
+            {
+                "name": f"{name[1]}",
+                "persistentVolumeClaim": {"claimName": f"{name[1]}-pvc"},
+            }
+        )
+    cfg = {
+        "apiVersion": "apps/v1",
+        "kind": "Deployment",
+        "metadata": {"name": deployment, "labels": {"app": deployment}},
+        "spec": {
+            "replicas": 1,
+            "selector": {"matchLabels": {"app": deployment}},
+            "template": {
+                "metadata": {"labels": {"app": deployment}},
+                "spec": {
+                    "containers": [
+                        {
+                            "name": image["name"],
+                            "image": image["image"] + ":" + version,
+                            "imagePullPolicy": "Always",
+                            "ports": port_dict,
+                            "volumeMounts": volumemount_dict,
+                        }
+                    ],
+                    "volumes": volume_dict,
+                },
+            },
+        },
+    }
+    yaml_string = yaml.dump(cfg)
+    return "---\n" + yaml_string
+
+
+def gen_postgres_statefulset(name, version, image, port_list):
+    """Generate StatefulSet"""
+    port_dict = []
+    for port_tuple in port_list:
+        port_name, port = port_tuple[0], port_tuple[1]
+        port_dict.append({"name": port_name, "containerPort": port})
+    cfg = {
+        "apiVersion": "apps/v1",
+        "kind": "StatefulSet",
+        "metadata": {
+            "name": name,
+        },
+        "spec": {
+            "serviceName": name,
+            "replicas": 1,
+            "selector": {"matchLabels": {"app": name}},
+            "template": {
+                "metadata": {"labels": {"app": name}},
+                "spec": {
+                    "containers": [
+                        {
+                            "name": name,
+                            "image": image,
+                            "args": ["-c", "config_file=/config/postgresql.conf"],
+                            "env": [
+                                {"name": "PGDATA", "value": "/data/pgdata"},
+                                {"name": "POSTGRES_USER", "value": "postgres"},
+                                {
+                                    "name": "POSTGRES_PASSWORD",
+                                    "valueFrom": {
+                                        "secretKeyRef": {
+                                            "name": f"{name}-secret",
+                                            "key": "password",
+                                        }
+                                    },
+                                },
+                            ],
+                            "ports": port_dict,
+                            "volumeMounts": [
+                                {
+                                    "name": "config",
+                                    "mountPath": "/config",
+                                },
+                                {
+                                    "name": "init",
+                                    "mountPath": "/docker-entrypoint-initdb.d",
+                                },
+                                {
+                                    "name": f"{name}-{version}-pvc",
+                                    "mountPath": "/data",
+                                },
+                            ],
+                        }
+                    ],
+                    "volumes": [
+                        {
+                            "name": "config",
+                            "configMap": {
+                                "name": f"{name}-config",
+                                "defaultMode": "0o755",
+                            },
+                        },
+                        {
+                            "name": "init",
+                            "configMap": {
+                                "name": f"{name}-init",
+                                "defaultMode": "0o755",
+                            },
+                        },
+                        {
+                            "name": f"{name}-{version}-pvc",
+                            "persistentVolumeClaim": {
+                                "claimName": f"{name}-{version}-pvc"
+                            },
+                        },
+                    ],
+                },
+            },
+        },
+    }
+    yaml_string = yaml.dump(cfg)
+    return "---\n" + yaml_string
+
+
+def gen_configmap(name, kv_list):
+    """Generate ConfigMap"""
+    data = {}
+    for kv in kv_list:
+        data[kv[0]] = kv[1]
+    cfg = {
+        "apiVersion": "v1",
+        "kind": "ConfigMap",
+        "metadata": {
+            "name": name,
+        },
+        "data": data,
+    }
+    yaml_string = yaml.dump(cfg)
+    return "---\n" + yaml_string
+
+
+# ===================
 # ===================
 # config
 # config vscode
 @check_project
 def config_vscode():
     """Write the VSCode config"""
-    host_paths = [
-        os.path.join(repo_dir, get_env("ODOO_V"), "odoo"),
-        os.path.join(repo_dir, get_env("ODOO_V"), "enterprise"),
-    ]
+    project = os.path.basename(CWD)
+    host_paths = get_host_paths(os.path.join(CWD, f"{project}.yaml"))
     if not os.path.exists(os.path.join(CWD, ".vscode")):
         os.makedirs(os.path.join(CWD, ".vscode"))
     with open(
@@ -199,7 +464,7 @@ def config_vscode():
                     "python.terminal.executeInFileDir": True,
                     "python.formatting.provider": "black",
                 },
-                indent=2,
+                indent=4,
             )
         )
     return
@@ -209,10 +474,8 @@ def config_vscode():
 @check_project
 def config_pyright():
     """Write pyrightconfig.json"""
-    host_paths = [
-        os.path.join(repo_dir, get_env("ODOO_V"), "odoo"),
-        os.path.join(repo_dir, get_env("ODOO_V"), "enterprise"),
-    ]
+    project = os.path.basename(CWD)
+    host_paths = get_host_paths(os.path.join(CWD, f"{project}.yaml"))
     host_paths.append("addons")
 
     with open(
@@ -227,9 +490,177 @@ def config_pyright():
                     "venv": ".direnv",
                     "executionEnvironments": [{"root": ".", "extraPaths": host_paths}],
                 },
-                indent=2,
+                indent=4,
             )
         )
+    return
+
+
+# ===================
+# kube
+# kube gen postgres
+def kube_gen_postgres(version):
+    """Generate PostgreSQL Manifest"""
+    print(f"postgres {version} manifest")
+    if not os.path.exists(manifests):
+        os.makedirs(manifests)
+    postgres_manifest = os.path.join(manifests, "postgres.yaml")
+
+    if not os.path.exists(os.path.join(local_dir, "oda", "postgres", version, "data")):
+        os.makedirs(os.path.join(local_dir, "oda", "postgres", version, "data"))
+
+    with open(postgres_manifest, "w", encoding="UTF-8") as postgres:
+        # secret
+        postgres.write(gen_secret("postgres", "postgres"))
+        # pv
+        postgres.write(
+            gen_pv(
+                f"postgres-{version}",
+                "ReadWriteOnce",
+                "10Gi",
+                os.path.join(local_dir, "oda", "postgres", version, "data"),
+            )
+        )
+        # pvc
+        postgres.write(
+            gen_pvc(
+                f"postgres-{version}",
+                "ReadWriteOnce",
+                "10Gi",
+            )
+        )
+        # configmap-config
+        postgres.write(
+            gen_configmap(
+                "postgres-config",
+                [
+                    [
+                        "pg_hba.conf",
+                        """    # TYPE  DATABASE        USER            ADDRESS                 METHOD
+    # "local" is for Unix domain socket connections only
+    local   all             all                                     trust
+    # IPv4 local connections:
+    host    all             all             127.0.0.1/32            trust
+    # IPv6 local connections:
+    host    all             all             ::1/128                 trust
+    # Allow replication connections from localhost, by a user with the
+    # replication privilege.
+    local   replication     all                                     trust
+    host    replication     all             127.0.0.1/32            trust
+    host    replication     all             ::1/128                 trust
+
+    host all all all scram-sha-256
+""",
+                    ],
+                    [
+                        "postgresql.conf",
+                        """data_directory = '/data/pgdata'
+    hba_file = '/config/pg_hba.conf'
+    ident_file = '/config/pg_ident.conf'
+
+    port = 5432
+    listen_addresses = '*'
+    max_connections = 100
+    shared_buffers = 128MB
+    dynamic_shared_memory_type = posix
+    max_wal_size = 1GB
+    min_wal_size = 80MB
+    log_timezone = 'Etc/UTC'
+    datestyle = 'iso, mdy'
+    timezone = 'Etc/UTC'
+
+    #locale settings
+    lc_messages = 'en_US.utf8'                  # locale for system error message
+    lc_monetary = 'en_US.utf8'                  # locale for monetary formatting
+    lc_numeric = 'en_US.utf8'                   # locale for number formatting
+    lc_time = 'en_US.utf8'                              # locale for time formatting
+
+    default_text_search_config = 'pg_catalog.english'""",
+                    ],
+                ],
+            )
+        )
+        # configmap-init
+        postgres.write(
+            gen_configmap(
+                "postgres-init",
+                [
+                    [
+                        "createodoouser.sql",
+                        "CREATE ROLE odoodev WITH LOGIN CREATEDB PASSWORD 'odooodoo'",
+                    ]
+                ],
+            )
+        )
+        # statefulset
+        postgres.write(
+            gen_postgres_statefulset(
+                "postgres",
+                version,
+                f"postgres:{version}-alpine",
+                [["postgres", 5432]],
+            )
+        )
+        # service
+        postgres.write(gen_service("postgres", [["postgres", 5432]], 30432))
+    return
+
+
+def kube_apply_postgres():
+    """Start PostgreSQL"""
+    postgres_manifest = os.path.join(manifests, "postgres.yaml")
+    utils.create_from_yaml(k8s_client, postgres_manifest, verbose=True)
+    return
+
+
+def get_current_odoo_repos():
+    """Get Currently Copied Odoo Repos"""
+    dirnames = os.listdir(repo_dir)
+    dirnames = [dir for dir in dirnames if dir != "odoo"]
+    dirnames = [dir for dir in dirnames if dir != "enterprise"]
+    return dirnames
+
+
+# kube gen odoo
+def kube_gen_odoo():
+    """Generate Odoo Volume Manifest"""
+    print("odoo manifest")
+    if not os.path.exists(manifests):
+        os.makedirs(manifests)
+    if not os.path.exists(os.path.join(project_dir, "backups")):
+        os.makedirs(os.path.join(project_dir, "backups"))
+    odoo_manifest = os.path.join(manifests, "odoo.yaml")
+    dirnames = get_current_odoo_repos()
+    with open(odoo_manifest, "w", encoding="UTF-8") as odoo:
+        for dirname in dirnames:
+            dname = dirname.replace(".", "-")
+            dirs = os.listdir(os.path.join(repo_dir, dirname))
+            for d in dirs:
+                odoo.write(
+                    gen_pv(
+                        f"{d}-{dname}",
+                        "ReadOnlyMany",
+                        "10Gi",
+                        os.path.join(repo_dir, dirname, d),
+                    )
+                )
+                odoo.write(gen_pvc(f"{d}-{dname}", "ReadOnlyMany", "10Gi"))
+                odoo.write(
+                    gen_pv(
+                        "backups",
+                        "ReadWriteMany",
+                        "10Gi",
+                        os.path.join(project_dir, "backups"),
+                    )
+                )
+                odoo.write(gen_pvc("backups", "ReadWriteMany", "10Gi"))
+    return
+
+
+def kube_apply_odoo():
+    """Start Odoo Volumes"""
+    odoo_manifest = os.path.join(manifests, "odoo.yaml")
+    utils.create_from_yaml(k8s_client, odoo_manifest, verbose=False)
     return
 
 
@@ -239,35 +670,7 @@ def config_pyright():
 def start():
     """Start the instance"""
     project = os.path.basename(CWD)
-    odoo_v = get_env("ODOO_V")
-    subprocess.run(
-        [
-            "podman",
-            "run",
-            "--rm",
-            "-d",
-            "--publish-all",
-            "--userns",
-            "keep-id",
-            "--name",
-            f"{project}.local",
-            "-v",
-            f"{CWD}/conf:/opt/odoo/conf:ro",
-            "-v",
-            f"{CWD}/data:/opt/odoo/data",
-            "-v",
-            f"{CWD}/addons:/opt/odoo/addons",
-            "-v",
-            f"{repo_dir}/{odoo_v}/odoo:/opt/odoo/odoo:ro",
-            "-v",
-            f"{repo_dir}/{odoo_v}/enterprise:/opt/odoo/enterprise:ro",
-            "-v",
-            f"{project_dir}/backups:/opt/odoo/backups",
-            f"ghcr.io/ppreeper/odoobase:{odoo_v}",
-        ],
-        check=False,
-    )
-    gen_caddy()
+    utils.create_from_yaml(k8s_client, f"{project}.yaml", verbose=False)
     return
 
 
@@ -277,7 +680,7 @@ def start():
 def stop():
     """Stop the instance"""
     project = os.path.basename(CWD)
-    subprocess.run(["podman", "stop", f"{project}.local"], check=False)
+    subprocess.run(["kubectl", "delete", "-f", f"{project}.yaml"], check=False)
     return
 
 
@@ -287,98 +690,8 @@ def stop():
 def restart():
     """Restart the instance"""
     project = os.path.basename(CWD)
-    subprocess.run(["podman", "restart", f"{project}.local"], check=False)
-    gen_caddy()
-
-    return
-
-
-# ===================
-# proxy
-# proxy start
-def caddy_start():
-    """Proxy Start"""
-    subprocess.run(
-        ["caddy", "start", "--config", os.path.join(project_dir, "Caddyfile")],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        check=False,
-    )
-    return
-
-
-# proxy stop
-def caddy_stop():
-    """Proxy Stop"""
-    subprocess.run(
-        ["caddy", "stop", "--config", os.path.join(project_dir, "Caddyfile")],
-        check=False,
-    )
-    return
-
-
-# proxy restart
-def caddy_restart():
-    """Proxy Restart"""
-    subprocess.run(
-        ["caddy", "reload", "--config", os.path.join(project_dir, "Caddyfile")],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        check=False,
-    )
-    return
-
-
-def gen_caddy():
-    """Generate Caddyfile"""
-    output = subprocess.run(
-        ["podman", "ps", "--format", "'{{.Image}} {{.Names}} {{.Ports}}'"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    pod_configs = []
-
-    for row in output.stdout.splitlines():
-        pod = row.strip("'").split(" ")
-        pod_record = {}
-        if container_image["image"] in pod[0]:
-            ports = pod[2:]
-            pod_record["name"] = pod[1]
-            odoo_ports = {}
-            for port in ports:
-                p = port.split("->")
-                odoo_n = p[0].split(":")[1]
-                odoo_p = p[1].split("/")[0]
-                odoo_ports[odoo_p] = odoo_n
-            pod_record["odoo_ports"] = odoo_ports
-            pod_configs.append(pod_record)
-
-    with open(
-        os.path.join(project_dir, "Caddyfile"), "w", encoding="UTF-8"
-    ) as caddyfile:
-        for pod in pod_configs:
-            caddyfile.write(pod["name"] + ":80 {" + "\n")
-            caddyfile.write(
-                "reverse_proxy http://127.0.1.1:" + pod["odoo_ports"]["8069"] + "\n"
-            )
-            caddyfile.write(
-                "reverse_proxy /websocket http://127.0.1.1:"
-                + pod["odoo_ports"]["8072"]
-                + "\n"
-            )
-            caddyfile.write(
-                "reverse_proxy /longpolling/* http://127.0.1.1:"
-                + pod["odoo_ports"]["8072"]
-                + "\n"
-            )
-            caddyfile.write("}" + "\n")
-
-    subprocess.run(
-        ["caddy", "fmt", "-w", os.path.join(project_dir, "Caddyfile")],
-        check=False,
-    )
+    pod = get_pod(project)
+    v1.delete_namespaced_pod(pod, "default")
     return
 
 
@@ -391,20 +704,25 @@ def app_install_upgrade(modules, install=True):
     """Install Upgrade modules"""
     iu = "-i" if install else "-u"
     project = os.path.basename(CWD)
+    pod_name = get_pod(project)
     mod_list = parse_modules(modules)
-    subprocess.run(
-        [
-            "podman",
-            "exec",
-            "-it",
-            f"{project}.local",
-            "odoo/odoo-bin",
-            "--no-http",
-            "--stop-after-init",
-            f"{iu}",
-            f"{mod_list}",
-        ],
-        check=False,
+    pod_name = get_pod(project)
+    exec_command = [
+        "odoo/odoo-bin",
+        "--no-http",
+        "--stop-after-init",
+        iu,
+        f"{mod_list}",
+    ]
+    stream(
+        v1.connect_get_namespaced_pod_exec,
+        pod_name,
+        "default",
+        command=exec_command,
+        stderr=True,
+        stdin=False,
+        stdout=True,
+        tty=False,
     )
     return
 
@@ -415,8 +733,8 @@ def app_install_upgrade(modules, install=True):
 def logs():
     """Show logs"""
     project = os.path.basename(CWD)
-    print(f"podman logs -f {project}.local")
-    subprocess.run(["podman", "logs", "-f", f"{project}.local"], check=False)
+    pod_name = get_pod(project)
+    subprocess.run(["kubectl", "logs", "-f", pod_name], check=True)
     return
 
 
@@ -426,18 +744,18 @@ def logs():
 def scaffold(module):
     """Scaffold an App"""
     project = os.path.basename(CWD)
-    subprocess.run(
-        [
-            "podman",
-            "exec",
-            "-it",
-            f"{project}.local",
-            "odoo/odoo-bin",
-            "scaffold",
-            f"{module}",
-            "/opt/odoo/addons/.",
-        ],
-        check=False,
+    pod_name = get_pod(project)
+
+    exec_command = ["odoo/odoo-bin", "scaffold", f"{module}", "/opt/odoo/addons/."]
+    stream(
+        v1.connect_get_namespaced_pod_exec,
+        pod_name,
+        "default",
+        command=exec_command,
+        stderr=True,
+        stdin=False,
+        stdout=True,
+        tty=False,
     )
     return
 
@@ -448,8 +766,9 @@ def scaffold(module):
 def execshell():
     """Exec prompt"""
     project = os.path.basename(CWD)
+    pod_name = get_pod(project)
     subprocess.run(
-        ["podman", "exec", "-it", f"{project}.local", "/bin/bash"],
+        ["kubectl", "exec", "--stdin", "--tty", pod_name, "--", "/bin/bash"],
         check=True,
     )
     return
@@ -460,25 +779,20 @@ def execshell():
 @check_project
 def psql():
     """Connect to Database"""
-    project = os.path.basename(CWD)
-    db_host = get_odoo_conf("db_host")
-    db_user = get_odoo_conf("db_user")
-    db_password = get_odoo_conf("db_password")
-    db_name = get_odoo_conf("db_name")
+    db = get_odoo_conf("db_name")
+    pod_name = get_pod("postgres")
     subprocess.run(
         [
-            "podman",
+            "kubectl",
             "exec",
-            "-it",
-            "-e",
-            f"PGPASSWORD={db_password}",
-            f"{project}.local",
-            "psql",
-            "-h",
-            f"{db_host}",
+            "--stdin",
+            "--tty",
+            pod_name,
+            "--",
+            "/usr/local/bin/psql",
             "-U",
-            f"{db_user}",
-            f"{db_name}",
+            "postgres",
+            db,
         ],
         check=False,
     )
@@ -486,69 +800,40 @@ def psql():
 
 
 # ===================
+# query
+def query():
+    """Query Odoo"""
+    # TODO: query
+    print("query")
+    # EXEC="odooquery -host localhost -port ${ODOO_PORT} -d ${args[--db_name]} -U ${args[-U]} -P ${args[-P]} -model ${args[model]}"
+    # [ -z ${args[--filter]} ] || EXEC="${EXEC} -filter \"${args[--filter]}\""
+    # [ -z ${args[--fields]} ] || EXEC="${EXEC} -fields ${args[--fields]}"
+    # [ -z ${args[--limit]} ] || EXEC="${EXEC} -limit ${args[--limit]}"
+    # [ -z ${args[--offset]} ] || EXEC="${EXEC} -offset ${args[--offset]}"
+    # [ -z ${args[--count]} ] || EXEC="${EXEC} -count"
+    # ${EXEC}
+    return
+
+
+# ===================
 # pgdb
 def pgdb():
     """Connect to PostgreSQL Database"""
-    subprocess.run(
-        ["podman", "exec", "-it", DB_HOST, "psql", "-U", "postgres"], check=False
-    )
-    return
-
-
-def pgdb_start():
-    """PosgreSQL start"""
+    pod_name = get_pod("postgres")
     subprocess.run(
         [
-            "podman",
-            "run",
-            "--name",
-            DB_HOST,
-            "-p",
-            f"{DB_PORT}:5432",
-            "-e",
-            f"POSTGRES_PASSWORD={DB_PASS}",
-            "-v",
-            f"{DB_HOST}:/var/lib/postgresql/data",
-            "-d",
-            "docker.io/postgres:15-alpine",
-        ],
-        check=False,
-    )
-    return
-
-
-def pgdb_stop():
-    """PosgreSQL stop"""
-    subprocess.run(["podman", "stop", DB_HOST], check=False)
-    return
-
-
-def pgdb_restart():
-    """PosgreSQL restart"""
-    subprocess.run(["podman", "restart", DB_HOST], check=False)
-    return
-
-
-def pgdb_fullreset():
-    """PostgreSQL Full Reset"""
-    pgdb_stop()
-    subprocess.run(["podman", "volume", "rm", DB_HOST], check=False)
-    pgdb_start()
-    subprocess.run(
-        [
-            "podman",
+            "kubectl",
             "exec",
-            "-it",
-            "--user",
+            "--stdin",
+            "--tty",
+            pod_name,
+            "--",
+            "/usr/local/bin/psql",
+            "-U",
             "postgres",
-            DB_HOST,
-            "psql",
-            "-c",
-            f"\"create role {DB_USERNAME} with createdb login password '{DB_USERPASS}';\"",
         ],
         check=False,
     )
-
     return
 
 
@@ -558,8 +843,9 @@ def pgdb_fullreset():
 def backup():
     """Backup to file"""
     project = os.path.basename(CWD)
+    pod_name = get_pod(project)
     subprocess.run(
-        ["podman", "exec", "-it", f"{project}.local", "oda_db.py", "-b"],
+        ["kubectl", "exec", "--stdin", "--tty", pod_name, "--", "oda_db.py", "-b"],
         check=True,
     )
     return
@@ -570,161 +856,26 @@ def backup():
 @check_project
 def restore(backup_files):
     """Restore from backup file"""
-    project = os.path.basename(CWD)
-    if not are_you_sure("restore from backup"):
-        return
-    # stop
-    subprocess.run(["podman", "stop", f"{project}.local"], check=False)
     files = parse_multi(backup_files)
-    files.sort()
     project = os.path.basename(CWD)
-    for dump_file in files:
-        fname = os.path.splitext(os.path.basename(dump_file))[0].split(".")[0]
-        bfile = os.path.splitext(fname)[0].split("__")
-
-        if len(bfile) == 2:
-            print(f"restore from dump file {dump_file}")
-            _restore_db_tar(dump_file)
-        elif len(bfile) == 3 and bfile[-1] == "addons":
-            print(f"restore addons file {dump_file}")
-            _restore_addons_tar(dump_file)
-        else:
-            print("invalid backup filename")
-    return
-
-
-@check_project
-def _restore_db_tar(bkp_file, copy=True):
-    print(bkp_file)
-    db_host = get_odoo_conf("db_host")
-    db_name = get_odoo_conf("db_name")
-    db_user = get_odoo_conf("db_user")
-    db_template = get_odoo_conf("db_template")
-    # drop target database
-    subprocess.run(
-        [
-            "podman",
-            "exec",
-            "-it",
-            db_host,
-            "dropdb",
-            "--if-exists",
-            "-U",
-            "postgres",
-            "-f",
-            db_name,
-        ],
-        check=False,
-    )
-    # create new postgresql database
-    subprocess.run(
-        [
-            "podman",
-            "exec",
-            "-it",
-            db_host,
-            "createdb",
-            "-U",
-            "postgres",
-            "--encoding",
-            "unicode",
-            "--lc-collate",
-            "C",
-            "-T",
-            db_template,
-            "-O",
-            db_user,
-            db_name,
-        ],
-        check=False,
-    )
-
-    # restore postgresql database
-    tarpg_cmd = ["tar", "Oaxf", bkp_file, "./dump.sql"]
-    pg_cmd = ["psql", "-h", db_host, "-U", db_user, "--dbname", db_name, "-q"]
-    tarpg = subprocess.Popen(
-        tarpg_cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-    )
-    pg = subprocess.Popen(
-        pg_cmd,
-        stdin=tarpg.stdout,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    tarpg.stdout.close()
-    pg.communicate()
-    if pg.returncode != 0:
-        raise OSError(
-            f"could not backup postgresql database {db_name} pg.returncode {pg.returncode}"
-        )
-
-    #########
-    # Filestore Restore
-    data = os.path.join(CWD, "data")
-    filestore = os.path.join(data, "filestore", db_name)
-    rmrf(data)
-    os.makedirs(filestore, exist_ok=True)
-    tar_cmd = "tar"
-    tar_args = ["axf", bkp_file, "-C", filestore, "--strip-components=2", "./filestore"]
-    print(tar_cmd, *tar_args)
-    tar = subprocess.run(
-        [tar_cmd, *tar_args],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.STDOUT,
-        check=True,
-    )
-    if tar.returncode != 0:
-        raise OSError(f"could not restore filestore for {db_name}")
-
-    if copy:
-        db_reset(db_host, db_name, db_user)
-    return
-
-
-def db_reset(db_host, db_name, db_user):
-    """Database Reset DBUUID and remove MCode"""
-    sqlq = ["delete from ir_config_parameter where key='database.enterprise_code'"]
-    sqlq.append(
-        "update ir_config_parameter set value=(select gen_random_uuid()) "
-        + "where key = 'database.uuid'"
-    )
-    sqlq.append(
-        """insert into ir_config_parameter
-        (key,value,create_uid,create_date,write_uid,write_date)
-        values
-        ('database.expiration_date',(current_date+'3 months'::interval)::timestamp,1,
-        current_timestamp,1,current_timestamp)
-        on conflict (key)
-        do update set value = (current_date+'3 months'::interval)::timestamp;"""
-    )
-    for q in sqlq:
+    pod_name = get_pod(project)
+    for bfile in files:
+        print(pod_name, os.path.basename(bfile))
         subprocess.run(
-            ["podman", "exec", "-it", db_host, "psql", "-U", db_user, "-c", q, db_name],
-            check=False,
-        )
-    return
-
-
-@check_project
-def _restore_addons_tar(bkp_file):
-    """Restore Odoo DB addons folders"""
-    addons = ""
-    dest = addons if addons != "" else bkp_file.split("_")[-1:][0].split(".")[0]
-    dest = os.path.join(CWD, dest)
-    rmrf(dest)
-    tar_cmd = "tar"
-    tar_args = ["axf", bkp_file, "-C", dest, "."]
-    try:
-        subprocess.run(
-            [tar_cmd, *tar_args],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.STDOUT,
+            [
+                "kubectl",
+                "exec",
+                "--stdin",
+                "--tty",
+                pod_name,
+                "--",
+                "oda_db.py",
+                "-r",
+                os.path.join("/opt/odoo/backups/", os.path.basename(bfile)),
+            ],
             check=True,
         )
-    except Exception as e:
-        raise OSError(f"could not restore addons {dest}") from e
+    return
 
 
 # ===================
@@ -733,34 +884,29 @@ def _restore_addons_tar(bkp_file):
 @check_project
 def admin_username():
     """Set Admin username"""
-    user1 = input("Please enter  the new admin username: ").strip()
+    username = input("Please enter  the new admin username: ").strip()
     user2 = input("Please verify the new admin username: ").strip()
-    if user1 != user2:
+    if username != user2:
         print("usernames entered do not match")
         return
-    project = os.path.basename(CWD)
-    db_host = get_odoo_conf("db_host")
-    db_user = get_odoo_conf("db_user")
-    db_password = get_odoo_conf("db_password")
-    db_name = get_odoo_conf("db_name")
+
+    db = get_odoo_conf("db_name")
     subprocess.run(
         [
-            "podman",
+            "kubectl",
             "exec",
-            "-it",
-            "-e",
-            f"PGPASSWORD={db_password}",
-            f"{project}.local",
-            "psql",
-            "-h",
-            f"{db_host}",
+            "--stdin",
+            "--tty",
+            "postgres-0",
+            "--",
+            "/usr/local/bin/psql",
             "-U",
-            f"{db_user}",
-            f"{db_name}",
+            "postgres",
+            db,
             "-c",
-            f"""update res_users set login='{user1}' where id=2;""",
+            f"""update res_users set login='{username}' where id=2;""",
         ],
-        check=False,
+        check=True,
     )
     return
 
@@ -777,29 +923,23 @@ def admin_password():
         print("passwords entered do not match")
         return
     password = change_password(pass1).strip()
-    project = os.path.basename(CWD)
-    db_host = get_odoo_conf("db_host")
-    db_user = get_odoo_conf("db_user")
-    db_password = get_odoo_conf("db_password")
-    db_name = get_odoo_conf("db_name")
+    db = get_odoo_conf("db_name")
     subprocess.run(
         [
-            "podman",
+            "kubectl",
             "exec",
-            "-it",
-            "-e",
-            f"PGPASSWORD={db_password}",
-            f"{project}.local",
-            "psql",
-            "-h",
-            f"{db_host}",
+            "--stdin",
+            "--tty",
+            "postgres-0",
+            "--",
+            "/usr/local/bin/psql",
             "-U",
-            f"{db_user}",
-            f"{db_name}",
+            "postgres",
+            db,
             "-c",
             f"""update res_users set password='{password}' where id=2;""",
         ],
-        check=False,
+        check=True,
     )
     return
 
@@ -820,7 +960,7 @@ def gen_odoo_conf(dbname, epoch, enterprise=True):
         "csv_internal_sep": ";",
         "reportgz": False,
         "server_wide_modules": "base,web",
-        "db_host": "db.local",
+        "db_host": "postgres",
         "db_port": 5432,
         "db_maxconn": 8,
         "db_user": "odoodev",
@@ -866,17 +1006,66 @@ def project_setup(edition, version, project_name):
         project_name,
         edition,
     )
-    # envrc
+    vers = version.replace(".", "-")
+    volumes = [
+        {"name": "conf", "acl": "ReadOnlyMany", "size": "1Mi"},
+        {"name": "addons", "acl": "ReadWriteOnce", "size": "10Gi"},
+        {"name": "data", "acl": "ReadWriteOnce", "size": "10Gi"},
+    ]
+    global_vols = [
+        {"name": "backups", "path": "/opt/odoo/backups"},
+        {"name": f"odoo-{vers}", "path": "/opt/odoo/odoo"},
+        {"name": f"enterprise-{vers}", "path": "/opt/odoo/enterprise"},
+    ]
+    port_list = [
+        {"name": "odoo", "port": 8069, "path": "/", "pathtype": "Prefix"},
+        {
+            "name": "websocket",
+            "port": 8072,
+            "path": "/websocket",
+            "pathtype": "Exact",
+        },
+        {
+            "name": "longpolling",
+            "port": 8072,
+            "path": "/longpolling",
+            "pathtype": "Prefix",
+        },
+    ]
     with open(
-        os.path.join(project_dir, project_name, ".env"), "w", encoding="UTF-8"
-    ) as envrc:
-        envrc.writelines(f"ODOO_V={version}")
+        os.path.join(project_dir, project_name, f"{project_name}.yaml"),
+        "w",
+        encoding="UTF-8",
+    ) as manifest:
+        for vol in volumes:
+            name, acl, size = vol.items()
+            manifest.write(
+                gen_pv(
+                    f"{project_name}-{name[1]}",
+                    acl[1],
+                    size[1],
+                    os.path.join(project_dir, project_name, name[1]),
+                )
+            )
+            manifest.write(gen_pvc(f"{project_name}-{name[1]}", acl[1], size[1]))
+        manifest.write(
+            gen_deployment(
+                project_name,
+                container_image,
+                version,
+                [8069, 8072],
+                volumes,
+                global_vols,
+            )
+        )
+        manifest.write(gen_service(project_name, [["odoo", 8069], ["websocket", 8072]]))
+        manifest.write(gen_ingress(project_name, port_list))
     return
 
 
 # project init
 def project_init(edition, version, projectname):
-    """Project Init"""
+    """Initialize Project"""
     project_name = projectname
     project_setup(edition, version, project_name)
     return
@@ -884,7 +1073,7 @@ def project_init(edition, version, projectname):
 
 # project branch
 def project_branch(edition, version, projectname, branch, url):
-    """Project Branch Init"""
+    """Initialize Project"""
     project_name = f"{projectname}" if branch == "" else f"{projectname}-{branch}"
     project_setup(edition, version, project_name)
     Repo.clone_from(
@@ -898,20 +1087,33 @@ def project_branch(edition, version, projectname, branch, url):
 # project reset
 @check_project
 def project_reset():
-    """Project Reset: clear the data directory and drop database"""
+    """Project Reset: drop database and clear the data directory"""
     project = os.path.basename(CWD)
-    db_host = get_odoo_conf("db_host")
-    db_name = get_odoo_conf("db_name")
+    db = get_odoo_conf("db_name")
     if not are_you_sure("reset the project"):
         return
     # stop
-    subprocess.run(["podman", "stop", f"{project}.local"], check=False)
+    subprocess.run(
+        ["kubectl", "delete", "-f", os.path.join(CWD, f"{project}.yaml")],
+        check=False,
+    )
     # rm -rf data/*
-    rmrf(os.path.join(CWD, "data"))
+    rmtree(os.path.join(CWD, "data"), ignore_errors=True)
     os.makedirs(os.path.join(CWD, "data"), exist_ok=True)
     # drop db
     subprocess.run(
-        ["podman", "exec", "-it", db_host, "dropdb", "-U", "postgres", db_name],
+        [
+            "kubectl",
+            "exec",
+            "--stdin",
+            "--tty",
+            "postgres-0",
+            "--",
+            "/usr/local/bin/dropdb",
+            "-U",
+            "postgres",
+            db,
+        ],
         check=False,
     )
     return
@@ -961,54 +1163,19 @@ def project_hostsfile(new_host=""):
     with open("/etc/hosts", "w", encoding="UTF-8") as hosts:
         for line in new_hostlines:
             hosts.write(line.strip() + "\n")
-    return
 
 
 # project rebuild
 @check_project
-def project_rebuild(oproject):
+def project_rebuild():
     """Rebuild project with db and filestore of another project but with current addons"""
-    print(f"project_rebuild from {oproject}")
-    project = os.path.basename(CWD)
-    db_host = get_odoo_conf("db_host")
-    db_name = get_odoo_conf("db_name")
-    db_user = get_odoo_conf("db_user")
-    odb_name = get_odoo_conf(
-        "db_name", os.path.join(project_dir, oproject, "conf", "odoo.conf")
-    )
-    if not are_you_sure("reset the project"):
-        return
-    # stop target
-    subprocess.run(["podman", "stop", f"{project}.local"], check=False)
-
-    # remove targets files, copy from source to target
-    rmrf(os.path.join(CWD, "data"))
-    oproject_filestore = os.path.join(
-        project_dir, oproject, "data", "filestore", odb_name
-    )
-    project_filestore = os.path.join(CWD, "data", "filestore", db_name)
-    os.makedirs(project_filestore, exist_ok=True)
-    copytree(oproject_filestore, project_filestore, dirs_exist_ok=True)
-
-    # drop target database
-    subprocess.run(
-        ["podman", "exec", "-it", db_host, "dropdb", "-U", "postgres", db_name],
-        check=False,
-    )
-    # clone source db to target db
-    sqlq = f"SELECT pg_terminate_backend (pid) FROM pg_stat_activity WHERE datname = '{odb_name}'"
-    subprocess.run(
-        ["podman", "exec", "-it", db_host, "psql", "-U", "postgres", "-c", sqlq],
-        stdout=subprocess.DEVNULL,
-        check=False,
-    )
-    sqlq = f"CREATE DATABASE {db_name} WITH TEMPLATE {odb_name} OWNER {db_user}"
-    subprocess.run(
-        ["podman", "exec", "-it", db_host, "psql", "-U", "postgres", "-c", sqlq],
-        stdout=subprocess.DEVNULL,
-        check=False,
-    )
-    db_reset(db_host, db_name, db_user)
+    print("project_rebuild")
+    # TODO: project rebuild from one project to current project
+    # stop instance
+    # rm -rf data/*
+    # drop db
+    # copy files
+    # clone db
     return
 
 
@@ -1146,10 +1313,7 @@ def main():
     # config        additional config options
     config_parser = subparsers.add_parser("config", help="additional config options")
     config_subparser = config_parser.add_subparsers(
-        dest="config",
-        title="config",
-        help="additional config options",
-        required=True,
+        dest="config", title="config", help="additional config options", required=True
     )
 
     # config vscode
@@ -1162,6 +1326,46 @@ def main():
 
     # ===================
     # completions   Generate bash completions
+
+    # ===================
+    # kube
+    kube_parser = subparsers.add_parser("kube", help="kubernetes management")
+    kube_subparser = kube_parser.add_subparsers(
+        dest="kube", title="kube", help="kubernetes management", required=True
+    )
+
+    # kube gen
+    kube_gen_parser = kube_subparser.add_parser("gen", help="generate manifest")
+    kube_gen_subparser = kube_gen_parser.add_subparsers(
+        dest="gen",
+        title="gen",
+        help="generate manifest",
+        required=True,
+    )
+
+    # kube gen postgres
+    postgres_parser = kube_gen_subparser.add_parser("postgres", help="Postgresql Setup")
+    postgres_parser.add_argument("version", help="PostgreSQL version")
+
+    # kube gen odoo
+    kube_gen_subparser.add_parser("odoo", help="Odoo Volume Manifest")
+
+    # kube apply
+    kube_apply_parser = kube_subparser.add_parser("apply", help="apply manifest")
+    kube_apply_subparser = kube_apply_parser.add_subparsers(
+        dest="apply",
+        title="apply",
+        help="apply manifest",
+        required=True,
+    )
+
+    # kube apply postgres
+    postgres_parser = kube_apply_subparser.add_parser(
+        "postgres", help="Postgresql Start"
+    )
+
+    # kube apply odoo
+    kube_apply_subparser.add_parser("odoo", help="Odoo Volume Start")
 
     # ===================
     # start         Start the instance
@@ -1212,29 +1416,13 @@ def main():
     subparsers.add_parser("psql", help="Access the raw database")
 
     # ===================
-    # db         Access postgresql
-    db_parser = subparsers.add_parser("db", help="Access postgresql")
-    db_subparser = db_parser.add_subparsers(
-        dest="db", title="db", help="Database", required=True
-    )
-    # admin user
-    db_subparser.add_parser("psql", help="Database psql")
-    db_subparser.add_parser("start", help="Database start")
-    db_subparser.add_parser("stop", help="Database stop")
-    db_subparser.add_parser("restart", help="Database restart")
-    db_subparser.add_parser("fullreset", help="Database fullreset [CAUTION]")
+    # query         Query the database
+    subparsers.add_parser("query", help="Query the database")
 
     # ===================
-    # Proxy
-    proxy_parser = subparsers.add_parser("proxy", help="Caddy proxy")
-    proxy_subparser = proxy_parser.add_subparsers(
-        dest="proxy", title="proxy", help="Proxy", required=True
-    )
-    # admin user
-    proxy_subparser.add_parser("start", help="Proxy start")
-    proxy_subparser.add_parser("stop", help="Proxy stop")
-    proxy_subparser.add_parser("restart", help="Proxy restart")
-    proxy_subparser.add_parser("generate", help="Caddyfile generate")
+    # db         Access postgresql
+    subparsers.add_parser("db", help="Access postgresql")
+
     # ===================
     # backup        Backup database filestore and addons
     subparsers.add_parser("backup", help="Backup database filestore and addons")
@@ -1272,9 +1460,7 @@ def main():
     )
 
     # project init
-    project_init_parser = project_subparser.add_parser(
-        "init", help="initialize project directory"
-    )
+    project_init_parser = project_subparser.add_parser("init", help="init")
     project_init_parser.add_argument(
         "edition",
         choices=["community", "enterprise"],
@@ -1288,9 +1474,7 @@ def main():
     project_init_parser.add_argument("projectname", help="Project Name")
 
     # project branch
-    project_branch_parser = project_subparser.add_parser(
-        "branch", help="initialize branch of project"
-    )
+    project_branch_parser = project_subparser.add_parser("branch", help="branch")
     project_branch_parser.add_argument(
         "edition",
         help="community or enterprise",
@@ -1305,16 +1489,8 @@ def main():
     project_branch_parser.add_argument("branch", help="Project Branch")
     project_branch_parser.add_argument("url", help="Project URL")
 
-    # project branch
-    project_rebuild_parser = project_subparser.add_parser(
-        "rebuild", help="rebuild from another project"
-    )
-    project_rebuild_parser.add_argument(
-        "oproject", help="other project", choices=get_current_odoo_projects(), nargs=1
-    )
-
     # project reset
-    project_subparser.add_parser("reset", help="reset project dir and db")
+    project_subparser.add_parser("reset", help="reset")
 
     # project hostsfile
     project_subparser.add_parser(
@@ -1382,6 +1558,17 @@ def main():
             config_vscode()
         elif args.config == "pyright":
             config_pyright()
+    elif args.command == "kube":
+        if args.kube == "gen":
+            if args.gen == "postgres" and args.version:
+                kube_gen_postgres(args.version)
+            elif args.gen == "odoo":
+                kube_gen_odoo()
+        elif args.kube == "apply":
+            if args.apply == "postgres":
+                kube_apply_postgres()
+            elif args.apply == "odoo":
+                kube_apply_odoo()
     elif args.command == "start":
         start()
     elif args.command == "stop":
@@ -1401,28 +1588,14 @@ def main():
         execshell()
     elif args.command == "psql":
         psql()
+    elif args.command == "query":
+        query()
     elif args.command == "db":
-        if args.db == "psql":
-            pgdb()
-        elif args.db == "start":
-            pgdb_start()
-        elif args.db == "stop":
-            pgdb_stop()
-        elif args.db == "restart":
-            pgdb_restart()
+        pgdb()
     elif args.command == "backup":
         backup()
     elif args.command == "restore" and args.file:
         restore(args.file)
-    elif args.command == "proxy":
-        if args.proxy == "start":
-            caddy_start()
-        elif args.proxy == "stop":
-            caddy_stop()
-        elif args.proxy == "restart":
-            caddy_restart()
-        elif args.proxy == "generate":
-            gen_caddy()
     elif args.command == "admin":
         if args.admin == "username":
             admin_username()
@@ -1447,8 +1620,6 @@ def main():
             project_branch(
                 args.edition, args.version, args.projectname, args.branch, args.url
             )
-        elif args.project == "rebuild" and args.oproject:
-            project_rebuild(args.oproject[0])
         elif args.project == "reset":
             project_reset()
         elif args.project == "hostsfile":
