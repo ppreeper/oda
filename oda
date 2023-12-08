@@ -534,8 +534,6 @@ def pgdb_start():
             f"{DB_HOST}:/var/lib/postgresql/data",
             "--rm",
             "-d",
-            "--restart",
-            "always",
             "docker.io/postgres:15-alpine",
         ],
         check=False,
