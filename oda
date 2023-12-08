@@ -532,6 +532,7 @@ def pgdb_start():
             f"POSTGRES_PASSWORD={DB_PASS}",
             "-v",
             f"{DB_HOST}:/var/lib/postgresql/data",
+            "--rm",
             "-d",
             "--restart",
             "always",
