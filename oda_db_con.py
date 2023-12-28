@@ -411,9 +411,9 @@ def main():
     """Odoo Administration Backup Restore"""
     parser = argparse.ArgumentParser()
     parser.add_argument("-b", "--backup", action="store_true", help="backup database")
-    parser.add_argument(
-        "-r", "--restore", action="store", help="restore database", nargs="+"
-    )
+    # parser.add_argument(
+    #     "-r", "--restore", action="store", help="restore database", nargs="+"
+    # )
     parser.add_argument(
         "-c",
         "--config",
@@ -443,19 +443,19 @@ def main():
         print(_dump_addons_tar(args.config, bkp_prefix, "/opt/odoo/backups"))
         return
 
-    for dump in args.restore:
-        dump_file = dump.strip('"')
-        fname = os.path.splitext(os.path.basename(dump_file))[0].split(".")[0]
-        bfile = os.path.splitext(fname)[0].split("__")
+    # for dump in args.restore:
+    #     dump_file = dump.strip('"')
+    #     fname = os.path.splitext(os.path.basename(dump_file))[0].split(".")[0]
+    #     bfile = os.path.splitext(fname)[0].split("__")
 
-        if len(bfile) == 2:
-            print(f"restore from dump file {dump_file}")
-            _restore_db_tar(args.config, dump_file)
-        elif len(bfile) == 3 and bfile[-1] == "addons":
-            print(f"restore addons file {dump_file}")
-            _restore_addons_tar(dump_file)
-        else:
-            print("invalid backup filename")
+    #     if len(bfile) == 2:
+    #         print(f"restore from dump file {dump_file}")
+    #         _restore_db_tar(args.config, dump_file)
+    #     elif len(bfile) == 3 and bfile[-1] == "addons":
+    #         print(f"restore addons file {dump_file}")
+    #         _restore_addons_tar(dump_file)
+    #     else:
+    #         print("invalid backup filename")
     return
 
 
