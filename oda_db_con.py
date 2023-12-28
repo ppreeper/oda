@@ -427,6 +427,10 @@ def main():
 
     args = parser.parse_args()
 
+    if args.password:
+        change_password(args.password)
+        return
+
     if args.backup and args.restore:
         print("backup or restore cannot run both commands")
         return
@@ -452,11 +456,6 @@ def main():
             _restore_addons_tar(dump_file)
         else:
             print("invalid backup filename")
-
-    if args.password:
-        change_password(args.password)
-        return
-
     return
 
 
