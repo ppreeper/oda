@@ -8,16 +8,13 @@ import sys
 import shutil
 import subprocess
 from contextlib import closing
+from passlib.context import CryptContext
 import psycopg2
 
 sys.path.append("odoo")
 import odoo
 
 sys.path.append("odoo")
-# import odoo.release
-# import odoo.sql_db
-# import odoo.tools
-# from odoo.tools import exec_pg_environ
 
 
 # Backup
@@ -396,6 +393,17 @@ def get_odoo_conf(configfile, key):
     return
 
 
+# Admin password
+def change_password(new_password):
+    new_password = new_password.strip()
+    if new_password == "":
+        return
+    ctx = CryptContext(schemes=["pbkdf2_sha512"])
+    pw_hash = ctx.hash(new_password)
+    print(pw_hash)
+    return
+
+
 # =============================================================================
 
 
@@ -412,6 +420,9 @@ def main():
         action="store",
         default="/opt/odoo/conf/odoo.conf",
         help="odoo.conf file location",
+    )
+    parser.add_argument(
+        "-p", "--password", action="store", help="generate password hash"
     )
 
     args = parser.parse_args()
@@ -441,6 +452,11 @@ def main():
             _restore_addons_tar(dump_file)
         else:
             print("invalid backup filename")
+
+    if args.password:
+        change_password(args.password)
+        return
+
     return
 
 
