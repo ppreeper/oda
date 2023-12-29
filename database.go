@@ -6,7 +6,45 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/jmoiron/sqlx"
 )
+
+// Database struct contains sql pointer
+type Database struct {
+	Hostname string `json:"hostname,omitempty"`
+	Port     int    `json:"port,omitempty"`
+	Database string `json:"database,omitempty"`
+	Username string `json:"username,omitempty"`
+	Password string `json:"password,omitempty"`
+	URI      string `json:"uri,omitempty"`
+	*sqlx.DB
+}
+
+// OpenDatabase open database
+func OpenDatabase(db Database) (*Database, error) {
+	var err error
+	db.GetURI()
+	db.DB, err = sqlx.Open("pgx", db.URI)
+	if err != nil {
+		return nil, fmt.Errorf("cannot open database: %w", err)
+	}
+	if err = db.Ping(); err != nil {
+		if err != nil {
+			return nil, fmt.Errorf("cannot open database: %w", err)
+		}
+	}
+	return &db, err
+}
+
+// GenURI generate db uri string
+func (db *Database) GetURI() {
+	port := 5432
+	if db.Port != 0 {
+		port = db.Port
+	}
+	db.URI = fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable", db.Username, db.Password, db.Hostname, port, db.Database)
+}
 
 func pgdbPgsql() error {
 	conf := GetConf()
@@ -86,13 +124,24 @@ func pgdbFullReset() error {
 		}
 		time.Sleep(1 * time.Second)
 	}
-	if err := exec.Command("podman",
-		"exec", "-it", "--user", "postgres", conf.DBHost,
-		"psql", "-c",
-		"create role "+conf.DBUsername+" with createdb login password '"+conf.DBUserpass+"';",
-	).Run(); err != nil {
-		return err
+
+	db, err := OpenDatabase(Database{
+		Hostname: conf.DBHost,
+		Username: "postgres",
+		Password: conf.DBPass,
+		Database: "postgres",
+	})
+	defer func() error {
+		if err := db.Close(); err != nil {
+			return fmt.Errorf("error closing database %w", err)
+		}
+		return nil
+	}()
+	if err != nil {
+		return fmt.Errorf("error opening database %w", err)
 	}
-	fmt.Println("User created")
+
+	db.MustExec(fmt.Sprintf("create role %s with createdb login password %s ;", conf.DBUsername, conf.DBUserpass))
+
 	return nil
 }

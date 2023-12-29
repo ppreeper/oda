@@ -1,8 +1,6 @@
 package main
 
 import (
-	"crypto/sha512"
-	"encoding/base64"
 	"fmt"
 	"math/rand"
 	"os"
@@ -11,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/huh"
-	"golang.org/x/crypto/pbkdf2"
 )
 
 func instanceStart() error {
@@ -227,34 +224,38 @@ func adminUsername() error {
 		return fmt.Errorf("usernames entered do not match")
 	}
 
-	cwd, project := GetProject()
+	cwd, _ := GetProject()
 
 	dbhost := GetOdooConf(cwd, "db_host")
 	dbuser := GetOdooConf(cwd, "db_user")
 	dbpassword := GetOdooConf(cwd, "db_password")
 	dbname := GetOdooConf(cwd, "db_name")
 
-	podCmd := exec.Command("podman",
-		"exec", "-it",
-		"-e", "PGPASSWORD="+dbpassword,
-		project+".local",
-		"psql", "-h", dbhost,
-		"-U", dbuser,
-		dbname,
-		"-c", "update res_users set login='"+user1+"' where id=2;",
-	)
-	if err := podCmd.Run(); err != nil {
-		return err
+	db, err := OpenDatabase(Database{
+		Hostname: dbhost,
+		Username: dbuser,
+		Password: dbpassword,
+		Database: dbname,
+	})
+	defer func() error {
+		if err := db.Close(); err != nil {
+			return fmt.Errorf("error closing database %w", err)
+		}
+		return nil
+	}()
+	if err != nil {
+		return fmt.Errorf("error opening database %w", err)
 	}
+
+	db.MustExec("update res_users set login=$1 where id=2;",
+		strings.TrimSpace(string(user1)))
+
 	fmt.Println("Admin username changed to", user1)
 	return nil
 }
 
 func adminPassword() error {
 	fmt.Println("admin password")
-	if !IsProject() {
-		return fmt.Errorf("not in a project directory")
-	}
 	if !IsProject() {
 		return fmt.Errorf("not in a project directory")
 	}
@@ -284,59 +285,44 @@ func adminPassword() error {
 	if !confirm {
 		return fmt.Errorf("password change cancelled")
 	}
-
-	fmt.Println("password1", password1, "password2", password2)
-
-	salt := []byte(randStr(22))
-	iteration := 350_000
-	key := pbkdf2.Key([]byte(password1), salt, iteration, sha512.Size, sha512.New)
-	pass := base64.RawStdEncoding.EncodeToString(key)
-
-	password := fmt.Sprintf("\\$pbkdf2-sha512\\$%d\\$%s\\$%s", iteration, string(salt), pass)
-	fmt.Println("password", password)
-
 	cwd, project := GetProject()
+	passkey, err := exec.Command("podman",
+		"exec", "-it", project+".local", "oda_db.py", "-p", password1).Output()
+	if err != nil {
+		return fmt.Errorf("error generating password %w", err)
+	}
+	// salt := []byte(randStr(22))
+	// iteration := 350_000
+	// key := pbkdf2.Key([]byte(password1), salt, iteration, sha512.Size, sha512.New)
+	// pass := base64.RawStdEncoding.EncodeToString(key)
+
+	// password := fmt.Sprintf("\\$pbkdf2-sha512\\$%d\\$%s\\$%s", iteration, string(salt), pass)
 
 	dbhost := GetOdooConf(cwd, "db_host")
 	dbuser := GetOdooConf(cwd, "db_user")
 	dbpassword := GetOdooConf(cwd, "db_password")
 	dbname := GetOdooConf(cwd, "db_name")
-	fmt.Println("podman",
-		"exec", "-it",
-		"-e", "PGPASSWORD="+dbpassword,
-		project+".local",
-		"psql", "-h", dbhost,
-		"-U", dbuser,
-		dbname,
-		"-c", "\"update res_users set password='"+strings.TrimSpace(password)+"' where id=2;\"")
 
-	podCmd := exec.Command("podman",
-		"exec", "-it",
-		"-e", "PGPASSWORD="+dbpassword,
-		project+".local",
-		"psql", "-h", dbhost,
-		"-U", dbuser,
-		dbname,
-		"-c", "\"update res_users set password='"+strings.TrimSpace(password)+"' where id=2;\"")
-	if err := podCmd.Run(); err != nil {
-		fmt.Println("error updating password", err)
-		return err
+	db, err := OpenDatabase(Database{
+		Hostname: dbhost,
+		Username: dbuser,
+		Password: dbpassword,
+		Database: dbname,
+	})
+	defer func() error {
+		if err := db.Close(); err != nil {
+			return fmt.Errorf("error closing database %w", err)
+		}
+		return nil
+	}()
+	if err != nil {
+		return fmt.Errorf("error opening database %w", err)
 	}
+
+	db.MustExec("update res_users set password=$1 where id=2;",
+		strings.TrimSpace(string(passkey)))
 	return nil
 }
-
-// func change_password(new_password string) string {
-//     // """Generate Password Hash"""
-//     new_password := new_password.strip()
-//     if new_password == ""{
-//         return ""
-// 	}
-//     ctx = CryptContext(schemes=["pbkdf2_sha512"])
-//     pw_hash = ctx.hash(new_password)
-//     return pw_hash
-// }
-
-// define the given charset, char only
 
 // n is the length of random string we want to generate
 func randStr(n int) string {

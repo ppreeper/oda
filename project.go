@@ -262,6 +262,7 @@ func projectRebuild() error {
 	dbhost := GetOdooConf(cwd, "db_host")
 	dbuser := GetOdooConf(cwd, "db_user")
 	destdB := GetOdooConf(cwd, "db_name")
+	dbpassword := GetOdooConf(cwd, "db_password")
 	sourceDB := GetOdooConf(filepath.Join(dirs.Project, sourceProject), "db_name")
 
 	sourceData := filepath.Join(dirs.Project, sourceProject)
@@ -281,24 +282,9 @@ func projectRebuild() error {
 		return fmt.Errorf("copy directory %s to %s failed %w", sourceData, destData, err)
 	}
 
-	// drop target database
-	exec.Command("podman",
-		"exec", "-it", dbhost, "dropdb", "-U", "postgres", destdB).Run()
-
-	// clone source db to target db
-	sqlq := "SELECT pg_terminate_backend (pid) FROM pg_stat_activity WHERE datname = '" + sourceDB + "'"
-	stopCmd := exec.Command("podman",
-		"exec", "-it", dbhost, "psql", "-U", "postgres", "-c", sqlq)
-	if err := stopCmd.Run(); err != nil {
-		fmt.Println("drop source db failed", err)
-		// return fmt.Errorf("database stop failed %w", err)
-	}
-	sqlq = "CREATE DATABASE " + destdB + " WITH TEMPLATE " + sourceDB + " OWNER " + dbuser
-	if err := exec.Command("podman",
-		"exec", "-it", dbhost, "psql", "-U", "postgres", "-c", sqlq).Run(); err != nil {
-		return fmt.Errorf("database copy failed %w", err)
-	}
-	DBReset(dbhost, destdB, dbuser)
+	// clone from target database
+	DBClone(dbhost, sourceDB, destdB, dbuser, dbpassword)
+	DBReset(dbhost, destdB, dbuser, dbpassword)
 	return nil
 }
 

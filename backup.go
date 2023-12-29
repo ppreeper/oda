@@ -93,6 +93,7 @@ func RestoreDBTar(backupFile string, copyDB bool) error {
 	dbname := GetOdooConf(cwd, "db_name")
 	dbhost := GetOdooConf(cwd, "db_host")
 	dbuser := GetOdooConf(cwd, "db_user")
+	dbpassword := GetOdooConf(cwd, "db_password")
 	dbtemplate := GetOdooConf(cwd, "db_template")
 
 	// drop target database
@@ -122,6 +123,8 @@ func RestoreDBTar(backupFile string, copyDB bool) error {
 	pgCmd := exec.Command("psql",
 		"-h", dbhost, "-U", dbuser, "--dbname", dbname, "-q",
 	)
+	pgCmd.Env = append(pgCmd.Env, "PGPASSWORD="+dbpassword)
+
 	r, w := io.Pipe()
 	tarpgCmd.Stdout = w
 	pgCmd.Stdin = r
@@ -149,37 +152,68 @@ func RestoreDBTar(backupFile string, copyDB bool) error {
 	}
 
 	if copyDB {
-		if err := DBReset(dbhost, dbname, dbuser); err != nil {
+		if err := DBReset(dbhost, dbname, dbuser, dbpassword); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
+func DBClone(dbhost, sourceDB, destDB, dbuser, dbpassword string) error {
+	db, err := OpenDatabase(Database{
+		Hostname: dbhost,
+		Username: dbuser,
+		Password: dbpassword,
+		Database: "postgres",
+	})
+	defer func() error {
+		if err := db.Close(); err != nil {
+			return fmt.Errorf("error closing database %w", err)
+		}
+		return nil
+	}()
+	if err != nil {
+		return fmt.Errorf("error opening database %w", err)
+	}
+
+	db.MustExec("drop database if exists " + destDB)
+	db.MustExec("select pg_terminate_backend (pid) from pg_stat_activity where datname=$1", sourceDB)
+	db.MustExec(fmt.Sprintf("create database %s with template %s owner %s", destDB, sourceDB, dbuser))
+
+	return nil
+}
+
 // DBReset Database Reset DBUUID and remove MCode
-func DBReset(dbhost, dbname, dbuser string) error {
-	sqlq := []string{}
-	sqlq = append(sqlq, "delete from ir_config_parameter where key='database.enterprise_code'")
-	sqlq = append(sqlq, `update ir_config_parameter
+func DBReset(dbhost, dbname, dbuser, dbpassword string) error {
+	db, err := OpenDatabase(Database{
+		Hostname: dbhost,
+		Username: dbuser,
+		Password: dbpassword,
+		Database: dbname,
+	})
+	defer func() error {
+		if err := db.Close(); err != nil {
+			return fmt.Errorf("error closing database %w", err)
+		}
+		return nil
+	}()
+	if err != nil {
+		return fmt.Errorf("error opening database %w", err)
+	}
+
+	db.MustExec("delete from ir_config_parameter where key='database.enterprise_code'")
+	db.MustExec(`update ir_config_parameter
 		set value=(select gen_random_uuid())
 		where key = 'database.uuid'`,
 	)
-	sqlq = append(sqlq,
-		`insert into ir_config_parameter
+	db.MustExec(`insert into ir_config_parameter
 	    (key,value,create_uid,create_date,write_uid,write_date) values
 	    ('database.expiration_date',(current_date+'3 months'::interval)::timestamp,1,
 	    current_timestamp,1,current_timestamp)
 	    on conflict (key)
 	    do update set value = (current_date+'3 months'::interval)::timestamp;`,
 	)
-	for _, q := range sqlq {
-		podCmd := exec.Command("podman",
-			"exec", "-it", dbhost, "psql", "-U", dbuser, "-c", q, dbname,
-		)
-		if err := podCmd.Run(); err != nil {
-			return err
-		}
-	}
+
 	return nil
 }
 

@@ -243,7 +243,6 @@ func main() {
 						Name:  "password",
 						Usage: "Odoo Admin password",
 						Action: func(cCtx *cli.Context) error {
-							// Test
 							return adminPassword()
 						},
 					},
