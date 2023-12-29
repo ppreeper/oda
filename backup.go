@@ -151,6 +151,7 @@ func RestoreDBTar(backupFile string, copyDB bool) error {
 		return fmt.Errorf("filestore restore failed %w", err)
 	}
 
+	// if copyDB then reset DBUUID and remove MCode
 	if copyDB {
 		if err := DBReset(dbhost, dbname, dbuser, dbpassword); err != nil {
 			return err

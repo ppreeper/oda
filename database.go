@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -43,7 +44,8 @@ func (db *Database) GetURI() {
 	if db.Port != 0 {
 		port = db.Port
 	}
-	db.URI = fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable", db.Username, db.Password, db.Hostname, port, db.Database)
+	db.URI = fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
+		db.Username, db.Password, db.Hostname, port, db.Database)
 }
 
 func pgdbPgsql() error {
