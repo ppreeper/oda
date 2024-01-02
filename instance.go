@@ -48,7 +48,10 @@ func instanceStop() error {
 	}
 	_, project := GetProject()
 	if err := exec.Command("podman", "stop", project+".local").Run(); err != nil {
-		return err
+		fmt.Println("stopping: ", err)
+	}
+	if err := exec.Command("podman", "rm", project+".local").Run(); err != nil {
+		fmt.Println("removing: ", err)
 	}
 	fmt.Println(project+".local", "stopped")
 	return nil
