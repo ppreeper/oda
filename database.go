@@ -65,6 +65,20 @@ func pgdbPgsql() error {
 
 func pgdbStart() error {
 	conf := GetConf()
+
+	pods, _ := getPods(true)
+	for _, pod := range pods {
+		if strings.Contains(pod.Name, conf.DBHost) &&
+			strings.HasPrefix(pod.Status, "Up") {
+			fmt.Println("Database already running")
+			return nil
+		}
+		if strings.Contains(pod.Name, conf.DBHost) &&
+			(strings.HasPrefix(pod.Status, "Created") || strings.HasPrefix(pod.Status, "Exited")) {
+			instanceStop()
+		}
+	}
+
 	if err := exec.Command("podman",
 		"run", "--name", conf.DBHost,
 		"-p", conf.DBPort+":5432",
@@ -80,8 +94,12 @@ func pgdbStart() error {
 func pgdbStop() error {
 	conf := GetConf()
 	if err := exec.Command("podman", "stop", conf.DBHost).Run(); err != nil {
-		return err
+		fmt.Println("stopping: ", err)
 	}
+	if err := exec.Command("podman", "rm", conf.DBHost).Run(); err != nil {
+		fmt.Println("removing: ", err)
+	}
+	fmt.Println(conf.DBHost, "stopped")
 	return nil
 }
 

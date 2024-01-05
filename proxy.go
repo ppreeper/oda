@@ -41,46 +41,25 @@ func proxyRestart() error {
 func proxyGenerate() error {
 	fmt.Println("proxy generate")
 	conf := GetConf()
-	out, err := exec.Command("podman",
-		"ps", "--format", "'{{.Image}};{{.Names}};{{.Ports}}'",
-	).Output()
+
+	pods, err := getPods(false)
 	if err != nil {
 		return err
 	}
-	type Pod struct {
-		Name  string
-		Ports map[string]string
-	}
-	pods := strings.Split(string(out), "\n")
 	podList := []Pod{}
 	for _, pod := range pods {
-		podSplit := strings.Split(pod, ";")
-		if len(podSplit) == 3 {
-			if strings.Contains(podSplit[0], conf.Odoobase) {
-				aPod := Pod{
-					Name:  "",
-					Ports: make(map[string]string),
-				}
-				aPod.Name = podSplit[1]
-				ports := strings.Split(podSplit[2], ",")
-				for _, port := range ports {
-					portSplit := strings.Split(port, "->")
-					source := strings.Split(portSplit[0], ":")
-					dest := strings.Split(portSplit[1], "/")
-					aPod.Ports[dest[0]] = source[1]
-				}
-				podList = append(podList, aPod)
-			}
+		if strings.Contains(pod.Image, conf.Odoobase) {
+			podList = append(podList, pod)
 		}
 	}
 	dirs := GetDirs()
 	caddyFile := filepath.Join(dirs.Project, "Caddyfile")
+	caddyOut, err := os.Create(caddyFile)
+	if err != nil {
+		return err
+	}
+	defer caddyOut.Close()
 	for _, pod := range podList {
-		caddyOut, err := os.Create(caddyFile)
-		if err != nil {
-			return err
-		}
-		defer caddyOut.Close()
 		caddyOut.WriteString(pod.Name + ":80 {" + "\n")
 		caddyOut.WriteString("reverse_proxy http://127.0.0.1:" + pod.Ports["8069"] + "\n")
 		caddyOut.WriteString("reverse_proxy /websocket http://127.0.0.1:" + pod.Ports["8072"] + "\n")

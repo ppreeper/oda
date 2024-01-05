@@ -2,23 +2,39 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/charmbracelet/huh"
 )
 
 func instanceStart() error {
-	fmt.Println("Start the instance")
 	if !IsProject() {
 		return fmt.Errorf("not in a project directory")
 	}
+	fmt.Println("Start the instance")
 	cwd, project := GetProject()
 	dirs := GetDirs()
 	version := GetVersion()
+
+	pods, _ := getPods(true)
+	for _, pod := range pods {
+		if strings.Contains(pod.Name, project) && strings.HasPrefix(pod.Status, "Up") {
+			// Check to see if the instance is running
+			fmt.Println(project+".local", "is already running")
+			return nil
+		}
+		if strings.Contains(pod.Name, project) &&
+			(strings.HasPrefix(pod.Status, "Created") || strings.HasPrefix(pod.Status, "Exited")) {
+			// Check to see if the instance is in invalid state
+			// Remove if in invalid state
+			instanceStop()
+		}
+	}
+
 	out, err := exec.Command("podman",
 		"run", "--rm", "-d",
 		"--publish-all",
@@ -58,6 +74,9 @@ func instanceStop() error {
 }
 
 func instanceRestart() error {
+	if !IsProject() {
+		return fmt.Errorf("not in a project directory")
+	}
 	if err := instanceStop(); err != nil {
 		return err
 	}
@@ -328,12 +347,60 @@ func adminPassword() error {
 }
 
 // n is the length of random string we want to generate
-func randStr(n int) string {
-	charset := []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-	b := make([]byte, n)
-	for i := range b {
-		// randomly select 1 character from given charset
-		b[i] = charset[rand.Intn(len(charset))]
+// func randStr(n int) string {
+// 	charset := []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+// 	b := make([]byte, n)
+// 	for i := range b {
+// 		// randomly select 1 character from given charset
+// 		b[i] = charset[rand.Intn(len(charset))]
+// 	}
+// 	return string(b)
+// }
+
+type Pod struct {
+	Image  string
+	Name   string
+	Ports  map[string]string
+	Status string
+}
+
+func getPods(all bool) ([]Pod, error) {
+	podCmd := []string{"ps", "--format", "{{.Image}};{{.Names}};{{.Ports}};{{.Status}}"}
+	if all {
+		podCmd = append(podCmd, "-a")
 	}
-	return string(b)
+	out, err := exec.Command("podman", podCmd...).Output()
+	if err != nil {
+		return nil, err
+	}
+	podList := strings.Split(string(out), "\n")
+	slices.Sort(podList)
+	pods := []Pod{}
+	for _, pod := range podList {
+
+		podSplit := strings.Split(pod, ";")
+		if len(podSplit) != 4 {
+			continue
+		}
+
+		aPod := Pod{
+			Image:  podSplit[0],
+			Name:   podSplit[1],
+			Ports:  make(map[string]string),
+			Status: podSplit[3],
+		}
+
+		ports := strings.Split(podSplit[2], ",")
+		if len(ports) == 1 && ports[0] == "" {
+			continue
+		}
+		for _, port := range ports {
+			portSplit := strings.Split(port, "->")
+			source := strings.Split(portSplit[0], ":")
+			dest := strings.Split(portSplit[1], "/")
+			aPod.Ports[dest[0]] = source[1]
+		}
+		pods = append(pods, aPod)
+	}
+	return pods, nil
 }
