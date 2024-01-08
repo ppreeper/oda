@@ -13,7 +13,7 @@ func main() {
 	app := &cli.App{
 		Name:                 "oda",
 		Usage:                "Odoo Administration Tool",
-		Version:              "0.4.4",
+		Version:              "0.4.6",
 		EnableBashCompletion: true,
 		Commands: []*cli.Command{
 			{
