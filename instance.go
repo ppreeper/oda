@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -9,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/huh"
+	"github.com/ppreeper/odoojrpc"
 )
 
 func instanceStart() error {
@@ -222,6 +224,56 @@ func instancePSQL() error {
 	if err := podCmd.Run(); err != nil {
 		return err
 	}
+	return nil
+}
+
+func instanceQuery(q *QueryDef) error {
+	if !IsProject() {
+		return fmt.Errorf("not in a project directory")
+	}
+	cwd, project := GetProject()
+
+	dbname := GetOdooConf(cwd, "db_name")
+
+	oc := odoojrpc.NewOdoo().
+		WithHostname(project + ".local").
+		WithPort(443).
+		WithDatabase(dbname).
+		WithUsername("admin").
+		WithPassword("admin").
+		WithSchema("https")
+
+	err := oc.Login()
+	if err != nil {
+		return err
+	}
+
+	umdl := strings.Replace(q.Model, "_", ".", -1)
+
+	fields := parseFields(q.Fields)
+	if q.Count {
+		fields = []string{"id"}
+	}
+
+	filtp, err := parseFilter(q.Filter)
+	if err != nil {
+		fmt.Printf("%v\n", err.Error())
+	}
+
+	rr, err := oc.SearchRead(umdl, filtp, q.Offset, q.Limit, fields)
+	if err != nil {
+		fmt.Printf("%v\n", err.Error())
+	}
+	if q.Count {
+		fmt.Println("records:", len(rr))
+	} else {
+		jsonStr, err := json.MarshalIndent(rr, "", "  ")
+		if err != nil {
+			fmt.Printf("%v\n", err.Error())
+		}
+		fmt.Println(string(jsonStr))
+	}
+
 	return nil
 }
 

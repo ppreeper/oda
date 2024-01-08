@@ -9,6 +9,7 @@ import (
 )
 
 func main() {
+	q := QueryDef{}
 	app := &cli.App{
 		Name:                 "oda",
 		Usage:                "Odoo Administration Tool",
@@ -132,6 +133,56 @@ func main() {
 				Category: "instance",
 				Action: func(cCtx *cli.Context) error {
 					return instancePSQL()
+				},
+			},
+			{
+				Name:      "query",
+				Usage:     "Query an Odoo model",
+				UsageText: "oda query <model> [command options]",
+				Category:  "instance",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:        "domain",
+						Aliases:     []string{"d"},
+						Value:       "",
+						Usage:       "domain filter",
+						Destination: &q.Filter,
+					},
+					&cli.IntFlag{
+						Name:        "offset",
+						Aliases:     []string{"o"},
+						Value:       0,
+						Usage:       "offset",
+						Destination: &q.Offset,
+					},
+					&cli.IntFlag{
+						Name:        "limit",
+						Aliases:     []string{"l"},
+						Value:       0,
+						Usage:       "limit records returned",
+						Destination: &q.Limit,
+					},
+					&cli.StringFlag{
+						Name:        "fields",
+						Aliases:     []string{"f"},
+						Value:       "",
+						Usage:       "fields to return",
+						Destination: &q.Fields,
+					},
+					&cli.BoolFlag{
+						Name:        "count",
+						Aliases:     []string{"c"},
+						Value:       false,
+						Usage:       "count records",
+						Destination: &q.Count,
+					},
+				},
+				Action: func(cCtx *cli.Context) error {
+					if cCtx.NArg() == 0 {
+						return fmt.Errorf("no model specified")
+					}
+					q.Model = cCtx.Args().First()
+					return instanceQuery(&q)
 				},
 			},
 			{
