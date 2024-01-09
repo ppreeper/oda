@@ -148,7 +148,11 @@ func IsProject() bool {
 }
 
 func getGitHubUsernameToken() (username, token string) {
-	fi, err := os.Open("/home/peterp/.gitcreds")
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Println(err)
+	}
+	fi, err := os.Open(filepath.Join(homedir, ".gitcreds"))
 	if err != nil {
 		fmt.Println(err)
 	}
