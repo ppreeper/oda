@@ -1,4 +1,4 @@
-package main
+package oda
 
 import (
 	"bufio"
@@ -13,8 +13,8 @@ import (
 	"github.com/charmbracelet/huh"
 )
 
-// projectIinit Project Init
-func projectIinit() error {
+// ProjectIinit Project Init
+func ProjectIinit() error {
 	projects := GetCurrentOdooProjects()
 
 	versions := GetCurrentOdooRepos()
@@ -69,8 +69,8 @@ func projectIinit() error {
 	return nil
 }
 
-// projectBranch Project Branch Init
-func projectBranch() error {
+// ProjectBranch Project Branch Init
+func ProjectBranch() error {
 	projects := GetCurrentOdooProjects()
 
 	versions := GetCurrentOdooRepos()
@@ -141,8 +141,8 @@ func projectBranch() error {
 	}
 	// clone repo branch
 	dirs := GetDirs()
-	username, token := getGitHubUsernameToken()
-	if err := cloneUrlDir(
+	username, token := GetGitHubUsernameToken()
+	if err := CloneUrlDir(
 		url,
 		filepath.Join(dirs.Project, project, "addons"),
 		branch,
@@ -220,8 +220,8 @@ func writeOdooConf(file, projectName, edition string) error {
 	return nil
 }
 
-// projectRebuild Rebuild project with db and filestore of another project but with current addons
-func projectRebuild() error {
+// ProjectRebuild Rebuild project with db and filestore of another project but with current addons
+func ProjectRebuild() error {
 	if !IsProject() {
 		return fmt.Errorf("not in a project directory")
 	}
@@ -254,7 +254,7 @@ func projectRebuild() error {
 	}
 
 	// stop target
-	instanceStop()
+	InstanceStop()
 
 	// remove targets files, copy from source to target
 	dirs := GetDirs()
@@ -283,13 +283,13 @@ func projectRebuild() error {
 	}
 
 	// clone from target database
-	DBClone(dbhost, sourceDB, destdB, dbuser, dbpassword)
-	DBReset(dbhost, destdB, dbuser, dbpassword)
+	dbClone(dbhost, sourceDB, destdB, dbuser, dbpassword)
+	dbReset(dbhost, destdB, dbuser, dbpassword)
 	return nil
 }
 
-// projectReset clear the data directory and drop database"""
-func projectReset() error {
+// ProjectReset clear the data directory and drop database"""
+func ProjectReset() error {
 	if !IsProject() {
 		return fmt.Errorf("not in a project directory")
 	}
@@ -298,7 +298,7 @@ func projectReset() error {
 		return fmt.Errorf("reset the project canceled")
 	}
 	// stop
-	if err := instanceStop(); err != nil {
+	if err := InstanceStop(); err != nil {
 		return err
 	}
 	// rm -rf data/*
@@ -317,8 +317,8 @@ func projectReset() error {
 	return nil
 }
 
-// projectHostsFile Update /etc/hosts file with projectname
-func projectHostsFile() error {
+// ProjectHostsFile Update /etc/hosts file with projectname
+func ProjectHostsFile() error {
 	sudouser, _ := os.LookupEnv("SUDO_USER")
 	if sudouser == "" {
 		return fmt.Errorf("not allowed: this requires root access")

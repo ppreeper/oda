@@ -1,4 +1,4 @@
-package main
+package oda
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 )
 
-func adminInit() error {
+func AdminInit() error {
 	HOME, _ := os.UserHomeDir()
 	CONFIG, _ := os.UserConfigDir()
 
@@ -52,13 +52,13 @@ func adminInit() error {
 	return nil
 }
 
-func repoBaseClone() error {
+func RepoBaseClone() error {
 	dirs := GetDirs()
 	urlbase := "https://github.com/odoo/"
 	repos := []string{"odoo", "enterprise"}
 	for _, repo := range repos {
-		username, token := getGitHubUsernameToken()
-		if err := cloneUrlDir(
+		username, token := GetGitHubUsernameToken()
+		if err := CloneUrlDir(
 			urlbase+repo,
 			dirs.Repo, repo,
 			username, token,
@@ -69,14 +69,14 @@ func repoBaseClone() error {
 	return nil
 }
 
-func repoBaseUpdate() error {
+func RepoBaseUpdate() error {
 	dirs := GetDirs()
 	repos := []string{"odoo", "enterprise"}
 	for _, repo := range repos {
 
 		repoDir := filepath.Join(dirs.Repo, repo)
 
-		repoHeadShortCode, err := repoHeadShortCode(repo)
+		repoHeadShortCode, err := RepoHeadShortCode(repo)
 		if err != nil {
 			return fmt.Errorf("repoHeadShortCode %w", err)
 		}
@@ -102,8 +102,8 @@ func repoBaseUpdate() error {
 	return nil
 }
 
-func repoBranchClone() error {
-	repoShorts, _ := repoShortCodes("odoo")
+func RepoBranchClone() error {
+	repoShorts, _ := RepoShortCodes("odoo")
 	versions := GetCurrentOdooRepos()
 	for _, version := range versions {
 		repoShorts = removeValue(repoShorts, version)
@@ -161,7 +161,7 @@ func repoBranchClone() error {
 	return nil
 }
 
-func repoBranchUpdate() error {
+func RepoBranchUpdate() error {
 	versions := GetCurrentOdooRepos()
 	versionOptions := []huh.Option[string]{}
 	for _, version := range versions {
@@ -212,7 +212,7 @@ func repoBranchUpdate() error {
 	return nil
 }
 
-func repoHeadShortCode(repo string) (string, error) {
+func RepoHeadShortCode(repo string) (string, error) {
 	dirs := GetDirs()
 	repoDir := filepath.Join(dirs.Repo, repo)
 
@@ -237,7 +237,7 @@ func repoHeadShortCode(repo string) (string, error) {
 	return refList, nil
 }
 
-func repoShortCodes(repo string) ([]string, error) {
+func RepoShortCodes(repo string) ([]string, error) {
 	dirs := GetDirs()
 	repoDir := filepath.Join(dirs.Repo, repo)
 

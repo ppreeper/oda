@@ -1,4 +1,4 @@
-package main
+package oda
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"github.com/charmbracelet/huh"
 )
 
-func adminBackup() error {
+func AdminBackup() error {
 	if !IsProject() {
 		return fmt.Errorf("not in a project directory")
 	}
@@ -24,12 +24,63 @@ func adminBackup() error {
 	return nil
 }
 
-// adminRestore Restore from backup file
-func adminRestore() error {
-	if !IsProject() {
-		return fmt.Errorf("not in a project directory")
+func AdminRestoreNode(move bool) error {
+	backups, addons := GetOdooBackupsNode()
+
+	backupOptions := []huh.Option[string]{}
+	for _, backup := range backups {
+		backupOptions = append(backupOptions, huh.NewOption(backup, backup))
+	}
+	addonOptions := []huh.Option[string]{}
+	addonOptions = append(addonOptions, huh.NewOption("None", "none"))
+	for _, addon := range addons {
+		addonOptions = append(addonOptions, huh.NewOption(addon, addon))
 	}
 
+	var (
+		backupFile string
+		addonFile  string
+		confirm    bool
+	)
+
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("Odoo Backup File").
+				Options(backupOptions...).
+				Value(&backupFile),
+
+			huh.NewSelect[string]().
+				Title("Odoo Addon File").
+				Options(addonOptions...).
+				Value(&addonFile),
+
+			huh.NewConfirm().
+				Title("Restore Project?").
+				Value(&confirm),
+		),
+	)
+	if err := form.Run(); err != nil {
+		fmt.Println("form error", err)
+	}
+
+	fmt.Println("restore from backup file " + backupFile)
+	if err := restoreDBTarNode(backupFile, move); err != nil {
+		return err
+	}
+
+	if addonFile != "none" {
+		fmt.Println("restore from addon file " + addonFile)
+		if err := restoreAddonsTarNode(addonFile); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// AdminRestore Restore from backup file
+func AdminRestore(move bool) error {
 	backups, addons := GetOdooBackups()
 
 	backupOptions := []huh.Option[string]{}
@@ -70,13 +121,13 @@ func adminRestore() error {
 	}
 
 	fmt.Println("restore from backup file " + backupFile)
-	if err := RestoreDBTar(backupFile, true); err != nil {
+	if err := restoreDBTar(backupFile, move); err != nil {
 		return err
 	}
 
 	if addonFile != "none" {
 		fmt.Println("restore from addon file " + addonFile)
-		if err := RestoreAddonsTar(addonFile); err != nil {
+		if err := restoreAddonsTar(addonFile); err != nil {
 			return err
 		}
 	}
@@ -84,8 +135,98 @@ func adminRestore() error {
 	return nil
 }
 
-// RestoreDBTar Restore Odoo DB from backup
-func RestoreDBTar(backupFile string, copyDB bool) error {
+func restoreDBTarNode(backupFile string, moveDB bool) error {
+	odir := "/opt/odoo"
+	source := filepath.Join(odir, "backups", backupFile)
+
+	dbname := GetOdooConf(odir, "db_name")
+	dbhost := GetOdooConf(odir, "db_host")
+	dbuser := GetOdooConf(odir, "db_user")
+	dbpassword := GetOdooConf(odir, "db_password")
+	dbtemplate := GetOdooConf(odir, "db_template")
+
+	fmt.Println("sudo", "-u", "postgres",
+		"dropdb", "--if-exists", "-f", dbname)
+
+	// drop target database
+	if err := exec.Command("sudo", "-u", "postgres",
+		"dropdb", "--if-exists", "-f", dbname).Run(); err != nil {
+		return fmt.Errorf("could not drop postgresql database %s error: %w", dbname, err)
+	}
+
+	fmt.Println("sudo", "-u", "postgres",
+		"createdb",
+		"--encoding", "unicode",
+		"--lc-collate", "C",
+		"-T", dbtemplate,
+		"-O", dbuser, dbname)
+	// create new postgresql database
+	if err := exec.Command("sudo", "-u", "postgres",
+		"createdb",
+		"--encoding", "unicode",
+		"--lc-collate", "C",
+		"-T", dbtemplate,
+		"-O", dbuser, dbname,
+	).Run(); err != nil {
+		return fmt.Errorf("could not create postgresql database %s error: %w", dbname, err)
+	}
+
+	fmt.Println("tar",
+		"Oaxf", source, "./dump.sql")
+	// restore postgresql database
+	tarpgCmd := exec.Command("tar",
+		"Oaxf", source, "./dump.sql",
+	)
+	fmt.Println("PGPASSWORD=" + dbpassword)
+	fmt.Println("psql",
+		"-h", dbhost, "-U", dbuser, "--dbname", dbname, "-q")
+	pgCmd := exec.Command("psql",
+		"-h", dbhost, "-U", dbuser, "--dbname", dbname, "-q",
+	)
+	pgCmd.Env = append(pgCmd.Env, "PGPASSWORD="+dbpassword)
+
+	r, w := io.Pipe()
+	tarpgCmd.Stdout = w
+	pgCmd.Stdin = r
+
+	tarpgCmd.Start()
+	pgCmd.Start()
+	tarpgCmd.Wait()
+	w.Close()
+	pgCmd.Wait()
+
+	// restore data filestore
+	data := filepath.Join(odir, "data")
+	fmt.Println("data", data)
+	if err := RemoveContents(data); err != nil {
+		return fmt.Errorf("data files removal failed %w", err)
+	}
+	filestore := filepath.Join(data, "filestore", dbname)
+	fmt.Println("filestore", filestore)
+	if err := os.MkdirAll(filestore, 0o755); err != nil {
+		return fmt.Errorf("filestore directory creation failed %w", err)
+	}
+	fmt.Println("tar",
+		"axf", source, "-C", filestore, "--strip-components=2", "./filestore")
+	tarCmd := exec.Command("tar",
+		"axf", source, "-C", filestore, "--strip-components=2", "./filestore",
+	)
+	if err := tarCmd.Run(); err != nil {
+		return fmt.Errorf("filestore restore failed %w", err)
+	}
+
+	// if not moveDB then reset DBUUID and remove MCode
+	if !moveDB {
+		fmt.Println("copy the db")
+		// if err := dbReset(dbhost, dbname, dbuser, dbpassword); err != nil {
+		// 	return err
+		// }
+	}
+	return nil
+}
+
+// restoreDBTar Restore Odoo DB from backup
+func restoreDBTar(backupFile string, moveDB bool) error {
 	cwd, _ := GetProject()
 	dirs := GetDirs()
 	source := filepath.Join(dirs.Project, "backups", backupFile)
@@ -151,16 +292,16 @@ func RestoreDBTar(backupFile string, copyDB bool) error {
 		return fmt.Errorf("filestore restore failed %w", err)
 	}
 
-	// if copyDB then reset DBUUID and remove MCode
-	if copyDB {
-		if err := DBReset(dbhost, dbname, dbuser, dbpassword); err != nil {
+	// if not moveDB then reset DBUUID and remove MCode
+	if !moveDB {
+		if err := dbReset(dbhost, dbname, dbuser, dbpassword); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func DBClone(dbhost, sourceDB, destDB, dbuser, dbpassword string) error {
+func dbClone(dbhost, sourceDB, destDB, dbuser, dbpassword string) error {
 	db, err := OpenDatabase(Database{
 		Hostname: dbhost,
 		Username: dbuser,
@@ -184,8 +325,8 @@ func DBClone(dbhost, sourceDB, destDB, dbuser, dbpassword string) error {
 	return nil
 }
 
-// DBReset Database Reset DBUUID and remove MCode
-func DBReset(dbhost, dbname, dbuser, dbpassword string) error {
+// dbReset Database Reset DBUUID and remove MCode
+func dbReset(dbhost, dbname, dbuser, dbpassword string) error {
 	db, err := OpenDatabase(Database{
 		Hostname: dbhost,
 		Username: dbuser,
@@ -218,12 +359,31 @@ func DBReset(dbhost, dbname, dbuser, dbpassword string) error {
 	return nil
 }
 
-// RestoreAddonsTar Restore Odoo DB addons folders
-func RestoreAddonsTar(addonsFile string) error {
+// restoreAddonsTar Restore Odoo DB addons folders
+func restoreAddonsTar(addonsFile string) error {
 	cwd, _ := GetProject()
 	dirs := GetDirs()
 	source := filepath.Join(dirs.Project, "backups", addonsFile)
 	dest := filepath.Join(cwd, "addons")
+	if err := RemoveContents(dest); err != nil {
+		return err
+	}
+	podCmd := exec.Command("tar",
+		"axf", source, "-C", dest, ".",
+	)
+	podCmd.Stdin = os.Stdin
+	podCmd.Stdout = os.Stdout
+	podCmd.Stderr = os.Stderr
+	if err := podCmd.Run(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func restoreAddonsTarNode(addonsFile string) error {
+	odir := "/opt/odoo"
+	source := filepath.Join(odir, "backups", addonsFile)
+	dest := filepath.Join(odir, "addons")
 	if err := RemoveContents(dest); err != nil {
 		return err
 	}

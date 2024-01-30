@@ -9,6 +9,7 @@ require (
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/joho/godotenv v1.5.1
 	github.com/ppreeper/odoojrpc v1.3.3
+	github.com/urfave/cli v1.22.14
 	github.com/urfave/cli/v2 v2.27.1
 )
 

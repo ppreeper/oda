@@ -1,4 +1,4 @@
-package main
+package oda
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func proxyStart() error {
+func ProxyStart() error {
 	fmt.Println("proxy start")
 	dirs := GetDirs()
 	if err := exec.Command("caddy", "start",
@@ -18,7 +18,7 @@ func proxyStart() error {
 	return nil
 }
 
-func proxyStop() error {
+func ProxyStop() error {
 	fmt.Println("proxy stop")
 	dirs := GetDirs()
 	if err := exec.Command("caddy",
@@ -28,21 +28,21 @@ func proxyStop() error {
 	return nil
 }
 
-func proxyRestart() error {
-	if err := proxyStop(); err != nil {
+func ProxyRestart() error {
+	if err := ProxyStop(); err != nil {
 		return err
 	}
-	if err := proxyStart(); err != nil {
+	if err := ProxyStart(); err != nil {
 		return err
 	}
 	return nil
 }
 
-func proxyGenerate() error {
+func ProxyGenerate() error {
 	fmt.Println("proxy generate")
 	conf := GetConf()
 
-	pods, err := getPods(false)
+	pods, err := GetPods(false)
 	if err != nil {
 		return err
 	}

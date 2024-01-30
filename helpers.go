@@ -1,4 +1,4 @@
-package main
+package oda
 
 import (
 	"bufio"
@@ -147,7 +147,7 @@ func IsProject() bool {
 	return true
 }
 
-func getGitHubUsernameToken() (username, token string) {
+func GetGitHubUsernameToken() (username, token string) {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
 		fmt.Println(err)
@@ -177,7 +177,7 @@ func getGitHubUsernameToken() (username, token string) {
 	return
 }
 
-func cloneUrlDir(url, baseDir, cloneDir, username, token string) error {
+func CloneUrlDir(url, baseDir, cloneDir, username, token string) error {
 	_, err := os.Stat(filepath.Join(baseDir, cloneDir, ".git"))
 	if os.IsNotExist(err) {
 		os.MkdirAll(baseDir, 0o755)
@@ -272,6 +272,28 @@ func GetCurrentOdooProjects() []string {
 	dirnames = removeValue(dirnames, "odoo")
 	dirnames = removeValue(dirnames, "enterprise")
 	return dirnames
+}
+
+func GetOdooBackupsNode() (backups, addons []string) {
+	entries, err := os.ReadDir(filepath.Join("/opt/odoo", "backups"))
+	if err != nil {
+		fmt.Println(err)
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			fname := strings.Split(entry.Name(), "__")
+			if len(fname) == 2 {
+				backups = append(backups, entry.Name())
+			} else if len(fname) == 3 {
+				addons = append(addons, entry.Name())
+			}
+		}
+	}
+	slices.Sort(backups)
+	slices.Sort(addons)
+	backups = removeDuplicate(backups)
+	addons = removeDuplicate(addons)
+	return
 }
 
 // GetCurrentOdooProjects Get Current Odoo Projects

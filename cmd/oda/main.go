@@ -5,11 +5,12 @@ import (
 	"log"
 	"os"
 
+	"github.com/ppreeper/oda"
 	"github.com/urfave/cli/v2"
 )
 
 func main() {
-	q := QueryDef{}
+	q := oda.QueryDef{}
 	app := &cli.App{
 		Name:                 "oda",
 		Usage:                "Odoo Administration Tool",
@@ -25,14 +26,14 @@ func main() {
 						Name:  "vscode",
 						Usage: "Setup vscode settings and launch json files",
 						Action: func(cCtx *cli.Context) error {
-							return configVSCode()
+							return oda.ConfigVSCode()
 						},
 					},
 					{
 						Name:  "pyright",
 						Usage: "Setup pyright settings",
 						Action: func(cCtx *cli.Context) error {
-							return configPyright()
+							return oda.ConfigPyright()
 						},
 					},
 				},
@@ -42,7 +43,7 @@ func main() {
 				Usage:    "Start the instance",
 				Category: "instance",
 				Action: func(cCtx *cli.Context) error {
-					return instanceStart()
+					return oda.InstanceStart()
 				},
 			},
 			{
@@ -50,7 +51,7 @@ func main() {
 				Usage:    "Stop the instance",
 				Category: "instance",
 				Action: func(cCtx *cli.Context) error {
-					return instanceStop()
+					return oda.InstanceStop()
 				},
 			},
 			{
@@ -58,7 +59,7 @@ func main() {
 				Usage:    "Restart the instance",
 				Category: "instance",
 				Action: func(cCtx *cli.Context) error {
-					return instanceRestart()
+					return oda.InstanceRestart()
 				},
 			},
 			{
@@ -74,7 +75,7 @@ func main() {
 							if modlen == 0 {
 								return fmt.Errorf("no modules specified")
 							}
-							return instanceAppInstallUpgrade(true, cCtx.Args().Slice()...)
+							return oda.InstanceAppInstallUpgrade(true, cCtx.Args().Slice()...)
 						},
 					},
 					{
@@ -85,7 +86,7 @@ func main() {
 							if modlen == 0 {
 								return fmt.Errorf("no modules specified")
 							}
-							return instanceAppInstallUpgrade(false, cCtx.Args().Slice()...)
+							return oda.InstanceAppInstallUpgrade(false, cCtx.Args().Slice()...)
 						},
 					},
 				},
@@ -95,7 +96,7 @@ func main() {
 				Usage:    "Follow the logs",
 				Category: "instance",
 				Action: func(cCtx *cli.Context) error {
-					return instanceLogs()
+					return oda.InstanceLogs()
 				},
 			},
 			{
@@ -108,7 +109,7 @@ func main() {
 						return fmt.Errorf("no module specified")
 					}
 					module := cCtx.Args().First()
-					return instanceScaffold(module)
+					return oda.InstanceScaffold(module)
 				},
 			},
 			{
@@ -116,7 +117,7 @@ func main() {
 				Usage:    "List Odoo Instances",
 				Category: "instance",
 				Action: func(cCtx *cli.Context) error {
-					return instancePS()
+					return oda.InstancePS()
 				},
 			},
 			{
@@ -124,7 +125,7 @@ func main() {
 				Usage:    "Access the shell",
 				Category: "instance",
 				Action: func(cCtx *cli.Context) error {
-					return instanceExec()
+					return oda.InstanceExec()
 				},
 			},
 			{
@@ -132,7 +133,7 @@ func main() {
 				Usage:    "Access the instance database",
 				Category: "instance",
 				Action: func(cCtx *cli.Context) error {
-					return instancePSQL()
+					return oda.InstancePSQL()
 				},
 			},
 			{
@@ -182,7 +183,7 @@ func main() {
 						return fmt.Errorf("no model specified")
 					}
 					q.Model = cCtx.Args().First()
-					return instanceQuery(&q)
+					return oda.InstanceQuery(&q)
 				},
 			},
 			{
@@ -194,35 +195,35 @@ func main() {
 						Name:  "psql",
 						Usage: "database psql",
 						Action: func(cCtx *cli.Context) error {
-							return pgdbPgsql()
+							return oda.PgdbPgsql()
 						},
 					},
 					{
 						Name:  "start",
 						Usage: "database start",
 						Action: func(cCtx *cli.Context) error {
-							return pgdbStart()
+							return oda.PgdbStart()
 						},
 					},
 					{
 						Name:  "stop",
 						Usage: "database stop",
 						Action: func(cCtx *cli.Context) error {
-							return pgdbStop()
+							return oda.PgdbStop()
 						},
 					},
 					{
 						Name:  "restart",
 						Usage: "database restart",
 						Action: func(cCtx *cli.Context) error {
-							return pgdbRestart()
+							return oda.PgdbRestart()
 						},
 					},
 					{
 						Name:  "fullreset",
 						Usage: "database fullreset",
-						Action: func(ctx *cli.Context) error {
-							return pgdbFullReset()
+						Action: func(cCtx *cli.Context) error {
+							return oda.PgdbFullReset()
 						},
 					},
 				},
@@ -236,28 +237,28 @@ func main() {
 						Name:  "start",
 						Usage: "proxy start",
 						Action: func(cCtx *cli.Context) error {
-							return proxyStart()
+							return oda.ProxyStart()
 						},
 					},
 					{
 						Name:  "stop",
 						Usage: "proxy stop",
 						Action: func(cCtx *cli.Context) error {
-							return proxyStop()
+							return oda.ProxyStop()
 						},
 					},
 					{
 						Name:  "restart",
 						Usage: "proxy restart",
 						Action: func(cCtx *cli.Context) error {
-							return proxyRestart()
+							return oda.ProxyRestart()
 						},
 					},
 					{
 						Name:  "generate",
 						Usage: "proxy generate",
 						Action: func(cCtx *cli.Context) error {
-							return proxyGenerate()
+							return oda.ProxyGenerate()
 						},
 					},
 				},
@@ -266,16 +267,27 @@ func main() {
 				Name:     "backup",
 				Usage:    "Backup database filestore and addons",
 				Category: "admin",
-				Action: func(ctx *cli.Context) error {
-					return adminBackup()
+				Action: func(cCtx *cli.Context) error {
+					return oda.AdminBackup()
 				},
 			},
 			{
 				Name:     "restore",
 				Usage:    "Restore database and filestore or addons",
 				Category: "admin",
-				Action: func(ctx *cli.Context) error {
-					return adminRestore()
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:  "move",
+						Value: false,
+						Usage: "move server",
+					},
+				},
+				Action: func(cCtx *cli.Context) error {
+					if !oda.IsProject() {
+						return fmt.Errorf("not in a project directory")
+					}
+					move := cCtx.Bool("move")
+					return oda.AdminRestore(move)
 				},
 			},
 			{
@@ -287,14 +299,14 @@ func main() {
 						Name:  "username",
 						Usage: "Odoo Admin username",
 						Action: func(cCtx *cli.Context) error {
-							return adminUsername()
+							return oda.AdminUsername()
 						},
 					},
 					{
 						Name:  "password",
 						Usage: "Odoo Admin password",
 						Action: func(cCtx *cli.Context) error {
-							return adminPassword()
+							return oda.AdminPassword()
 						},
 					},
 				},
@@ -303,8 +315,8 @@ func main() {
 				Name:     "init",
 				Usage:    "initialize oda setup",
 				Category: "admin",
-				Action: func(ctx *cli.Context) error {
-					return adminInit()
+				Action: func(cCtx *cli.Context) error {
+					return oda.AdminInit()
 				},
 			},
 			{
@@ -312,7 +324,7 @@ func main() {
 				Usage:    "Update /etc/hosts file (Requires root access)",
 				Category: "admin",
 				Action: func(cCtx *cli.Context) error {
-					return projectHostsFile()
+					return oda.ProjectHostsFile()
 				},
 			},
 			{
@@ -324,28 +336,28 @@ func main() {
 						Name:  "init",
 						Usage: "initialize project directory",
 						Action: func(cCtx *cli.Context) error {
-							return projectIinit()
+							return oda.ProjectIinit()
 						},
 					},
 					{
 						Name:  "branch",
 						Usage: "initialize branch of project",
 						Action: func(cCtx *cli.Context) error {
-							return projectBranch()
+							return oda.ProjectBranch()
 						},
 					},
 					{
 						Name:  "rebuild",
 						Usage: "rebuild from another project",
 						Action: func(cCtx *cli.Context) error {
-							return projectRebuild()
+							return oda.ProjectRebuild()
 						},
 					},
 					{
 						Name:  "reset",
 						Usage: "reset project dir and db",
 						Action: func(cCtx *cli.Context) error {
-							return projectReset()
+							return oda.ProjectReset()
 						},
 					},
 				},
@@ -363,14 +375,14 @@ func main() {
 								Name:  "clone",
 								Usage: "clone Odoo source repository",
 								Action: func(cCtx *cli.Context) error {
-									return repoBaseClone()
+									return oda.RepoBaseClone()
 								},
 							},
 							{
 								Name:  "update",
 								Usage: "update Odoo source repository",
 								Action: func(cCtx *cli.Context) error {
-									return repoBaseUpdate()
+									return oda.RepoBaseUpdate()
 								},
 							},
 						},
@@ -383,14 +395,14 @@ func main() {
 								Name:  "clone",
 								Usage: "clone Odoo branch repository",
 								Action: func(cCtx *cli.Context) error {
-									return repoBranchClone()
+									return oda.RepoBranchClone()
 								},
 							},
 							{
 								Name:  "update",
 								Usage: "update Odoo branch repository",
 								Action: func(cCtx *cli.Context) error {
-									return repoBranchUpdate()
+									return oda.RepoBranchUpdate()
 								},
 							},
 						},

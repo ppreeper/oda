@@ -1,4 +1,4 @@
-package main
+package oda
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-func configVSCode() error {
+func ConfigVSCode() error {
 	if !IsProject() {
 		return fmt.Errorf("not in a project directory")
 	}
@@ -80,7 +80,7 @@ func configVSCode() error {
 	return nil
 }
 
-func configPyright() error {
+func ConfigPyright() error {
 	if !IsProject() {
 		return fmt.Errorf("not in a project directory")
 	}

@@ -1,0 +1,5 @@
+start/restart
+convert start to restart and have both quietly restart (add quiet remove function)
+
+restore
+put a project filter on restore to limit the whole long list from popping up. maybe add year, month filters

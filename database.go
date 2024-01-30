@@ -1,4 +1,4 @@
-package main
+package oda
 
 import (
 	"fmt"
@@ -48,7 +48,7 @@ func (db *Database) GetURI() {
 		db.Username, db.Password, db.Hostname, port, db.Database)
 }
 
-func pgdbPgsql() error {
+func PgdbPgsql() error {
 	conf := GetConf()
 	podCmd := exec.Command("podman",
 		"exec", "-it", conf.DBHost,
@@ -63,10 +63,10 @@ func pgdbPgsql() error {
 	return nil
 }
 
-func pgdbStart() error {
+func PgdbStart() error {
 	conf := GetConf()
 
-	pods, _ := getPods(true)
+	pods, _ := GetPods(true)
 	for _, pod := range pods {
 		if strings.Contains(pod.Name, conf.DBHost) &&
 			strings.HasPrefix(pod.Status, "Up") {
@@ -75,7 +75,7 @@ func pgdbStart() error {
 		}
 		if strings.Contains(pod.Name, conf.DBHost) &&
 			(strings.HasPrefix(pod.Status, "Created") || strings.HasPrefix(pod.Status, "Exited")) {
-			instanceStop()
+			InstanceStop()
 		}
 	}
 
@@ -91,7 +91,7 @@ func pgdbStart() error {
 	return nil
 }
 
-func pgdbStop() error {
+func PgdbStop() error {
 	conf := GetConf()
 	if err := exec.Command("podman", "stop", conf.DBHost).Run(); err != nil {
 		fmt.Println("stopping: ", err)
@@ -103,19 +103,19 @@ func pgdbStop() error {
 	return nil
 }
 
-func pgdbRestart() error {
-	if err := pgdbStop(); err != nil {
+func PgdbRestart() error {
+	if err := PgdbStop(); err != nil {
 		return err
 	}
-	if err := pgdbStart(); err != nil {
+	if err := PgdbStart(); err != nil {
 		return err
 	}
 	return nil
 }
 
-func pgdbFullReset() error {
+func PgdbFullReset() error {
 	conf := GetConf()
-	if err := pgdbStop(); err != nil {
+	if err := PgdbStop(); err != nil {
 		fmt.Println(err)
 	}
 	fmt.Println("Database stopped")
@@ -125,7 +125,7 @@ func pgdbFullReset() error {
 		fmt.Println(err)
 	}
 	fmt.Println("Volume removed")
-	if err := pgdbStart(); err != nil {
+	if err := PgdbStart(); err != nil {
 		fmt.Println(err)
 	}
 	fmt.Println("Database started")

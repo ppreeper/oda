@@ -1,4 +1,4 @@
-package main
+package oda
 
 import (
 	"encoding/json"
@@ -13,7 +13,7 @@ import (
 	"github.com/ppreeper/odoojrpc"
 )
 
-func instanceStart() error {
+func InstanceStart() error {
 	if !IsProject() {
 		return fmt.Errorf("not in a project directory")
 	}
@@ -22,7 +22,7 @@ func instanceStart() error {
 	dirs := GetDirs()
 	version := GetVersion()
 
-	pods, _ := getPods(true)
+	pods, _ := GetPods(true)
 	for _, pod := range pods {
 		if strings.Contains(pod.Name, project) && strings.HasPrefix(pod.Status, "Up") {
 			// Check to see if the instance is running
@@ -33,7 +33,7 @@ func instanceStart() error {
 			(strings.HasPrefix(pod.Status, "Created") || strings.HasPrefix(pod.Status, "Exited")) {
 			// Check to see if the instance is in invalid state
 			// Remove if in invalid state
-			instanceStop()
+			InstanceStop()
 		}
 	}
 
@@ -54,13 +54,13 @@ func instanceStart() error {
 		return err
 	}
 	fmt.Println(project+".local", "started", string(out[0:12]))
-	proxyGenerate()
-	proxyStop()
-	proxyStart()
+	ProxyGenerate()
+	ProxyStop()
+	ProxyStart()
 	return nil
 }
 
-func instanceStop() error {
+func InstanceStop() error {
 	if !IsProject() {
 		return fmt.Errorf("not in a project directory")
 	}
@@ -75,20 +75,20 @@ func instanceStop() error {
 	return nil
 }
 
-func instanceRestart() error {
+func InstanceRestart() error {
 	if !IsProject() {
 		return fmt.Errorf("not in a project directory")
 	}
-	if err := instanceStop(); err != nil {
+	if err := InstanceStop(); err != nil {
 		return err
 	}
-	if err := instanceStart(); err != nil {
+	if err := InstanceStart(); err != nil {
 		return err
 	}
 	return nil
 }
 
-func instanceAppInstallUpgrade(install bool, modules ...string) error {
+func InstanceAppInstallUpgrade(install bool, modules ...string) error {
 	if !IsProject() {
 		return fmt.Errorf("not in a project directory")
 	}
@@ -124,7 +124,7 @@ func instanceAppInstallUpgrade(install bool, modules ...string) error {
 	return nil
 }
 
-func instanceScaffold(module string) error {
+func InstanceScaffold(module string) error {
 	if !IsProject() {
 		return fmt.Errorf("not in a project directory")
 	}
@@ -146,7 +146,7 @@ func instanceScaffold(module string) error {
 	return nil
 }
 
-func instancePS() error {
+func InstancePS() error {
 	out, err := exec.Command("podman", "ps", "--format", "{{.Image}};{{.Names}}").Output()
 	if err != nil {
 		fmt.Println("Error: ", err)
@@ -162,7 +162,7 @@ func instancePS() error {
 	return nil
 }
 
-func instanceExec() error {
+func InstanceExec() error {
 	if !IsProject() {
 		return fmt.Errorf("not in a project directory")
 	}
@@ -181,7 +181,7 @@ func instanceExec() error {
 	return nil
 }
 
-func instanceLogs() error {
+func InstanceLogs() error {
 	if !IsProject() {
 		return fmt.Errorf("not in a project directory")
 	}
@@ -199,7 +199,7 @@ func instanceLogs() error {
 	return nil
 }
 
-func instancePSQL() error {
+func InstancePSQL() error {
 	if !IsProject() {
 		return fmt.Errorf("not in a project directory")
 	}
@@ -227,7 +227,7 @@ func instancePSQL() error {
 	return nil
 }
 
-func instanceQuery(q *QueryDef) error {
+func InstanceQuery(q *QueryDef) error {
 	if !IsProject() {
 		return fmt.Errorf("not in a project directory")
 	}
@@ -277,7 +277,7 @@ func instanceQuery(q *QueryDef) error {
 	return nil
 }
 
-func adminUsername() error {
+func AdminUsername() error {
 	if !IsProject() {
 		return fmt.Errorf("not in a project directory")
 	}
@@ -328,7 +328,7 @@ func adminUsername() error {
 	return nil
 }
 
-func adminPassword() error {
+func AdminPassword() error {
 	fmt.Println("admin password")
 	if !IsProject() {
 		return fmt.Errorf("not in a project directory")
@@ -416,7 +416,7 @@ type Pod struct {
 	Status string
 }
 
-func getPods(all bool) ([]Pod, error) {
+func GetPods(all bool) ([]Pod, error) {
 	podCmd := []string{"ps", "--format", "{{.Image}};{{.Names}};{{.Ports}};{{.Status}}"}
 	if all {
 		podCmd = append(podCmd, "-a")
