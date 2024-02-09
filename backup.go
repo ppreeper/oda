@@ -99,25 +99,26 @@ func AdminRestore(move bool) error {
 		confirm    bool
 	)
 
-	form := huh.NewForm(
-		huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("Odoo Backup File").
-				Options(backupOptions...).
-				Value(&backupFile),
+	huh.NewSelect[string]().
+		Title("Odoo Backup File").
+		Options(backupOptions...).
+		Value(&backupFile).
+		Run()
 
-			huh.NewSelect[string]().
-				Title("Odoo Addon File").
-				Options(addonOptions...).
-				Value(&addonFile),
+	huh.NewSelect[string]().
+		Title("Odoo Addon File").
+		Options(addonOptions...).
+		Value(&addonFile).
+		Run()
 
-			huh.NewConfirm().
-				Title("Restore Project?").
-				Value(&confirm),
-		),
-	)
-	if err := form.Run(); err != nil {
-		fmt.Println("form error", err)
+	huh.NewConfirm().
+		Title("Restore Project?").
+		Value(&confirm).
+		Run()
+
+	if !confirm {
+		fmt.Println("restore cancelled")
+		return nil
 	}
 
 	fmt.Println("restore from backup file " + backupFile)
