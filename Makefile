@@ -5,3 +5,7 @@ go:
 	sudo mv ${HOME}/.local/bin/odago /usr/local/bin/oda
 node:
 	go build -o ${HOME}/.local/bin/odanode ./cmd/odanode/.
+
+odai:
+	@rm -f odai
+	@go build -o odai ./cmd/odai/.

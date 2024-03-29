@@ -3,3 +3,11 @@ convert start to restart and have both quietly restart (add quiet remove functio
 
 restore
 put a project filter on restore to limit the whole long list from popping up. maybe add year, month filters
+
+incus
+investigate using incus for local development
+
+incus list -f json -c 4n | jq '.[].state.network.eth0.addresses | .[] | select(.family=="inet") .address'
+incus list -f json -c 4n | jq '.[].name'
+
+echo $(incus list -f json -c 4n | jq '.[].state.network.eth0.addresses | .[] | select(.family=="inet") .address') $(incus list -f json -c 4n | jq '.[].name') | tr -d \"

@@ -1,6 +1,6 @@
 module github.com/ppreeper/oda
 
-go 1.21.5
+go 1.22.1
 
 require (
 	github.com/charmbracelet/huh v0.2.3
@@ -9,7 +9,7 @@ require (
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/joho/godotenv v1.5.1
 	github.com/ppreeper/odoojrpc v1.3.3
-	github.com/urfave/cli v1.22.14
+	github.com/ppreeper/str v0.0.0-20240129034638-e87440b77a20
 	github.com/urfave/cli/v2 v2.27.1
 )
 
