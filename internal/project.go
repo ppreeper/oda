@@ -357,7 +357,7 @@ func ProjectHostsFile() error {
 		for _, project := range projects {
 			if strings.Contains(container.Name, project) {
 				projectLines = append(projectLines,
-					str.RightLen(container.IP4, " ", 16)+" "+container.Name+"."+conf.Domain)
+					str.RightLen("127.0.1.1", " ", 16)+" "+container.Name+"."+conf.Domain)
 			}
 		}
 	}
