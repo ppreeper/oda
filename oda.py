@@ -379,6 +379,34 @@ def _drop_database(configfile, db_name):
             raise OSError(f"Couldn't drop database {db_name}: {e}") from e
 
 
+def install_upgrade(mode, module):
+    module_list = []
+    for m in module:
+        mods = m.split(",")
+        for mod in mods:
+            module_list.append(mod)
+    modules = list(dict.fromkeys(module_list))
+    """Install/Upgrade module"""
+    odoo_cmd = [
+        "odoo/odoo-bin",
+        "-c",
+        "/opt/odoo/conf/odoo.conf",
+        "--no-http",
+        "--stop-after-init",
+    ]
+    if mode == "install":
+        odoo_cmd.append("-i")
+        odoo_cmd.append(",".join(modules))
+    elif mode == "upgrade":
+        odoo_cmd.append("-u")
+        odoo_cmd.append(",".join(modules))
+    r = subprocess.run(
+        odoo_cmd,
+        check=True,
+    )
+    return
+
+
 def trim(bkp_path=".", limit=10):
     """Trim database backups"""
     onlyfiles = [
@@ -575,6 +603,12 @@ def main():
     restore_parser.add_argument("file", help="Path to backup file", nargs="+")
     # trim           Trim database backups
     subparsers.add_parser("trim", help="Trim database backups")
+    # install        Install module(s)
+    install_parser = subparsers.add_parser("install", help="Install module(s)")
+    install_parser.add_argument("module", help="module(s) to install", nargs="+")
+    # upgrade        Upgrade module(s)
+    upgrade_parser = subparsers.add_parser("upgrade", help="Upgrade module(s)")
+    upgrade_parser.add_argument("module", help="module(s) to upgrade", nargs="+")
     # start          start odoo server
     subparsers.add_parser("start", help="start odoo server")
     # stop           stop odoo server
@@ -620,6 +654,10 @@ def main():
         odoo_restore(args.config, args.file)
     elif args.command == "trim":
         trim(args.d, int(args.n))
+    elif args.command == "install":
+        install_upgrade("install", args.module)
+    elif args.command == "upgrade":
+        install_upgrade("upgrade", args.module)
     elif args.command == "start":
         odoo_service("start")
     elif args.command == "stop":
