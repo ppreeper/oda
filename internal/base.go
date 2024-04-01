@@ -376,6 +376,31 @@ func roleOdooUser(name string) error {
 
 	os.Remove("/tmp/odoo.sudo")
 
+	// SSH key
+	if err := IncusExec(name, "mkdir", "/home/odoo/.ssh"); err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	conf := GetConf()
+	HOME, _ := os.UserHomeDir()
+	sshKey := HOME + "/.ssh/" + conf.SSHKey + ".pub"
+	fmt.Println("SSHKey:", sshKey)
+
+	if err := exec.Command("incus", "file", "push", sshKey, name+"/home/odoo/.ssh/authorized_keys").Run(); err != nil {
+		return err
+	}
+
+	if err := IncusExec(name, "chmod", "0600", "/home/odoo/.ssh/authorized_keys"); err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	if err := IncusExec(name, "chown", "-R", "odoo:odoo", "/home/odoo/.ssh"); err != nil {
+		fmt.Println(err)
+		return err
+	}
+
 	return nil
 }
 
