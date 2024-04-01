@@ -1,1 +1,0 @@
-ssh ${args[remote]} oda fs odoo update ${args[version]}

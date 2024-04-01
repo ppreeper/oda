@@ -1,1 +1,0 @@
-ssh ${args[node]} oda node mount ${args[version]} ${args[projectname]} ${args[branch]}

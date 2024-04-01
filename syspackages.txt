@@ -1,1 +1,5 @@
-git python3-git python3-kubernetes python3-passlib python3-psycopg2
+git
+caddy
+sshconfig
+go
+incus
