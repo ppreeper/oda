@@ -407,6 +407,22 @@ def install_upgrade(mode, module):
     return
 
 
+def scaffold(module):
+    """Scaffold module"""
+    odoo_cmd = [
+        "odoo/odoo-bin",
+        "scaffold",
+        module[0],
+        "/opt/odoo/addons/",
+    ]
+    r = subprocess.run(
+        odoo_cmd,
+        check=True,
+    )
+    print(f"module '{module[0]}' scaffolded")
+    return
+
+
 def trim(bkp_path=".", limit=10):
     """Trim database backups"""
     onlyfiles = [
@@ -609,6 +625,9 @@ def main():
     # upgrade        Upgrade module(s)
     upgrade_parser = subparsers.add_parser("upgrade", help="Upgrade module(s)")
     upgrade_parser.add_argument("module", help="module(s) to upgrade", nargs="+")
+    # scaffold        Scaffold module
+    scaffold_parser = subparsers.add_parser("scaffold", help="Scaffold module")
+    scaffold_parser.add_argument("module", help="module to scaffold", nargs="*")
     # start          start odoo server
     subparsers.add_parser("start", help="start odoo server")
     # stop           stop odoo server
@@ -658,6 +677,11 @@ def main():
         install_upgrade("install", args.module)
     elif args.command == "upgrade":
         install_upgrade("upgrade", args.module)
+    elif args.command == "scaffold":
+        if len(args.module) > 1:
+            print("only one module allowed")
+            return
+        scaffold(args.module)
     elif args.command == "start":
         odoo_service("start")
     elif args.command == "stop":
