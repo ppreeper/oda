@@ -369,6 +369,11 @@ func roleOdooUser(name string) error {
 		return err
 	}
 
+	if err := IncusExec(name, "chown", "root:root", "/etc/sudoers.d/odoo"); err != nil {
+		fmt.Println(err)
+		return err
+	}
+
 	os.Remove("/tmp/odoo.sudo")
 
 	return nil
@@ -427,11 +432,11 @@ func roleOdooBasePackages(name, version string) error {
 }
 
 func roleOdooNode(name string) error {
-	if err := IncusExec(name, "wget", "-qO", "/usr/local/bin/oda.py", "https://raw.githubusercontent.com/ppreeper/oda/main/oda.py"); err != nil {
+	if err := IncusExec(name, "wget", "-qO", "/usr/local/bin/oda", "https://raw.githubusercontent.com/ppreeper/oda/main/oda.py"); err != nil {
 		fmt.Println(err)
 		return err
 	}
-	if err := IncusExec(name, "chmod", "-x", "/usr/local/bin/oda.py"); err != nil {
+	if err := IncusExec(name, "chmod", "+x", "/usr/local/bin/oda"); err != nil {
 		fmt.Println(err)
 		return err
 	}
