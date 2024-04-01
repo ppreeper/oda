@@ -203,7 +203,7 @@ func writeOdooConf(file, projectName, edition string) error {
 	fo.WriteString("csv_internal_sep = ;" + "\n")
 	fo.WriteString("reportgz = false" + "\n")
 	fo.WriteString("server_wide_modules = base,web" + "\n")
-	fo.WriteString("db_host = " + conf.DBH + "." + conf.Domain + "\n")
+	fo.WriteString("db_host = " + conf.DBHost + "\n")
 	fo.WriteString("db_port = " + conf.DBPort + "\n")
 	fo.WriteString("db_maxconn = 8" + "\n")
 	fo.WriteString("db_user = " + conf.DBUsername + "\n")
@@ -310,7 +310,7 @@ func ProjectReset() error {
 	// drop db
 	dbhost := GetOdooConf(cwd, "db_host")
 	dbname := GetOdooConf(cwd, "db_name")
-	
+
 	podCmd := exec.Command("podman",
 		"exec", "-it", dbhost, "dropdb", "-U", "postgres", dbname)
 	if err := podCmd.Run(); err != nil {
@@ -361,12 +361,12 @@ func ProjectHostsFile() error {
 			}
 		}
 	}
-	container, err := GetContainer(conf.DBH)
+	container, err := GetContainer(conf.DBHost)
 	if err != nil {
-		return fmt.Errorf("container %s not found %w", conf.DBH, err)
+		return fmt.Errorf("container %s not found %w", conf.DBHost, err)
 	}
 	projectLines = append(projectLines,
-		str.RightLen(container.IP4, " ", 16)+" "+conf.DBH+"."+conf.Domain)
+		str.RightLen(container.IP4, " ", 16)+" "+conf.DBHost+"."+conf.Domain)
 
 	newHostlines := []string{}
 	if begin == -1 && end == -1 {

@@ -352,11 +352,30 @@ func roleOdooUser(name string) error {
 		fmt.Println(err)
 		return err
 	}
+
+	if err := IncusExec(name, "usermod", "-aG", "sudo", "odoo"); err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	f, err := os.Create("/tmp/odoo.sudo")
+	if err != nil {
+		return err
+	}
+	f.WriteString("odoo ALL=(ALL) NOPASSWD:ALL")
+	f.Close()
+
+	if err := exec.Command("incus", "file", "push", "/tmp/odoo.sudo", name+"/etc/sudoers.d/odoo").Run(); err != nil {
+		return err
+	}
+
+	os.Remove("/tmp/odoo.sudo")
+
 	return nil
 }
 
 func roleOdooDirs(name string) error {
-	dirs := []string{"addons", "backup", "conf", "data", "odoo", "enterprise"}
+	dirs := []string{"addons", "backups", "conf", "data", "odoo", "enterprise"}
 
 	for _, dir := range dirs {
 		if err := IncusExec(name, "mkdir", "-p", "/opt/odoo/"+dir); err != nil {
@@ -408,20 +427,8 @@ func roleOdooBasePackages(name, version string) error {
 }
 
 func roleOdooNode(name string) error {
-	// /usr/local/bin/odanode
-	//     - odoo_oda_sh (odanodes)
-	// ---
-	// - name: ODA SH
-	//   ansible.builtin.get_url:
-	//     url: "https://raw.githubusercontent.com/ppreeper/oda/main/oda.sh"
-	//     dest: /usr/local/bin/oda.sh
-	//     mode: "0755"
-	// - name: ODA DB python
-	//   ansible.builtin.get_url:
-	//     url: "https://raw.githubusercontent.com/ppreeper/oda/main/oda_db.py"
-	//     dest: /usr/local/bin/oda.sh
-	//     mode: "0755"
-
+	fmt.Println("wget", "-qO", "/usr/local/bin/oda.py", "https://raw.githubusercontent.com/ppreeper/oda/main/oda.py")
+	// chmod := []string{"chmod", "+x", "/usr/local/bin/oda.py"}
 	return nil
 }
 
@@ -455,6 +462,11 @@ func roleOdooService(name string) error {
 	os.Remove("/tmp/odoo.service")
 
 	if err := IncusExec(name, "systemctl", "daemon-reload"); err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	if err := IncusExec(name, "systemctl", "enable", "odoo.service"); err != nil {
 		fmt.Println(err)
 		return err
 	}

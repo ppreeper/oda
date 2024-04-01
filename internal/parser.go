@@ -8,12 +8,14 @@ import (
 )
 
 type QueryDef struct {
-	Model  string
-	Filter string
-	Offset int
-	Limit  int
-	Fields string
-	Count  bool
+	Model    string
+	Filter   string
+	Offset   int
+	Limit    int
+	Fields   string
+	Count    bool
+	Username string
+	Password string
 }
 
 func parseFields(field string) (fields []string) {

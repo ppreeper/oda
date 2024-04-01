@@ -1,35 +1,59 @@
 package oda
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"slices"
-	"strconv"
-	"strings"
-
-	"github.com/charmbracelet/huh"
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
+	"sort"
 )
 
 func AdminInit() error {
 	HOME, _ := os.UserHomeDir()
-	CONFIG, _ := os.UserConfigDir()
+
+	conf := *NewConf()
 
 	// Repo
 	REPO := filepath.Join(HOME, "workspace/repos/odoo")
 	if _, err := os.Stat(REPO); os.IsNotExist(err) {
 		os.MkdirAll(filepath.Join(REPO), 0o755)
 	}
+	conf.Repo = REPO
 
 	// Project
 	PROJECT := filepath.Join(HOME, "workspace/odoo")
 	if _, err := os.Stat(filepath.Join(PROJECT, "backups")); os.IsNotExist(err) {
 		os.MkdirAll(filepath.Join(PROJECT, "backups"), 0o755)
 	}
+	conf.Project = PROJECT
 
+	confRec, _ := json.Marshal(conf)
+	var confMap map[string]any
+	json.Unmarshal(confRec, &confMap)
+
+	keys := []string{}
+	for field := range confMap {
+		keys = append(keys, field)
+	}
+	sort.Strings(keys)
+
+	// ODA Config
+	ODAConfig(keys, confMap)
+
+	// PostgreSQL Config
+	POSTGRESCONF()
+
+	// PGHBA Config
+	PGHBACONF()
+
+	// PGBouncer Config
+	PGBouncer()
+
+	return nil
+}
+
+func ODAConfig(keys []string, confMap map[string]any) error {
+	CONFIG, _ := os.UserConfigDir()
 	// ODA Config
 	ODOOCONF := filepath.Join(CONFIG, "oda", "oda.conf")
 	if _, err := os.Stat(ODOOCONF); os.IsNotExist(err) {
@@ -39,21 +63,71 @@ func AdminInit() error {
 			return err
 		}
 		defer f.Close()
-		f.WriteString("REPO=" + REPO + "\n")
-		f.WriteString("PROJECT=" + PROJECT + "\n")
-		f.WriteString("ODOOBASE=ghcr.io/ppreeper/odoobase" + "\n")
-		f.WriteString("OS_IMAGE=ubuntu/22.04" + "\n")
-		f.WriteString("DB_IMAGE=alpine/3.19" + "\n")
-		f.WriteString("BR_ADDR=10.250.250.10" + "\n")
-		f.WriteString("DOMAIN=local" + "\n")
-		f.WriteString("DBHOST=db" + "\n")
-		f.WriteString("DB_HOST=db.local" + "\n")
-		f.WriteString("DB_PORT=6432" + "\n")
-		f.WriteString("DB_PASS=postgres" + "\n")
-		f.WriteString("DB_USERNAME=odoodev" + "\n")
-		f.WriteString("DB_USERPASS=odooodoo" + "\n")
+		for _, field := range keys {
+			f.WriteString(fmt.Sprintf("%s=%s\n", field, confMap[field]))
+		}
 	}
-	// ODA Config
+	return nil
+}
+
+func POSTGRESCONF() error {
+	CONFIG, _ := os.UserConfigDir()
+	POSTGRESCONF := filepath.Join(CONFIG, "oda", "postgresql.conf")
+	if _, err := os.Stat(POSTGRESCONF); os.IsNotExist(err) {
+		os.MkdirAll(filepath.Join(CONFIG, "oda"), 0o755)
+		f, err := os.Create(POSTGRESCONF)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		f.WriteString("listen_addresses = '*'" + "\n")
+		f.WriteString("port = 5432" + "\n")
+		f.WriteString("max_connections = 100" + "\n")
+		f.WriteString("shared_buffers = 128MB" + "\n")
+		f.WriteString("effective_cache_size = 4GB" + "\n")
+		f.WriteString("maintenance_work_mem = 512MB" + "\n")
+		f.WriteString("checkpoint_completion_target = 0.9" + "\n")
+		f.WriteString("wal_buffers = 16MB" + "\n")
+		f.WriteString("default_statistics_target = 100" + "\n")
+		f.WriteString("random_page_cost = 1.1" + "\n")
+		f.WriteString("effective_io_concurrency = 200" + "\n")
+		f.WriteString("work_mem = 4MB" + "\n")
+		f.WriteString("min_wal_size = 1GB" + "\n")
+		f.WriteString("max_wal_size = 2GB" + "\n")
+		f.WriteString("max_worker_processes = 8" + "\n")
+		f.WriteString("max_parallel_workers_per_gather = 4" + "\n")
+		f.WriteString("max_parallel_workers = 8" + "\n")
+		f.WriteString("max_parallel_maintenance_workers = 4" + "\n")
+	}
+
+	return nil
+}
+
+func PGHBACONF() error {
+	CONFIG, _ := os.UserConfigDir()
+	PGHBACONF := filepath.Join(CONFIG, "oda", "pg_hba.conf")
+	if _, err := os.Stat(PGHBACONF); os.IsNotExist(err) {
+		os.MkdirAll(filepath.Join(CONFIG, "oda"), 0o755)
+		f, err := os.Create(PGHBACONF)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		f.WriteString("local  all          postgres                      peer" + "\n")
+		f.WriteString("local  all          all                           peer" + "\n")
+		f.WriteString("host   all          all       0.0.0.0/0           scram-sha-256" + "\n")
+		f.WriteString("host   all          all       127.0.0.1/32        scram-sha-256" + "\n")
+		f.WriteString("host   all          all       ::1/128             scram-sha-256" + "\n")
+		f.WriteString("local  replication  all                           peer" + "\n")
+		f.WriteString("host   replication  all       127.0.0.1/32        scram-sha-256" + "\n")
+		f.WriteString("host   replication  all       ::1/128             scram-sha-256" + "\n")
+	}
+	return nil
+}
+
+func PGBouncer() error {
+	CONFIG, _ := os.UserConfigDir()
+	// PGBouncer Config
 	PGBOUNCERINI := filepath.Join(CONFIG, "oda", "pgbouncer.ini")
 	if _, err := os.Stat(PGBOUNCERINI); os.IsNotExist(err) {
 		os.MkdirAll(filepath.Join(CONFIG, "oda"), 0o755)
@@ -80,229 +154,4 @@ func AdminInit() error {
 		f.WriteString("ignore_startup_parameters = extra_float_digits" + "\n")
 	}
 	return nil
-}
-
-func RepoBaseClone() error {
-	dirs := GetDirs()
-	urlbase := "https://github.com/odoo/"
-	repos := []string{"odoo", "enterprise"}
-	for _, repo := range repos {
-		username, token := GetGitHubUsernameToken()
-		if err := CloneUrlDir(
-			urlbase+repo,
-			dirs.Repo, repo,
-			username, token,
-		); err != nil {
-			return fmt.Errorf("odoo repo %s clone failed %w", repo, err)
-		}
-	}
-	return nil
-}
-
-func RepoBaseUpdate() error {
-	dirs := GetDirs()
-	repos := []string{"odoo", "enterprise"}
-	for _, repo := range repos {
-
-		repoDir := filepath.Join(dirs.Repo, repo)
-
-		repoHeadShortCode, err := RepoHeadShortCode(repo)
-		if err != nil {
-			return fmt.Errorf("repoHeadShortCode %w", err)
-		}
-
-		fetch := exec.Command("git", "fetch", "origin")
-		fetch.Dir = repoDir
-		if err := fetch.Run(); err != nil {
-			return fmt.Errorf("git fetch origin on %s %w", repo, err)
-		}
-
-		checkout := exec.Command("git", "checkout", repoHeadShortCode)
-		checkout.Dir = repoDir
-		if err := checkout.Run(); err != nil {
-			return fmt.Errorf("git checkout on %s %w", repo, err)
-		}
-
-		pull := exec.Command("git", "pull", "origin", repoHeadShortCode)
-		pull.Dir = repoDir
-		if err := pull.Run(); err != nil {
-			return fmt.Errorf("git pull on %s %w", repo, err)
-		}
-	}
-	return nil
-}
-
-func RepoBranchClone() error {
-	repoShorts, _ := RepoShortCodes("odoo")
-	versions := GetCurrentOdooRepos()
-	for _, version := range versions {
-		repoShorts = removeValue(repoShorts, version)
-	}
-	versionOptions := []huh.Option[string]{}
-	for _, version := range repoShorts {
-		versionOptions = append(versionOptions, huh.NewOption(version, version))
-	}
-	var version string
-	var create bool
-	form := huh.NewForm(
-		huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("Available Odoo Branches").
-				Options(versionOptions...).
-				Value(&version),
-
-			huh.NewConfirm().
-				Title("Clone Branch?").
-				Value(&create),
-		),
-	)
-	if err := form.Run(); err != nil {
-		return fmt.Errorf("odoo version form error %w", err)
-	}
-
-	dirs := GetDirs()
-	repos := []string{"odoo", "enterprise"}
-
-	for _, repo := range repos {
-		source := filepath.Join(dirs.Repo, repo)
-		dest := filepath.Join(dirs.Repo, version, repo)
-		if err := CopyDirectory(source, dest); err != nil {
-			return fmt.Errorf("copy directory %s to %s failed %w", source, dest, err)
-		}
-
-		fetcher := exec.Command("git", "fetch", "origin")
-		fetcher.Dir = dest
-		if err := fetcher.Run(); err != nil {
-			return fmt.Errorf("git fetch origin on %s %w", repo, err)
-		}
-
-		checkout := exec.Command("git", "checkout", version)
-		checkout.Dir = dest
-		if err := checkout.Run(); err != nil {
-			return fmt.Errorf("git checkout on %s %w", repo, err)
-		}
-
-		pull := exec.Command("git", "pull", "origin", version)
-		pull.Dir = dest
-		if err := pull.Run(); err != nil {
-			return fmt.Errorf("git pull on %s %w", repo, err)
-		}
-	}
-	return nil
-}
-
-func RepoBranchUpdate() error {
-	versions := GetCurrentOdooRepos()
-	versionOptions := []huh.Option[string]{}
-	for _, version := range versions {
-		versionOptions = append(versionOptions, huh.NewOption(version, version))
-	}
-	var version string
-	var create bool
-	form := huh.NewForm(
-		huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("Available Odoo Branches").
-				Options(versionOptions...).
-				Value(&version),
-
-			huh.NewConfirm().
-				Title("Update Branch?").
-				Value(&create),
-		),
-	)
-	if err := form.Run(); err != nil {
-		return fmt.Errorf("odoo version form error %w", err)
-	}
-
-	dirs := GetDirs()
-	repos := []string{"odoo", "enterprise"}
-
-	for _, repo := range repos {
-		dest := filepath.Join(dirs.Repo, version, repo)
-
-		fetcher := exec.Command("git", "fetch", "origin")
-		fetcher.Dir = dest
-		if err := fetcher.Run(); err != nil {
-			return fmt.Errorf("git fetch origin on %s %w", repo, err)
-		}
-
-		checkout := exec.Command("git", "checkout", version)
-		checkout.Dir = dest
-		if err := checkout.Run(); err != nil {
-			return fmt.Errorf("git checkout on %s %w", repo, err)
-		}
-
-		pull := exec.Command("git", "pull", "origin", version)
-		pull.Dir = dest
-		if err := pull.Run(); err != nil {
-			return fmt.Errorf("git pull on %s %w", repo, err)
-		}
-	}
-	return nil
-}
-
-func RepoHeadShortCode(repo string) (string, error) {
-	dirs := GetDirs()
-	repoDir := filepath.Join(dirs.Repo, repo)
-
-	r, err := git.PlainOpen(repoDir)
-	if err != nil {
-		return "", err
-	}
-
-	refs, err := r.References()
-	if err != nil {
-		return "", err
-	}
-	var refList string
-	if err := refs.ForEach(func(ref *plumbing.Reference) error {
-		if ref.Type() == plumbing.SymbolicReference {
-			refList = ref.Target().Short()
-		}
-		return nil
-	}); err != nil {
-		return "", fmt.Errorf("refs.ForEach on %s %w", repo, err)
-	}
-	return refList, nil
-}
-
-func RepoShortCodes(repo string) ([]string, error) {
-	dirs := GetDirs()
-	repoDir := filepath.Join(dirs.Repo, repo)
-
-	r, err := git.PlainOpen(repoDir)
-	if err != nil {
-		return []string{}, err
-	}
-
-	refs, err := r.References()
-	if err != nil {
-		return []string{}, err
-	}
-	refList := []float64{}
-	if err := refs.ForEach(func(ref *plumbing.Reference) error {
-		if ref.Type() != plumbing.SymbolicReference &&
-			strings.HasPrefix(ref.Name().Short(), "origin") {
-			refSplit := strings.Split(ref.Name().Short(), "/")
-			shortName := refSplit[len(refSplit)-1]
-			if !strings.HasPrefix(shortName, "master") &&
-				!strings.HasPrefix(shortName, "staging") &&
-				!strings.HasPrefix(shortName, "saas") &&
-				!strings.HasPrefix(shortName, "tmp") {
-				val, _ := strconv.ParseFloat(shortName, 32)
-				refList = append(refList, val)
-			}
-		}
-		return nil
-	}); err != nil {
-		return []string{}, fmt.Errorf("refs.ForEach on %s %w", repo, err)
-	}
-	slices.Sort(refList)
-	slices.Reverse(refList)
-	shortRefs := []string{}
-	for _, ref := range refList[0:4] {
-		shortRefs = append(shortRefs, strconv.FormatFloat(ref, 'f', 1, 64))
-	}
-	return shortRefs, nil
 }

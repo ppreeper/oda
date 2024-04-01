@@ -320,6 +320,13 @@ func main() {
 				},
 			},
 			{
+				Name:  "rebuild",
+				Usage: "Rebuild the instance",
+				Action: func(cCtx *cli.Context) error {
+					return oda.InstanceRebuild()
+				},
+			},
+			{
 				Name:  "start",
 				Usage: "Start the instance",
 				Action: func(cCtx *cli.Context) error {
@@ -341,10 +348,37 @@ func main() {
 				},
 			},
 			{
+				Name:  "ps",
+				Usage: "List Odoo Instances",
+				Action: func(cCtx *cli.Context) error {
+					return oda.InstancePS()
+				},
+			},
+			{
 				Name:  "logs",
 				Usage: "Follow the logs",
 				Action: func(cCtx *cli.Context) error {
 					return oda.InstanceLogs()
+				},
+			},
+			{
+				Name:  "exec",
+				Usage: "Access the shell",
+				Action: func(cCtx *cli.Context) error {
+					username := "odoo"
+					modlen := cCtx.Args().Len()
+					if modlen != 0 {
+						username = cCtx.Args().First()
+					}
+					return oda.InstanceExec(username)
+				},
+			},
+			// //////////////////////////////////////////////
+			{
+				Name:  "psql",
+				Usage: "Access the instance database",
+				Action: func(cCtx *cli.Context) error {
+					return oda.InstancePSQL()
 				},
 			},
 			{
@@ -357,27 +391,6 @@ func main() {
 					}
 					module := cCtx.Args().First()
 					return oda.InstanceScaffold(module)
-				},
-			},
-			{
-				Name:  "ps",
-				Usage: "List Odoo Instances",
-				Action: func(cCtx *cli.Context) error {
-					return oda.InstancePS()
-				},
-			},
-			{
-				Name:  "exec",
-				Usage: "Access the shell",
-				Action: func(cCtx *cli.Context) error {
-					return oda.InstanceExec()
-				},
-			},
-			{
-				Name:  "psql",
-				Usage: "Access the instance database",
-				Action: func(cCtx *cli.Context) error {
-					return oda.InstancePSQL()
 				},
 			},
 			{
@@ -419,6 +432,20 @@ func main() {
 						Value:       false,
 						Usage:       "count records",
 						Destination: &q.Count,
+					},
+					&cli.StringFlag{
+						Name:        "username",
+						Aliases:     []string{"u"},
+						Value:       "admin",
+						Usage:       "username",
+						Destination: &q.Username,
+					},
+					&cli.StringFlag{
+						Name:        "password",
+						Aliases:     []string{"p"},
+						Value:       "admin",
+						Usage:       "password",
+						Destination: &q.Password,
 					},
 				},
 				Action: func(cCtx *cli.Context) error {

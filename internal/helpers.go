@@ -42,49 +42,7 @@ func GetDirs() Dirs {
 	return DirList
 }
 
-type Conf struct {
-	Odoobase   string
-	Domain     string
-	OSImage    string
-	DBImage    string
-	BRAddr     string
-	DBH        string
-	DBHost     string
-	DBPort     string
-	DBPass     string
-	DBUsername string
-	DBUserpass string
-}
 
-func GetConf() Conf {
-	sudouser, _ := os.LookupEnv("SUDO_USER")
-	ConfList := Conf{}
-	var CONFIG string
-	if sudouser != "" {
-		userLookup, _ := user.Lookup(sudouser)
-		CONFIG = filepath.Join(userLookup.HomeDir, ".config")
-	} else {
-		CONFIG, _ = os.UserConfigDir()
-	}
-	ODOOCONF := filepath.Join(CONFIG, "oda", "oda.conf")
-	err := godotenv.Load(ODOOCONF)
-	if err != nil {
-		fmt.Println("Error loading .env file")
-		return ConfList
-	}
-	ConfList.Odoobase, _ = os.LookupEnv("ODOOBASE")
-	ConfList.Domain, _ = os.LookupEnv("DOMAIN")
-	ConfList.OSImage, _ = os.LookupEnv("OS_IMAGE")
-	ConfList.DBImage, _ = os.LookupEnv("DB_IMAGE")
-	ConfList.BRAddr, _ = os.LookupEnv("BR_ADDR")
-	ConfList.DBH, _ = os.LookupEnv("DBH")
-	ConfList.DBHost, _ = os.LookupEnv("DB_HOST")
-	ConfList.DBPort, _ = os.LookupEnv("DB_PORT")
-	ConfList.DBPass, _ = os.LookupEnv("DB_PASS")
-	ConfList.DBUsername, _ = os.LookupEnv("DB_USERNAME")
-	ConfList.DBUserpass, _ = os.LookupEnv("DB_USERPASS")
-	return ConfList
-}
 
 func GetOdooConf(cwd, key string) string {
 	// cwd, _ := GetProject()

@@ -16,11 +16,19 @@ func AdminBackup() error {
 	}
 	_, project := GetProject()
 
-	if err := exec.Command("podman",
-		"exec", "-it", project+".local", "oda_db.py", "-b",
+	uid, err := IncusGetUid(project, "odoo")
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	if err := exec.Command("incus", "exec", project, "--user", uid, "-t",
+		"--env", "HOME=/home/odoo", "--cwd", "/opt/odoo", "--",
+		"oda_db.py", "-b",
 	).Run(); err != nil {
 		return fmt.Errorf("backup failed %w", err)
 	}
+
 	return nil
 }
 
@@ -319,9 +327,9 @@ func dbClone(dbhost, sourceDB, destDB, dbuser, dbpassword string) error {
 		return fmt.Errorf("error opening database %w", err)
 	}
 
-	db.MustExec("drop database if exists " + destDB)
-	db.MustExec("select pg_terminate_backend (pid) from pg_stat_activity where datname=$1", sourceDB)
-	db.MustExec(fmt.Sprintf("create database %s with template %s owner %s", destDB, sourceDB, dbuser))
+	db.Exec("drop database if exists " + destDB)
+	db.Exec("select pg_terminate_backend (pid) from pg_stat_activity where datname=$1", sourceDB)
+	db.Exec(fmt.Sprintf("create database %s with template %s owner %s", destDB, sourceDB, dbuser))
 
 	return nil
 }
@@ -344,12 +352,12 @@ func dbReset(dbhost, dbname, dbuser, dbpassword string) error {
 		return fmt.Errorf("error opening database %w", err)
 	}
 
-	db.MustExec("delete from ir_config_parameter where key='database.enterprise_code'")
-	db.MustExec(`update ir_config_parameter
+	db.Exec("delete from ir_config_parameter where key='database.enterprise_code'")
+	db.Exec(`update ir_config_parameter
 		set value=(select gen_random_uuid())
 		where key = 'database.uuid'`,
 	)
-	db.MustExec(`insert into ir_config_parameter
+	db.Exec(`insert into ir_config_parameter
 	    (key,value,create_uid,create_date,write_uid,write_date) values
 	    ('database.expiration_date',(current_date+'3 months'::interval)::timestamp,1,
 	    current_timestamp,1,current_timestamp)

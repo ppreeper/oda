@@ -14,13 +14,13 @@ import tempfile
 # from tkinter import W
 import zipfile
 
-sys.path.append("odoo")
-
 from psycopg2 import sql
 from contextlib import closing
 from passlib.context import CryptContext
 
 import psycopg2
+
+sys.path.append("odoo")
 
 import odoo
 from odoo import SUPERUSER_ID
@@ -36,6 +36,7 @@ _logger = logging.getLogger(__name__)
 
 
 def dump_db_manifest(cr):
+    """Generate Odoo Manifest data"""
     pg_version = "%d.%d" % divmod(cr._obj.connection.server_version / 100, 100)
     cr.execute(
         "SELECT name, latest_version FROM ir_module_module WHERE state = 'installed'"
@@ -62,6 +63,7 @@ def export_manifest(db_name):
 
 
 def _dump_addons_tar(addons, bkp_name, bkp_dest="./bkpdir"):
+    """Backup Odoo DB addons folders"""
     cwd = os.getcwd()
     for addon in addons:
         folder = addon.replace(cwd + "/", "")
@@ -71,7 +73,6 @@ def _dump_addons_tar(addons, bkp_name, bkp_dest="./bkpdir"):
             bkp_file = f"{bkp_name}__{folder}.tar.zst"
             file_path = os.path.join(bkp_dest, bkp_file)
             tar_args = ["ahcf", file_path, "-C", folder, "."]
-            # print([tar_cmd, *tar_args])
             r = subprocess.run(
                 [tar_cmd, *tar_args],
                 stdout=subprocess.DEVNULL,
@@ -83,6 +84,7 @@ def _dump_addons_tar(addons, bkp_name, bkp_dest="./bkpdir"):
 
 
 def _dump_db_tar(db_name, bkp_name, bkp_dest="./backups"):
+    """Backup Odoo DB to dump file"""
     bkp_file = f"{bkp_name}.tar.zst"
     dump_dir = os.path.abspath(os.path.join(bkp_dest, bkp_name))
     file_path = os.path.join(bkp_dest, bkp_file)
@@ -91,7 +93,7 @@ def _dump_db_tar(db_name, bkp_name, bkp_dest="./backups"):
     try:
         os.mkdir(dump_dir)
     except FileExistsError as e:
-        pass
+        raise OSError("directory already exists") from e
 
     # postgresql database
     pg_cmd = [
@@ -112,7 +114,7 @@ def _dump_db_tar(db_name, bkp_name, bkp_dest="./backups"):
         raise Exception(f"could not backup postgresql database {db_name}")
 
     # manifest.json
-    with open(os.path.join(dump_dir, "manifest.json"), "w") as fh:
+    with open(os.path.join(dump_dir, "manifest.json"), "w", encoding="UTF-8") as fh:
         db = odoo.sql_db.db_connect(db_name)
         with db.cursor() as cr:
             json.dump(dump_db_manifest(cr), fh, indent=4)
@@ -124,7 +126,7 @@ def _dump_db_tar(db_name, bkp_name, bkp_dest="./backups"):
         try:
             os.symlink(filestore, filestore_back, target_is_directory=True)
         except FileExistsError as e:
-            pass
+            raise OSError("symlink failed") from e
 
     # create tar archive
     tar_cmd = ["tar", "achf", os.path.abspath(file_path), "-C", dump_dir, "."]
@@ -132,6 +134,7 @@ def _dump_db_tar(db_name, bkp_name, bkp_dest="./backups"):
         tar_cmd,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.STDOUT,
+        check=True,
     )
     if r.returncode != 0:
         raise Exception(f"could not backup database {db_name}")
@@ -146,7 +149,9 @@ def _dump_db_tar(db_name, bkp_name, bkp_dest="./backups"):
 
 
 def _restore_addons_tar(bkp_file, addons=""):
+    """Restore Odoo DB addons folders"""
     dest = addons if addons != "" else bkp_file.split("_")[-1:][0].split(".")[0]
+    # dest = os.path.join("/opt/odoo", dest)
     if os.path.isdir(dest):
         shutil.rmtree(dest)
     if not os.path.exists(dest):
@@ -404,45 +409,39 @@ def change_password(new_password):
 
 
 def main():
-    argParser = argparse.ArgumentParser()
-    argParser.add_argument(
-        "-e", "--exp", action="store_true", help="export manifest.json"
-    )
-    argParser.add_argument(
-        "-i",
-        "--imp",
-        action="store_true",
-        help="import manifest.json",
-    )
-    argParser.add_argument(
-        "-b", "--backup", action="store_true", help="backup database"
-    )
-    argParser.add_argument(
-        "-f",
-        "--destfolder",
-        action="store",
-        default="./backups",
-        help="backup destination folder",
-    )
-    argParser.add_argument(
-        "-r", "--restore", action="store_true", help="restore database"
-    )
-    argParser.add_argument("-s", "--remote", action="store_true", help="remote restore")
-    argParser.add_argument(
-        "-d", "--dump_file", action="store", help="database dump file"
-    )
-    argParser.add_argument(
-        "-p", "--password", action="store", help="generate password hash"
-    )
-    argParser.add_argument(
+    """Odoo Administration Backup Restore"""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-b", "--backup", action="store_true", help="backup database")
+    parser.add_argument(
         "-c",
         "--config",
         action="store",
         default="./conf/odoo.conf",
         help="odoo.conf file location",
     )
+    parser.add_argument(
+        "-p", "--password", action="store", help="generate password hash"
+    )
 
-    args = argParser.parse_args()
+    parser.add_argument("-e", "--exp", action="store_true", help="export manifest.json")
+    parser.add_argument(
+        "-i",
+        "--imp",
+        action="store_true",
+        help="import manifest.json",
+    )
+    parser.add_argument(
+        "-f",
+        "--destfolder",
+        action="store",
+        default="./backups",
+        help="backup destination folder",
+    )
+    parser.add_argument("-r", "--restore", action="store_true", help="restore database")
+    parser.add_argument("-s", "--remote", action="store_true", help="remote restore")
+    parser.add_argument("-d", "--dump_file", action="store", help="database dump file")
+
+    args = parser.parse_args()
     odoo.tools.config._parse_config(["-c", args.config])
     db_name = odoo.tools.config["db_name"]
     addons = odoo.tools.config["addons_path"].split(",")[2:]
@@ -459,7 +458,7 @@ def main():
         return
 
     if not args.backup and not args.restore and not args.password:
-        print(argParser.print_help())
+        print(parser.print_help())
         return
 
     if args.password:

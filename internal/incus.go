@@ -3,6 +3,7 @@ package oda
 import (
 	"fmt"
 	"os/exec"
+	"os/user"
 	"strings"
 )
 
@@ -55,6 +56,24 @@ func IncusLaunch(name, image string) error {
 	return nil
 }
 
+func IncusCopy(source, target string) error {
+	fmt.Println("Copying image from", source, "to", target)
+	sourceContainer, _ := GetContainer(source)
+	targetContainer, _ := GetContainer(target)
+	if sourceContainer == (Container{}) {
+		return fmt.Errorf("container %s does not exist", source)
+	}
+	if targetContainer != (Container{}) {
+		return fmt.Errorf("container %s already exists", target)
+	}
+	if sourceContainer != (Container{}) && targetContainer == (Container{}) {
+		if err := exec.Command("incus", "copy", source, target).Run(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func IncusStart(name string) error {
 	if err := exec.Command("incus", "start", name).Run(); err != nil {
 		return err
@@ -95,5 +114,37 @@ func IncusDelete(name string) error {
 			return err
 		}
 	}
+	return nil
+}
+
+func IncusMount(name, mount, source, target string) error {
+	// fmt.Println("incus", "config", "device", "add", name, mount, "disk", "source="+source, "path="+target)
+	if err := exec.Command("incus", "config", "device", "add", name, mount, "disk", "source="+source, "path="+target).Run(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func IncusGetUid(name, username string) (string, error) {
+	out, err := exec.Command("incus", "exec", name, "-t", "--", "grep", "^"+username, "/etc/passwd").Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.Split(string(out), ":")[2], nil
+}
+
+func IncusIdmap(name string) error {
+	// printf "uid $(id -u) 1000\ngid $(id -g) 1000" | lxc config set test raw.idmap -
+
+	currentUser, err := user.Current()
+	if err != nil {
+		return err
+	}
+
+	// restore postgresql database
+	if err := exec.Command("incus", "config", "set", name, "raw.idmap", "both "+currentUser.Uid+" 1001").Run(); err != nil {
+		return err
+	}
+
 	return nil
 }

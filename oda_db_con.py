@@ -1,20 +1,24 @@
 #!/usr/bin/env python3
-"""Odoo Administration DB tool for Containers"""
+"""Odoo Administration DB tool for Servers"""
 import argparse
+
 import time
 import json
+import logging
 import os
 import sys
 import shutil
 import subprocess
+
+
 from contextlib import closing
 from passlib.context import CryptContext
+
 import psycopg2
 
 sys.path.append("odoo")
-import odoo
 
-sys.path.append("odoo")
+import odoo
 
 
 # Backup
@@ -37,6 +41,38 @@ def dump_db_manifest(db_name, cr):
         "modules": modules,
     }
     return manifest
+
+
+def export_manifest(db_name):
+    # manifest.json
+    with open(os.path.join(".", "manifest.json"), "w") as fh:
+        db = odoo.sql_db.db_connect(db_name)
+        with db.cursor() as cr:
+            json.dump(dump_db_manifest(cr), fh, indent=4)
+
+
+def _dump_addons_tar(configfile, bkp_prefix, bkp_dest="/opt/odoo/backups"):
+    """Backup Odoo DB addons folders"""
+    cwd = os.getcwd()
+    db_name = get_odoo_conf(configfile, "db_name")
+    addons = get_odoo_conf(configfile, "addons_path").split(",")[2:]
+    for addon in addons:
+        folder = addon.replace(cwd + "/", "")
+        dirlist = os.listdir(folder)
+        if len(dirlist) != 0:
+            tar_cmd = "tar"
+            bkp_file = f"{bkp_prefix}__{db_name}__{folder}.tar.zst"
+            file_path = os.path.join(bkp_dest, bkp_file)
+            tar_args = ["ahcf", file_path, "-C", folder, "."]
+            r = subprocess.run(
+                [tar_cmd, *tar_args],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.STDOUT,
+                check=True,
+            )
+            if r.returncode != 0:
+                raise OSError(f"could not backup addons {addon}")
+            return file_path
 
 
 def _dump_db_tar(configfile, bkp_prefix, bkp_dest="/opt/odoo/backups"):
@@ -88,7 +124,10 @@ def _dump_db_tar(configfile, bkp_prefix, bkp_dest="/opt/odoo/backups"):
     # create tar archive
     tar_cmd = ["tar", "achf", os.path.abspath(file_path), "-C", dump_dir, "."]
     r = subprocess.run(
-        tar_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT, check=True
+        tar_cmd,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.STDOUT,
+        check=True,
     )
     if r.returncode != 0:
         raise OSError(f"could not backup database {db_name}")
@@ -99,31 +138,34 @@ def _dump_db_tar(configfile, bkp_prefix, bkp_dest="/opt/odoo/backups"):
     return file_path
 
 
-def _dump_addons_tar(configfile, bkp_prefix, bkp_dest="/opt/odoo/backups"):
-    """Backup Odoo DB addons folders"""
-    cwd = os.getcwd()
-    db_name = get_odoo_conf(configfile, "db_name")
-    addons = get_odoo_conf(configfile, "addons_path").split(",")[2:]
-    for addon in addons:
-        folder = addon.replace(cwd + "/", "")
-        dirlist = os.listdir(folder)
-        if len(dirlist) != 0:
-            tar_cmd = "tar"
-            bkp_file = f"{bkp_prefix}__{db_name}__{folder}.tar.zst"
-            file_path = os.path.join(bkp_dest, bkp_file)
-            tar_args = ["ahcf", file_path, "-C", folder, "."]
-            r = subprocess.run(
-                [tar_cmd, *tar_args],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.STDOUT,
-                check=True,
-            )
-            if r.returncode != 0:
-                raise OSError(f"could not backup addons {addon}")
-            return file_path
-
-
 # Restore
+
+
+def _restore_addons_tar(bkp_file, bkp_dir="/opt/odoo/backups"):
+    """Restore Odoo DB addons folders"""
+    addons = ""
+    dest = addons if addons != "" else bkp_file.split("_")[-1:][0].split(".")[0]
+    dest = os.path.join("/opt/odoo", dest)
+    for filename in os.listdir(dest):
+        file_path = os.path.join(dest, filename)
+        try:
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            raise OSError(f"Error deleting {file_path}") from e
+    tar_cmd = "tar"
+    tar_args = ["axf", os.path.join(bkp_dir, bkp_file), "-C", dest, "."]
+    try:
+        subprocess.run(
+            [tar_cmd, *tar_args],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT,
+            check=True,
+        )
+    except Exception as e:
+        raise OSError(f"could not restore addons {dest}") from e
 
 
 def _restore_db_tar(
@@ -220,33 +262,6 @@ def _restore_db_tar(
                 do update set value = (current_date+'3 months'::interval)::timestamp;"""
             )
     return
-
-
-def _restore_addons_tar(bkp_file, bkp_dir="/opt/odoo/backups"):
-    """Restore Odoo DB addons folders"""
-    addons = ""
-    dest = addons if addons != "" else bkp_file.split("_")[-1:][0].split(".")[0]
-    dest = os.path.join("/opt/odoo", dest)
-    for filename in os.listdir(dest):
-        file_path = os.path.join(dest, filename)
-        try:
-            if os.path.isfile(file_path):
-                os.remove(file_path)
-            elif os.path.isdir(file_path):
-                shutil.rmtree(file_path)
-        except Exception as e:
-            raise OSError(f"Error deleting {file_path}") from e
-    tar_cmd = "tar"
-    tar_args = ["axf", os.path.join(bkp_dir, bkp_file), "-C", dest, "."]
-    try:
-        subprocess.run(
-            [tar_cmd, *tar_args],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.STDOUT,
-            check=True,
-        )
-    except Exception as e:
-        raise OSError(f"could not restore addons {dest}") from e
 
 
 # Helpers
@@ -411,9 +426,6 @@ def main():
     """Odoo Administration Backup Restore"""
     parser = argparse.ArgumentParser()
     parser.add_argument("-b", "--backup", action="store_true", help="backup database")
-    # parser.add_argument(
-    #     "-r", "--restore", action="store", help="restore database", nargs="+"
-    # )
     parser.add_argument(
         "-c",
         "--config",
@@ -431,10 +443,6 @@ def main():
         change_password(args.password)
         return
 
-    if args.backup and args.restore:
-        print("backup or restore cannot run both commands")
-        return
-
     if args.backup:
         bkp_prefix = f"{time.strftime('%Y_%m_%d_%H_%M_%S')}"
         # main database and filestore
@@ -442,20 +450,6 @@ def main():
         # addons
         print(_dump_addons_tar(args.config, bkp_prefix, "/opt/odoo/backups"))
         return
-
-    # for dump in args.restore:
-    #     dump_file = dump.strip('"')
-    #     fname = os.path.splitext(os.path.basename(dump_file))[0].split(".")[0]
-    #     bfile = os.path.splitext(fname)[0].split("__")
-
-    #     if len(bfile) == 2:
-    #         print(f"restore from dump file {dump_file}")
-    #         _restore_db_tar(args.config, dump_file)
-    #     elif len(bfile) == 3 and bfile[-1] == "addons":
-    #         print(f"restore addons file {dump_file}")
-    #         _restore_addons_tar(dump_file)
-    #     else:
-    #         print("invalid backup filename")
     return
 
 
