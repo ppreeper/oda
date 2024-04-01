@@ -1,11 +1,12 @@
 package oda
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
-	"slices"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -65,38 +66,6 @@ func InstanceRebuild() error {
 	return nil
 }
 
-func InstanceMounts(project string) error {
-	conf := GetConf()
-	cwd, _ := GetProject()
-	version := GetVersion()
-
-	if err := IncusMount(project, "odoo", conf.Repo+"/"+version+"/odoo", "/opt/odoo/odoo"); err != nil {
-		return err
-	}
-
-	if err := IncusMount(project, "enterprise", conf.Repo+"/"+version+"/enterprise", "/opt/odoo/enterprise"); err != nil {
-		return err
-	}
-
-	if err := IncusMount(project, "backups", conf.Project+"/backups", "/opt/odoo/backups"); err != nil {
-		return err
-	}
-
-	if err := IncusMount(project, "addons", cwd+"/addons", "/opt/odoo/addons"); err != nil {
-		return err
-	}
-
-	if err := IncusMount(project, "conf", cwd+"/conf", "/opt/odoo/conf"); err != nil {
-		return err
-	}
-
-	if err := IncusMount(project, "data", cwd+"/data", "/opt/odoo/data"); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func InstanceStart() error {
 	if !IsProject() {
 		return fmt.Errorf("not in a project directory")
@@ -112,6 +81,10 @@ func InstanceStart() error {
 	IncusStart(project)
 	InstanceMounts(project)
 	time.Sleep(2 * time.Second)
+	SSHConfigGenerate(project)
+	if err = exec.Command("sshconfig").Run(); err != nil {
+		return err
+	}
 	ProxyGenerate()
 	ProxyStop()
 	ProxyStart()
@@ -141,6 +114,38 @@ func InstanceRestart() error {
 	if err := InstanceStart(); err != nil {
 		return err
 	}
+	return nil
+}
+
+func InstanceMounts(project string) error {
+	conf := GetConf()
+	cwd, _ := GetProject()
+	version := GetVersion()
+
+	if err := IncusMount(project, "odoo", conf.Repo+"/"+version+"/odoo", "/opt/odoo/odoo"); err != nil {
+		return err
+	}
+
+	if err := IncusMount(project, "enterprise", conf.Repo+"/"+version+"/enterprise", "/opt/odoo/enterprise"); err != nil {
+		return err
+	}
+
+	if err := IncusMount(project, "backups", conf.Project+"/backups", "/opt/odoo/backups"); err != nil {
+		return err
+	}
+
+	if err := IncusMount(project, "addons", cwd+"/addons", "/opt/odoo/addons"); err != nil {
+		return err
+	}
+
+	if err := IncusMount(project, "conf", cwd+"/conf", "/opt/odoo/conf"); err != nil {
+		return err
+	}
+
+	if err := IncusMount(project, "data", cwd+"/data", "/opt/odoo/data"); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -532,50 +537,49 @@ func AdminPassword() error {
 	return nil
 }
 
-type Pod struct {
-	Image  string
-	Name   string
-	Ports  map[string]string
-	Status string
-}
-
-func GetPods(all bool) ([]Pod, error) {
-	podCmd := []string{"ps", "--format", "{{.Image}};{{.Names}};{{.Ports}};{{.Status}}"}
-	if all {
-		podCmd = append(podCmd, "-a")
-	}
-	out, err := exec.Command("podman", podCmd...).Output()
+func SSHConfigGenerate(project string) error {
+	HOME, _ := os.UserHomeDir()
+	conf := GetConf()
+	container, err := GetContainer(project)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("error getting container %w", err)
 	}
-	podList := strings.Split(string(out), "\n")
-	slices.Sort(podList)
-	pods := []Pod{}
-	for _, pod := range podList {
-
-		podSplit := strings.Split(pod, ";")
-		if len(podSplit) != 4 {
+	// priority;host;hostname;user;identityfile;port
+	sshconfig := fmt.Sprintf("%d;%s.%s;%s;%s;%s;%d", 10, project, conf.Domain, container.IP4, "odoo", conf.SSHKey, 22)
+	sshconfigCSV := filepath.Join(HOME, ".ssh", "sshconfig.csv")
+	// READ config
+	hosts, err := os.Open(sshconfigCSV)
+	if err != nil {
+		return fmt.Errorf("hosts file read failed %w", err)
+	}
+	defer hosts.Close()
+	hostlines := []string{}
+	scanner := bufio.NewScanner(hosts)
+	for scanner.Scan() {
+		hostlines = append(hostlines, scanner.Text())
+	}
+	headerLine := hostlines[0]
+	// Remove old lines
+	newHostlines := []string{}
+	for _, hostline := range hostlines[1:] {
+		hostlineSplit := strings.Split(hostline, ";")
+		if hostlineSplit[1] == project+"."+conf.Domain {
 			continue
 		}
-
-		aPod := Pod{
-			Image:  podSplit[0],
-			Name:   podSplit[1],
-			Ports:  make(map[string]string),
-			Status: podSplit[3],
-		}
-
-		ports := strings.Split(podSplit[2], ",")
-		if len(ports) == 1 && ports[0] == "" {
-			continue
-		}
-		for _, port := range ports {
-			portSplit := strings.Split(port, "->")
-			source := strings.Split(portSplit[0], ":")
-			dest := strings.Split(portSplit[1], "/")
-			aPod.Ports[dest[0]] = source[1]
-		}
-		pods = append(pods, aPod)
+		newHostlines = append(newHostlines, hostline)
 	}
-	return pods, nil
+	// Add new lines
+	newHostlines = append(newHostlines, sshconfig)
+	// WRITE config
+	fo, err := os.Create(sshconfigCSV)
+	if err != nil {
+		return err
+	}
+	defer fo.Close()
+	fo.WriteString(headerLine + "\n")
+	for _, hostline := range newHostlines {
+		fo.WriteString(hostline + "\n")
+	}
+
+	return nil
 }
