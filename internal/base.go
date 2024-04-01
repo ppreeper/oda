@@ -232,10 +232,10 @@ func BaseCreate(version string) error {
 		return err
 	}
 
-	// fmt.Println("roleOdooNode:", vers)
-	// if err := roleOdooNode(vers); err != nil {
-	// 	return err
-	// }
+	fmt.Println("roleOdooNode:", vers)
+	if err := roleOdooNode(vers); err != nil {
+		return err
+	}
 
 	fmt.Println("roleOdooService:", vers)
 	if err := roleOdooService(vers); err != nil {
@@ -427,8 +427,14 @@ func roleOdooBasePackages(name, version string) error {
 }
 
 func roleOdooNode(name string) error {
-	fmt.Println("wget", "-qO", "/usr/local/bin/oda.py", "https://raw.githubusercontent.com/ppreeper/oda/main/oda.py")
-	// chmod := []string{"chmod", "+x", "/usr/local/bin/oda.py"}
+	if err := IncusExec(name, "wget", "-qO", "/usr/local/bin/oda.py", "https://raw.githubusercontent.com/ppreeper/oda/main/oda.py"); err != nil {
+		fmt.Println(err)
+		return err
+	}
+	if err := IncusExec(name, "chmod", "-x", "/usr/local/bin/oda.py"); err != nil {
+		fmt.Println(err)
+		return err
+	}
 	return nil
 }
 
