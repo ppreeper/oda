@@ -302,7 +302,7 @@ func InstanceLogs() error {
 	_, project := GetProject()
 	podCmd := exec.Command("incus",
 		"exec", project, "-t", "--",
-		"tail", "-f", "/var/log/syslog",
+		"journalctl", "-f",
 	)
 	podCmd.Stdin = os.Stdin
 	podCmd.Stdout = os.Stdout

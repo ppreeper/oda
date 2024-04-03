@@ -278,3 +278,19 @@ func PGBouncer() error {
 
 	return nil
 }
+
+func DBLogs() error {
+	conf := GetConf()
+
+	cmd := exec.Command("incus",
+		"exec", conf.DBHost, "-t", "--",
+		"journalctl", "-f",
+	)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+	return nil
+}

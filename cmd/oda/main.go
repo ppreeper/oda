@@ -184,6 +184,13 @@ func main() {
 							return oda.PgdbFullReset()
 						},
 					},
+					{
+						Name:  "logs",
+						Usage: "Follow the logs",
+						Action: func(cCtx *cli.Context) error {
+							return oda.DBLogs()
+						},
+					},
 				},
 			},
 			{
