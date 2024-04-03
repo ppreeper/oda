@@ -78,24 +78,32 @@ func InstanceStart() error {
 		InstanceCreate()
 	}
 
-	IncusStart(project)
+	if err := IncusStart(project); err != nil {
+		fmt.Println(err)
+		return err
+	}
 
 	if err := IncusHosts(project, GetConf().Domain); err != nil {
+		fmt.Println(err)
 		return err
 	}
 
 	if err := IncusCaddyfile(project, GetConf().Domain); err != nil {
+		fmt.Println("IncusCaddyfile", err)
 		return err
 	}
 
 	if err := InstanceMounts(project); err != nil {
+		fmt.Println("InstanceMounts", err)
 		return err
 	}
 	time.Sleep(2 * time.Second)
 	if err := SSHConfigGenerate(project); err != nil {
+		fmt.Println("SSHConfigGenerate", err)
 		return err
 	}
 	if err = exec.Command("sshconfig").Run(); err != nil {
+		fmt.Println("sshconfig", err)
 		return err
 	}
 
@@ -136,29 +144,12 @@ func InstanceMounts(project string) error {
 	cwd, _ := GetProject()
 	version := GetVersion()
 
-	if err := IncusMount(project, "odoo", conf.Repo+"/"+version+"/odoo", "/opt/odoo/odoo"); err != nil {
-		return err
-	}
-
-	if err := IncusMount(project, "enterprise", conf.Repo+"/"+version+"/enterprise", "/opt/odoo/enterprise"); err != nil {
-		return err
-	}
-
-	if err := IncusMount(project, "backups", conf.Project+"/backups", "/opt/odoo/backups"); err != nil {
-		return err
-	}
-
-	if err := IncusMount(project, "addons", cwd+"/addons", "/opt/odoo/addons"); err != nil {
-		return err
-	}
-
-	if err := IncusMount(project, "conf", cwd+"/conf", "/opt/odoo/conf"); err != nil {
-		return err
-	}
-
-	if err := IncusMount(project, "data", cwd+"/data", "/opt/odoo/data"); err != nil {
-		return err
-	}
+	IncusMount(project, "odoo", conf.Repo+"/"+version+"/odoo", "/opt/odoo/odoo")
+	IncusMount(project, "enterprise", conf.Repo+"/"+version+"/enterprise", "/opt/odoo/enterprise")
+	IncusMount(project, "backups", conf.Project+"/backups", "/opt/odoo/backups")
+	IncusMount(project, "addons", cwd+"/addons", "/opt/odoo/addons")
+	IncusMount(project, "conf", cwd+"/conf", "/opt/odoo/conf")
+	IncusMount(project, "data", cwd+"/data", "/opt/odoo/data")
 
 	return nil
 }
@@ -468,7 +459,6 @@ func AdminUsername() error {
 }
 
 func AdminPassword() error {
-	fmt.Println("admin password")
 	if !IsProject() {
 		return fmt.Errorf("not in a project directory")
 	}
@@ -547,6 +537,7 @@ func AdminPassword() error {
 	if err != nil {
 		return fmt.Errorf("error updating password %w", err)
 	}
+	fmt.Println("admin password changed")
 
 	return nil
 }

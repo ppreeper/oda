@@ -28,7 +28,6 @@ func OpenDatabase(db Database) (*Database, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot open database: %w", err)
 	}
-	fmt.Println("Database opened")
 	if err = db.Ping(); err != nil {
 		fmt.Println("Database ping failed")
 		return nil, fmt.Errorf("cannot open database: %w", err)

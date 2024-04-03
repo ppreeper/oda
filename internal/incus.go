@@ -78,17 +78,11 @@ func IncusCopy(source, target string) error {
 }
 
 func IncusStart(name string) error {
-	if err := exec.Command("incus", "start", name).Run(); err != nil {
-		return err
-	}
-	return nil
+	return exec.Command("incus", "start", name).Run()
 }
 
 func IncusStop(name string) error {
-	if err := exec.Command("incus", "stop", name).Run(); err != nil {
-		return err
-	}
-	return nil
+	return exec.Command("incus", "stop", name).Run()
 }
 
 func IncusExec(name string, args ...string) error {
@@ -121,10 +115,7 @@ func IncusDelete(name string) error {
 }
 
 func IncusMount(name, mount, source, target string) error {
-	if err := exec.Command("incus", "config", "device", "add", name, mount, "disk", "source="+source, "path="+target).Run(); err != nil {
-		return err
-	}
-	return nil
+	return exec.Command("incus", "config", "device", "add", name, mount, "disk", "source="+source, "path="+target).Run()
 }
 
 func IncusGetUid(name, username string) (string, error) {

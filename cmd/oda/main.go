@@ -222,41 +222,6 @@ func main() {
 				},
 			},
 			{
-				Name:     "proxy",
-				Usage:    "Caddy proxy",
-				Category: "proxy",
-				Subcommands: []*cli.Command{
-					{
-						Name:  "start",
-						Usage: "proxy start",
-						Action: func(cCtx *cli.Context) error {
-							return oda.ProxyStart()
-						},
-					},
-					{
-						Name:  "stop",
-						Usage: "proxy stop",
-						Action: func(cCtx *cli.Context) error {
-							return oda.ProxyStop()
-						},
-					},
-					{
-						Name:  "restart",
-						Usage: "proxy restart",
-						Action: func(cCtx *cli.Context) error {
-							return oda.ProxyRestart()
-						},
-					},
-					{
-						Name:  "generate",
-						Usage: "proxy generate",
-						Action: func(cCtx *cli.Context) error {
-							return oda.ProxyGenerate()
-						},
-					},
-				},
-			},
-			{
 				Name:     "repo",
 				Usage:    "Odoo community and enterprise repository management",
 				Category: "repo",
