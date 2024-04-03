@@ -22,8 +22,6 @@ var Commit = func() string {
 				Revision = string([]rune(kv.Value)[:7])
 			case "vcs.time":
 				LastCommit, _ = time.Parse(time.RFC3339, kv.Value)
-				// case "vcs.modified":
-				// 	DirtyBuild = kv.Value == "true"
 			}
 		}
 		return fmt.Sprintf("%d%02d%02d-%s", LastCommit.Year(), LastCommit.Month(), LastCommit.Day(), Revision)

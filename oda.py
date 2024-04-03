@@ -628,6 +628,9 @@ def main():
     # scaffold        Scaffold module
     scaffold_parser = subparsers.add_parser("scaffold", help="Scaffold module")
     scaffold_parser.add_argument("module", help="module to scaffold", nargs="*")
+    # password       Change admin password
+    password_parser = subparsers.add_parser("password", help="Change admin password")
+    password_parser.add_argument("password", help="password", nargs="*")
     # start          start odoo server
     subparsers.add_parser("start", help="start odoo server")
     # stop           stop odoo server
@@ -643,13 +646,6 @@ def main():
         action="store",
         default="/opt/odoo/conf/odoo.conf",
         help="odoo.conf file location",
-    )
-    parser.add_argument(
-        "-p",
-        "--password",
-        action="store",
-        default="",
-        help="change admin password",
     )
     parser.add_argument(
         "-d",
@@ -693,7 +689,10 @@ def main():
     elif args.command == "logs":
         odoo_logs()
     elif args.command == "password":
-        change_password(args.password)
+        if len(args.password) > 1:
+            print("no spaces allowed in password")
+            return
+        change_password(args.password[0])
     return
 
 

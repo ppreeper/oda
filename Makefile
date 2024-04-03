@@ -6,6 +6,5 @@ go:
 node:
 	go build -o ${HOME}/.local/bin/odanode ./cmd/odanode/.
 
-odai:
-	@rm -f odai
-	@go build -o odai ./cmd/odai/.
+oda:
+	@rm -f $HOME/go/bin/oda && go install ./cmd/oda/.

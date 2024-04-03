@@ -24,7 +24,7 @@ func AdminBackup() error {
 
 	if err := exec.Command("incus", "exec", project, "--user", uid, "-t",
 		"--env", "HOME=/home/odoo", "--cwd", "/opt/odoo", "--",
-		"oda_db.py", "-b",
+		"oda", "backup",
 	).Run(); err != nil {
 		return fmt.Errorf("backup failed %w", err)
 	}
