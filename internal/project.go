@@ -255,7 +255,9 @@ func ProjectRebuild() error {
 	}
 
 	// stop target
-	InstanceStop()
+	if err := InstanceStop(); err != nil {
+		return fmt.Errorf("instance stop failed: %w", err)
+	}
 
 	// remove targets files, copy from source to target
 	dirs := GetDirs()
@@ -300,7 +302,7 @@ func ProjectReset() error {
 	}
 	// stop
 	if err := InstanceStop(); err != nil {
-		return err
+		return fmt.Errorf("instance stop failed: %w", err)
 	}
 	// rm -rf data/*
 	cwd, _ := GetProject()
@@ -311,11 +313,16 @@ func ProjectReset() error {
 	dbhost := GetOdooConf(cwd, "db_host")
 	dbname := GetOdooConf(cwd, "db_name")
 
-	podCmd := exec.Command("podman",
-		"exec", "-it", dbhost, "dropdb", "-U", "postgres", dbname)
-	if err := podCmd.Run(); err != nil {
-		return fmt.Errorf("database drop failed %w", err)
+	uid, err := IncusGetUid(dbhost, "postgres")
+	if err != nil {
+		return fmt.Errorf("could not get postgres user id: %w", err)
 	}
+	if err := exec.Command("incus", "exec", dbhost, "--user", uid, "-t", "--",
+		"dropdb", "--if-exists", "-U", "postgres", "-f", dbname,
+	).Run(); err != nil {
+		return fmt.Errorf("could not drop postgresql database %s error: %w", dbname, err)
+	}
+
 	return nil
 }
 
