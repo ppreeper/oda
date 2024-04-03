@@ -325,6 +325,7 @@ func ProjectHostsFile() error {
 	if sudouser == "" {
 		return fmt.Errorf("not allowed: this requires root access")
 	}
+
 	hosts, err := os.Open("/etc/hosts")
 	if err != nil {
 		return fmt.Errorf("hosts file read failed %w", err)
@@ -357,7 +358,7 @@ func ProjectHostsFile() error {
 		for _, project := range projects {
 			if strings.Contains(container.Name, project) {
 				projectLines = append(projectLines,
-					str.RightLen("127.0.1.1", " ", 16)+" "+container.Name+"."+conf.Domain)
+					str.RightLen(container.IP4, " ", 16)+" "+container.Name+"."+conf.Domain)
 			}
 		}
 	}

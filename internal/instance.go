@@ -79,15 +79,29 @@ func InstanceStart() error {
 	}
 
 	IncusStart(project)
-	InstanceMounts(project)
+
+	if err := IncusHosts(project, GetConf().Domain); err != nil {
+		return err
+	}
+
+	if err := IncusCaddyfile(project, GetConf().Domain); err != nil {
+		return err
+	}
+
+	if err := InstanceMounts(project); err != nil {
+		return err
+	}
 	time.Sleep(2 * time.Second)
-	SSHConfigGenerate(project)
+	if err := SSHConfigGenerate(project); err != nil {
+		return err
+	}
 	if err = exec.Command("sshconfig").Run(); err != nil {
 		return err
 	}
-	ProxyGenerate()
-	ProxyStop()
-	ProxyStart()
+
+	// ProxyGenerate()
+	// ProxyStop()
+	// ProxyStart()
 	fmt.Println(project + "." + conf.Domain + " started")
 
 	return nil
@@ -494,7 +508,7 @@ func AdminPassword() error {
 
 	passkey, err := exec.Command("incus", "exec", project, "--user", uid, "-t",
 		"--env", "HOME=/home/odoo", "--cwd", "/opt/odoo", "--",
-		"oda_db.py", "-p", password1,
+		"oda", "password", password1,
 	).Output()
 	if err != nil {
 		return fmt.Errorf("error generating password %w", err)

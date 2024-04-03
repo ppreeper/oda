@@ -242,6 +242,15 @@ func BaseCreate(version string) error {
 		return err
 	}
 
+	fmt.Println("roleCaddy")
+	if err := roleCaddy(vers); err != nil {
+		return err
+	}
+	fmt.Println("roleCaddyService")
+	if err := roleCaddyService(vers); err != nil {
+		return err
+	}
+
 	fmt.Println("IncusStop:", vers)
 	if err := IncusStop(vers); err != nil {
 		return err
@@ -287,26 +296,27 @@ func npmInstall(name string, pkgs ...string) error {
 }
 
 func roleUpdate(name string) error {
-	fmt.Println("apt-get update -y")
+	// fmt.Println("apt-get update -y")
 	if err := IncusExec(name, "apt-get", "update", "-y"); err != nil {
 		fmt.Println(err)
 		return err
 	}
 
-	fmt.Println("apt-get dist-upgrade -y")
+	// fmt.Println("apt-get dist-upgrade -y")
 	if err := IncusExec(name, "apt-get", "dist-upgrade", "-y"); err != nil {
 		return err
 	}
 
-	fmt.Println("apt-get autoremove -y")
+	// fmt.Println("apt-get autoremove -y")
 	if err := IncusExec(name, "apt-get", "autoremove", "-y"); err != nil {
 		return err
 	}
 
-	fmt.Println("apt-get autoclean -y")
+	// fmt.Println("apt-get autoclean -y")
 	if err := IncusExec(name, "apt-get", "autoclean", "-y"); err != nil {
 		return err
 	}
+	fmt.Println("update complete")
 	return nil
 }
 
@@ -580,5 +590,68 @@ func roleWkhtmltopdf(name string) error {
 		fmt.Println(err)
 		return err
 	}
+	return nil
+}
+
+func roleCaddy(name string) error {
+	url := "https://caddyserver.com/api/download?os=linux&arch=amd64&p=github.com%2Fcaddy-dns%2Fcloudflare"
+
+	if err := IncusExec(name, "wget", "-qO", "/usr/local/bin/caddy", url); err != nil {
+		fmt.Println(err)
+		return err
+	}
+	if err := IncusExec(name, "chmod", "+x", "/usr/local/bin/caddy"); err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	return nil
+}
+
+func roleCaddyService(name string) error {
+	f, err := os.Create("/tmp/caddy.service")
+	if err != nil {
+		return err
+	}
+	f.WriteString("[Unit]" + "\n")
+	f.WriteString("Description=caddy server" + "\n")
+	f.WriteString("Requires=network-online.target" + "\n")
+	f.WriteString("After=remote-fs.target" + "\n" + "\n")
+
+	f.WriteString("[Service]" + "\n")
+	f.WriteString("Type=simple" + "\n")
+	f.WriteString("SyslogIdentifier=caddy" + "\n")
+	f.WriteString("Restart=on-failure" + "\n")
+	f.WriteString("ExecStart=/usr/local/bin/caddy run --config /etc/caddy/Caddyfile" + "\n")
+	f.WriteString("KillSignal=SIGTERM" + "\n")
+	f.WriteString("StandardOutput=journal+console" + "\n")
+	f.WriteString("Restart=on-failure" + "\n")
+	f.WriteString("RestartSec=10s" + "\n" + "\n")
+
+	f.WriteString("[Install]" + "\n")
+	f.WriteString("WantedBy=multi-user.target" + "\n")
+	f.Close()
+
+	if err := exec.Command("incus", "file", "push", "/tmp/caddy.service", name+"/etc/systemd/system/caddy.service").Run(); err != nil {
+		return err
+	}
+
+	os.Remove("/tmp/caddy.service")
+
+	if err := IncusExec(name, "systemctl", "daemon-reload"); err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	if err := IncusExec(name, "systemctl", "enable", "caddy.service"); err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	if err := IncusExec(name, "mkdir", "-p", "/etc/caddy"); err != nil {
+		fmt.Println(err)
+		return err
+	}
+
 	return nil
 }

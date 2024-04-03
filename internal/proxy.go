@@ -70,15 +70,6 @@ func ProxyGenerate() error {
 			}
 		}
 	}
-	// for _, pod := range podList {
-	// 	caddyOut.WriteString(pod.Name + " {" + "\n")
-	// 	caddyOut.WriteString("tls internal" + "\n")
-	// 	caddyOut.WriteString("reverse_proxy http://127.0.0.1:" + pod.Ports["8069"] + "\n")
-	// 	caddyOut.WriteString("reverse_proxy /websocket http://127.0.0.1:" + pod.Ports["8072"] + "\n")
-	// 	caddyOut.WriteString("reverse_proxy /longpolling/* http://127.0.0.1:" + pod.Ports["8072"] + "\n")
-	// 	caddyOut.WriteString("}" + "\n")
-	// }
-
 	if err := exec.Command("caddy", "fmt", "-w", caddyFile).Run(); err != nil {
 		return err
 	}
