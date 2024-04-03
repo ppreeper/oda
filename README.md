@@ -100,15 +100,6 @@ go install -u github.com/ppreeper/oda/cmd/oda@latest
 | rebuild | rebuild from another project |
 | reset   | reset project dir and db     |
 
-#### `proxy` Caddy proxy
-
-| command  | description    |
-| -------- | -------------- |
-| start    | proxy start    |
-| stop     | proxy stop     |
-| restart  | proxy restart  |
-| generate | proxy generate |
-
 #### `repo` Odoo community and enterprise repository management
 
 | command | description            |
