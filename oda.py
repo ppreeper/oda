@@ -1,24 +1,20 @@
 #!/usr/bin/env python3
 """Odoo Administration DB tool for Servers"""
 import argparse
-from shutil import rmtree, which
-import time
 import json
 import os
-import sys
-
 import subprocess
-
-
+import sys
+import time
 from contextlib import closing
-from passlib.context import CryptContext
+from shutil import rmtree, which
 
 import psycopg2
+from passlib.context import CryptContext
 
 sys.path.append("odoo")
 
 import odoo
-
 
 # Backup
 
@@ -96,6 +92,7 @@ def _dump_db_tar(configfile, bkp_prefix, bkp_dest="/opt/odoo/backups"):
     db_name = get_odoo_conf(configfile, "db_name")
     db_user = get_odoo_conf(configfile, "db_user")
     db_password = get_odoo_conf(configfile, "db_password")
+    data_dir = get_odoo_conf(configfile, "data_dir")
     bkp_file = f"{bkp_prefix}__{db_name}.tar.zst"
     dump_dir = os.path.abspath(os.path.join(bkp_dest, bkp_prefix))
     file_path = os.path.join(bkp_dest, bkp_file)
@@ -139,7 +136,7 @@ def _dump_db_tar(configfile, bkp_prefix, bkp_dest="/opt/odoo/backups"):
             json.dump(dump_db_manifest(db_name, cr), fh, indent=4)
 
     # filestore
-    filestore = odoo.tools.config.filestore(db_name)
+    filestore = os.path.join(data_dir, "filestore", db_name)
     filestore_back = os.path.join(dump_dir, "filestore")
     if os.path.exists(filestore):
         try:
