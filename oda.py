@@ -10,47 +10,30 @@ from contextlib import closing
 from shutil import rmtree, which
 
 import psycopg2
-from passlib.context import CryptContext
 
-sys.path.append("odoo")
 
-import odoo
-
+# ==============================================================================
 # Backup
-
-
-def dump_db_manifest(db_name, cr):
-    """Generate Odoo Manifest data"""
-    pg_version = "%d.%d" % divmod(cr.connection.server_version / 100, 100)
-    cr.execute(
-        "SELECT name, latest_version FROM ir_module_module WHERE state = 'installed'"
-    )
-    modules = dict(cr.fetchall())
-    manifest = {
-        "odoo_dump": "1",
-        "db_name": db_name,
-        "version": odoo.release.version,
-        "version_info": odoo.release.version_info,
-        "major_version": odoo.release.major_version,
-        "pg_version": pg_version,
-        "modules": modules,
-    }
-    return manifest
+def odoo_backup(configfile):
+    bkp_prefix = f"{time.strftime('%Y_%m_%d_%H_%M_%S')}"
+    # main database and filestore
+    print("odoo:", _dump_db_tar(configfile, bkp_prefix, "/opt/odoo/backups"))
+    # addons
+    print("addons:", _dump_addons_tar(configfile, bkp_prefix, "/opt/odoo/backups"))
 
 
 def _dump_addons_tar(configfile, bkp_prefix, bkp_dest="/opt/odoo/backups"):
     """Backup Odoo DB addons folders"""
-    cwd = os.getcwd()
     db_name = get_odoo_conf(configfile, "db_name")
     addons = get_odoo_conf(configfile, "addons_path").split(",")[2:]
     for addon in addons:
-        folder = addon.replace(cwd + "/", "")
-        dirlist = os.listdir(folder)
+        folder = addon.replace("/opt/odoo/", "")
+        dirlist = os.listdir(addon)
         if len(dirlist) != 0:
             tar_cmd = "tar"
             bkp_file = f"{bkp_prefix}__{db_name}__{folder}.tar.zst"
             file_path = os.path.join(bkp_dest, bkp_file)
-            tar_args = ["ahcf", file_path, "-C", folder, "."]
+            tar_args = ["ahcf", file_path, "-C", addon, "."]
             r = subprocess.run(
                 [tar_cmd, *tar_args],
                 stdout=subprocess.DEVNULL,
@@ -62,31 +45,8 @@ def _dump_addons_tar(configfile, bkp_prefix, bkp_dest="/opt/odoo/backups"):
             return file_path
 
 
-def db_connect(configfile):
-    db_host = get_odoo_conf(configfile, "db_host")
-    db_port = get_odoo_conf(configfile, "db_port")
-    db_name = get_odoo_conf(configfile, "db_name")
-    db_user = get_odoo_conf(configfile, "db_user")
-    db_password = get_odoo_conf(configfile, "db_password")
-    return psycopg2.connect(
-        dbname=db_name, user=db_user, password=db_password, host=db_host, port=db_port
-    )
-
-
-def db_connect_postgres(configfile):
-    db_host = get_odoo_conf(configfile, "db_host")
-    db_port = 5432
-    db_name = "postgres"
-    db_user = "postgres"
-    db_password = "postgres"
-    return psycopg2.connect(
-        dbname=db_name, user=db_user, password=db_password, host=db_host, port=db_port
-    )
-
-
 def _dump_db_tar(configfile, bkp_prefix, bkp_dest="/opt/odoo/backups"):
     """Backup Odoo DB to dump file"""
-    # print(configfile, bkp_prefix, bkp_dest)
     db_host = get_odoo_conf(configfile, "db_host")
     db_port = get_odoo_conf(configfile, "db_port")
     db_name = get_odoo_conf(configfile, "db_name")
@@ -118,7 +78,6 @@ def _dump_db_tar(configfile, bkp_prefix, bkp_dest="/opt/odoo/backups"):
         os.path.join(dump_dir, "dump.sql"),
         db_name,
     ]
-    # print("pg_cmd", pg_cmd)
     r = subprocess.run(
         pg_cmd,
         env=PG_ENV,
@@ -128,12 +87,6 @@ def _dump_db_tar(configfile, bkp_prefix, bkp_dest="/opt/odoo/backups"):
     )
     if r.returncode != 0:
         raise OSError(f"could not backup postgresql database {db_name}")
-
-    # manifest.json
-    with open(os.path.join(dump_dir, "manifest.json"), "w", encoding="UTF-8") as fh:
-        db = db_connect(configfile)
-        with db.cursor() as cr:
-            json.dump(dump_db_manifest(db_name, cr), fh, indent=4)
 
     # filestore
     filestore = os.path.join(data_dir, "filestore", db_name)
@@ -161,7 +114,26 @@ def _dump_db_tar(configfile, bkp_prefix, bkp_dest="/opt/odoo/backups"):
     return file_path
 
 
+# ==============================================================================
 # Restore
+def odoo_restore(configfile, backup_files, copy=False):
+    """Restore from backup file"""
+    if not are_you_sure("restore from backup"):
+        return
+    # stop
+    files = parse_multi(backup_files)
+    files.sort()
+    for dump_file in files:
+        fname = os.path.splitext(os.path.basename(dump_file))[0].split(".")[0]
+        bfile = os.path.splitext(fname)[0].split("__")
+        if len(bfile) == 2:
+            print(f"restore from dump file {dump_file}")
+            _restore_db_tar(configfile, dump_file, copy=copy)
+        elif len(bfile) == 3 and bfile[-1] == "addons":
+            print(f"restore addons file {dump_file}")
+            _restore_addons_tar(dump_file)
+        else:
+            print("invalid backup filename")
 
 
 def _restore_addons_tar(dump_file, bkp_dir="/opt/odoo/backups"):
@@ -184,12 +156,7 @@ def _restore_addons_tar(dump_file, bkp_dir="/opt/odoo/backups"):
         raise OSError(f"could not restore addons {dest}") from e
 
 
-def _restore_db_tar(
-    configfile,
-    dump_file,
-    bkp_dir="/opt/odoo/backups",
-    copy=True,
-):
+def _restore_db_tar(configfile, dump_file, bkp_dir="/opt/odoo/backups", copy=True):
     """Restore Odoo DB from dump file"""
     db_host = get_odoo_conf(configfile, "db_host")
     db_port = get_odoo_conf(configfile, "db_port")
@@ -202,7 +169,6 @@ def _restore_db_tar(
     db_name = get_odoo_conf(configfile, "db_name")
     data_dir = get_odoo_conf(configfile, "data_dir")
 
-    #########
     # Database Drop and Restore
     # drop postgresql database
     _drop_database(configfile, db_name)
@@ -263,7 +229,6 @@ def _restore_db_tar(
         "--strip-components=2",
         "./filestore",
     ]
-    # print(tar_cmd)
     tar = subprocess.run(
         tar_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT, check=True
     )
@@ -271,23 +236,47 @@ def _restore_db_tar(
         raise OSError(f"could not restore filestore for {db_name}")
 
     #########
-    # odoo database registry
-    if copy:
+    # odoo database neutralize if not copy
+    _neutralize_db(configfile, copy)
+    return
+
+
+def _neutralize_db(configfile, copy=False):
+    if not copy:
         db = db_connect(configfile)
         with closing(db.cursor()) as cr:
             try:
+                # -- remove the enterprise code, report.url and web.base.url
                 cr.execute(
-                    "delete from ir_config_parameter where key='database.enterprise_code'"
+                    "delete from ir_config_parameter where key in ('database.enterprise_code', 'report.url', 'web.base.url.freeze')"
                 )
             except:
                 pass
+
             try:
+                # -- deactivate crons
+                cr.execute("""UPDATE ir_cron SET active = 'f';""")
+                cr.execute(
+                    """UPDATE ir_cron SET active = 't' WHERE id IN (SELECT res_id FROM ir_model_data WHERE name = 'autovacuum_job' AND module = 'base');"""
+                )
+            except:
+                pass
+
+            try:
+                # -- remove platform ir_logging
+                cr.execute("""DELETE FROM ir_logging WHERE func = 'odoo.sh';""")
+            except:
+                pass
+
+            try:
+                # -- reset db uuid
                 cr.execute(
                     """update ir_config_parameter set value=(select gen_random_uuid())
                     where key = 'database.uuid'"""
                 )
             except:
                 pass
+
             try:
                 cr.execute(
                     """insert into ir_config_parameter
@@ -296,131 +285,222 @@ def _restore_db_tar(
                     ('database.expiration_date',(current_date+'3 months'::interval)::timestamp,1,
                     current_timestamp,1,current_timestamp)
                     on conflict (key)
-                    do update set value = (current_date+'3 months'::interval)::timestamp;"""
+                    do UPDATE set value = (current_date+'3 months'::interval)::timestamp;"""
+                )
+            except:
+                pass
+
+            try:
+                # -- disable prod environment in all delivery carriers
+                cr.execute("""UPDATE delivery_carrier SET prod_environment = false;""")
+            except:
+                pass
+
+            try:
+                # -- disable delivery carriers from external providers
+                cr.execute(
+                    """UPDATE delivery_carrier SET active = false WHERE delivery_type NOT IN ('fixed', 'base_on_rule');"""
+                )
+            except:
+                pass
+
+            try:
+                cr.execute(
+                    """UPDATE iap_account SET account_token = REGEXP_REPLACE(account_token, '(\+.*)?$', '+disabled');"""
+                )
+            except:
+                pass
+
+            try:
+                # -- deactivate mail template
+                cr.execute("""UPDATE mail_template SET mail_server_id = NULL;""")
+            except:
+                pass
+
+            try:
+                # -- deactivate fetchmail server
+                cr.execute("""UPDATE fetchmail_server SET active = false;""")
+            except:
+                pass
+
+            try:
+                # -- disable generic payment provider
+                cr.execute(
+                    """UPDATE payment_provider SET state = 'disabled' WHERE state NOT IN ('test', 'disabled');"""
+                )
+            except:
+                pass
+
+            try:
+                # -- activate neutralization watermarks
+                cr.execute(
+                    """UPDATE ir_ui_view SET active = true WHERE key = 'web.neutralize_banner';"""
+                )
+            except:
+                pass
+
+            try:
+                # -- delete domains on websites
+                cr.execute("""UPDATE website SET domain = NULL;""")
+            except:
+                pass
+
+            try:
+                # -- activate neutralization watermarks
+                cr.execute(
+                    """UPDATE ir_ui_view SET active = true WHERE key = 'website.neutralize_ribbon';"""
+                )
+            except:
+                pass
+
+            try:
+                # -- disable cdn
+                cr.execute("""UPDATE website SET cdn_activated = false;""")
+            except:
+                pass
+
+            try:
+                # -- disable bank synchronisation links
+                cr.execute(
+                    """UPDATE account_online_link SET provider_data = '', client_id = 'duplicate';"""
+                )
+            except:
+                pass
+
+            try:
+                cr.execute(
+                    """DELETE FROM ir_config_parameter WHERE key IN ('odoo_ocn.project_id', 'ocn.uuid');"""
+                )
+            except:
+                pass
+
+            try:
+                # -- delete Facebook Access Tokens
+                cr.execute(
+                    """UPDATE social_account SET facebook_account_id = NULL, facebook_access_token = NULL;"""
+                )
+            except:
+                pass
+
+            try:
+                # -- delete Instagram Access Tokens
+                cr.execute(
+                    """UPDATE social_account SET instagram_account_id = NULL, instagram_facebook_account_id = NULL, instagram_access_token = NULL;"""
+                )
+            except:
+                pass
+
+            try:
+                # -- delete LinkedIn Access Tokens
+                cr.execute(
+                    """UPDATE social_account SET linkedin_account_urn = NULL, linkedin_access_token = NULL;"""
+                )
+            except:
+                pass
+
+            try:
+                # -- Unset Firebase configuration within website
+                cr.execute(
+                    """UPDATE website SET firebase_enable_push_notifications = false, firebase_use_own_account = false, firebase_project_id = NULL, firebase_web_api_key = NULL, firebase_push_certificate_key = NULL, firebase_sender_id = NULL;"""
+                )
+            except:
+                pass
+
+            try:
+                # -- delete Twitter Access Tokens
+                cr.execute(
+                    """UPDATE social_account SET twitter_user_id = NULL, twitter_oauth_token = NULL, twitter_oauth_token_secret = NULL;"""
+                )
+            except:
+                pass
+
+            try:
+                # -- delete Youtube Access Tokens
+                cr.execute(
+                    """UPDATE social_account SET youtube_channel_id = NULL, youtube_access_token = NULL, youtube_refresh_token = NULL, youtube_token_expiration_date = NULL, youtube_upload_playlist_id = NULL;"""
+                )
+            except:
+                pass
+
+            try:
+                # -- Remove Map Box Token as it's only valid per DB url
+                cr.execute(
+                    """DELETE FROM ir_config_parameter WHERE key = 'web_map.token_map_box';"""
+                )
+            except:
+                pass
+
+            try:
+                cr.execute(
+                    """UPDATE ir_cron SET active = 't' WHERE id IN (SELECT res_id FROM ir_model_data WHERE name = 'ir_cron_module_update_notification' AND module = 'mail');"""
+                )
+            except:
+                pass
+
+            try:
+                # -- deactivate mail servers but activate default "localhost" mail server
+                cr.execute(
+                    """DO $$
+                    BEGIN
+                        UPDATE ir_mail_server SET active = 'f';
+                        IF EXISTS (SELECT 1 FROM ir_module_module WHERE name='mail' and state IN ('installed', 'to upgrade', 'to remove')) THEN
+                            UPDATE mail_template SET mail_server_id = NULL;
+                        END IF;
+                    EXCEPTION
+                        WHEN undefined_table OR undefined_column THEN
+                    END;
+                $$;"""
                 )
             except:
                 pass
     return
 
 
-# Helpers
-class DatabaseExists(Warning):
-    """Empty Database Class"""
-
-
-def _create_empty_database(configfile, db_name):
-    """Create empty postgres db"""
-    db_template = get_odoo_conf(configfile, "db_template")
-    db_user = get_odoo_conf(configfile, "db_user")
-    dbc = db_connect_postgres(configfile)
-    with closing(dbc.cursor()) as cr:
-        chosen_template = db_template
-        cr.execute("SELECT datname FROM pg_database WHERE datname = %s", (db_name,))
-        if cr.fetchall():
-            raise DatabaseExists("database %r already exists!" % (db_name,))
-        else:
-            cr.connection.rollback()
-            cr.connection.autocommit = True
-            # 'C' collate is only safe with template0, but provides more useful indexes
-            cr.execute(
-                "CREATE DATABASE %s ENCODING 'unicode' %s TEMPLATE %s OWNER %s"
-                % (
-                    db_name,
-                    "LC_COLLATE 'C'",
-                    chosen_template,
-                    db_user,
-                ),
-            )
-    dbu = db_connect(configfile)
-    with closing(dbu.cursor()) as cr:
-        try:
-            cr.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
-            if odoo.tools.config["unaccent"]:
-                cr.execute("CREATE EXTENSION IF NOT EXISTS unaccent")
-                cr.execute("ALTER FUNCTION unaccent(text) IMMUTABLE")
-        except psycopg2.Error as e:
-            raise OSError(f"Unable to create PostgreSQL extensions : {e}") from e
-
-
-def _drop_conn(cr, db_name):
-    """Try to terminate all other connections that might prevent dropping the database"""
-    try:
-        pid_col = "pid" if cr.connection.server_version >= 90200 else "procpid"
-
-        cr.execute(
-            """SELECT pg_terminate_backend(%(pid_col)s)
-                      FROM pg_stat_activity
-                      WHERE datname = %%s AND
-                            %(pid_col)s != pg_backend_pid()"""
-            % {"pid_col": pid_col},
-            (db_name,),
-        )
-    except Exception as e:
-        raise OSError("database could not be dropped") from e
-
-
-def _drop_database(configfile, db_name):
-    """Drop PostgreSQL DB"""
-    db = db_connect_postgres(configfile)
-    with closing(db.cursor()) as cr:
-        # database-altering operations cannot be executed inside a transaction
-        cr.connection.autocommit = True
-        _drop_conn(cr, db_name)
-        try:
-            cr.execute(
-                psycopg2.sql.SQL("DROP DATABASE IF EXISTS {}").format(
-                    psycopg2.sql.Identifier(db_name)
-                )
-            )
-        except Exception as e:
-            raise OSError(f"Couldn't drop database {db_name}: {e}") from e
-
-
-def install_upgrade(mode, module):
-    module_list = []
-    for m in module:
-        mods = m.split(",")
-        for mod in mods:
-            module_list.append(mod)
-    modules = list(dict.fromkeys(module_list))
-    """Install/Upgrade module"""
-    odoo_cmd = [
-        "odoo/odoo-bin",
-        "-c",
-        "/opt/odoo/conf/odoo.conf",
-        "--no-http",
-        "--stop-after-init",
+# ==============================================================================
+# Trim
+def trim(configfile, bkp_path=".", limit=10):
+    """Trim database backups"""
+    db_name = get_odoo_conf(configfile, "db_name")
+    onlyfiles = [
+        f for f in os.listdir(bkp_path) if os.path.isfile(os.path.join(bkp_path, f))
     ]
-    if mode == "install":
-        odoo_cmd.append("-i")
-        odoo_cmd.append(",".join(modules))
-    elif mode == "upgrade":
-        odoo_cmd.append("-u")
-        odoo_cmd.append(",".join(modules))
-    r = subprocess.run(
-        odoo_cmd,
-        check=True,
-    )
-    return
+    backups = {}
+    addons = {}
+    for f in onlyfiles:
+        fparts = f.split("__")
+        # backups
+        if fparts[-1].endswith("zst") and len(fparts) == 2:
+            fs = f.replace(".tar.zst", "").split("__")
+            if len(fs) == 2:
+                if fs[1] not in backups:
+                    backups[fs[1]] = [fs[0]]
+                elif fs[1] in backups and len(backups[fs[1]]) == 0:
+                    backups[fs[1]] = [fs[0]]
+                else:
+                    backups[fs[1]].append(fs[0])
+        # addons
+        if fparts[-1].endswith("zst") and len(fparts) == 3:
+            fs = f.replace(".tar.zst", "").split("__")
+            if len(fs) == 3:
+                if fs[1] not in addons:
+                    addons[fs[1]] = [fs[0]]
+                elif fs[1] in addons and len(addons[fs[1]]) == 0:
+                    addons[fs[1]] = [fs[0]]
+                else:
+                    addons[fs[1]].append(fs[0])
+    rmlist = []
+    for dates in backups[db_name][:-limit]:
+        rmlist.append("__".join([dates, db_name]) + ".tar.zst")
+    for dates in addons[db_name][:-limit]:
+        rmlist.append("__".join([dates, db_name, "addons"]) + ".tar.zst")
+    rmlist.sort()
+    for r in rmlist:
+        print("rm -f ", os.path.join(bkp_path, r))
+        if os.path.exists(os.path.join(bkp_path, r)):
+            os.remove(os.path.join(bkp_path, r))
 
 
-def scaffold(module):
-    """Scaffold module"""
-    odoo_cmd = [
-        "odoo/odoo-bin",
-        "scaffold",
-        module[0],
-        "/opt/odoo/addons/",
-    ]
-    r = subprocess.run(
-        odoo_cmd,
-        check=True,
-    )
-    print(f"module '{module[0]}' scaffolded")
-    return
-
-
-def trim(bkp_path=".", limit=10):
+def trim_all(bkp_path=".", limit=10):
     """Trim database backups"""
     onlyfiles = [
         f for f in os.listdir(bkp_path) if os.path.isfile(os.path.join(bkp_path, f))
@@ -471,19 +551,94 @@ def trim(bkp_path=".", limit=10):
             os.remove(os.path.join(bkp_path, r))
 
 
-def rmrf(data_dir):
-    """Remove Directory Contents"""
-    for filename in os.listdir(data_dir):
-        file_path = os.path.join(data_dir, filename)
+# ==============================================================================
+# Database
+class DatabaseExists(Warning):
+    """Empty Database Class"""
+
+
+def db_connect(configfile, postgres=False):
+    db_host = get_odoo_conf(configfile, "db_host")
+    db_port = "5432" if postgres else get_odoo_conf(configfile, "db_port")
+    db_name = "postgres" if postgres else get_odoo_conf(configfile, "db_name")
+    db_user = "postgres" if postgres else get_odoo_conf(configfile, "db_user")
+    db_password = "postgres" if postgres else get_odoo_conf(configfile, "db_password")
+    return psycopg2.connect(
+        dbname=db_name, user=db_user, password=db_password, host=db_host, port=db_port
+    )
+
+
+def _create_empty_database(configfile, db_name):
+    """Create empty postgres db"""
+    db_template = get_odoo_conf(configfile, "db_template")
+    db_user = get_odoo_conf(configfile, "db_user")
+    dbc = db_connect(configfile, postgres=True)
+    with closing(dbc.cursor()) as cr:
+        chosen_template = db_template
+        cr.execute("SELECT datname FROM pg_database WHERE datname = %s", (db_name,))
+        if cr.fetchall():
+            raise DatabaseExists("database %r already exists!" % (db_name,))
+        else:
+            cr.connection.rollback()
+            cr.connection.autocommit = True
+            # 'C' collate is only safe with template0, but provides more useful indexes
+            cr.execute(
+                "CREATE DATABASE %s ENCODING 'unicode' %s TEMPLATE %s OWNER %s"
+                % (
+                    db_name,
+                    "LC_COLLATE 'C'",
+                    chosen_template,
+                    db_user,
+                ),
+            )
+    dbu = db_connect(configfile)
+    with closing(dbu.cursor()) as cr:
         try:
-            if os.path.isfile(file_path):
-                os.remove(file_path)
-            elif os.path.isdir(file_path):
-                rmtree(file_path)
+            cr.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
+            unaccent = get_odoo_conf(configfile, "unaccent")
+            if unaccent != None:
+                cr.execute("CREATE EXTENSION IF NOT EXISTS unaccent")
+                cr.execute("ALTER FUNCTION unaccent(text) IMMUTABLE")
+        except psycopg2.Error as e:
+            raise OSError(f"Unable to create PostgreSQL extensions : {e}") from e
+
+
+def _drop_conn(cr, db_name):
+    """Try to terminate all other connections that might prevent dropping the database"""
+    try:
+        pid_col = "pid" if cr.connection.server_version >= 90200 else "procpid"
+
+        cr.execute(
+            """SELECT pg_terminate_backend(%(pid_col)s)
+                      FROM pg_stat_activity
+                      WHERE datname = %%s AND
+                            %(pid_col)s != pg_backend_pid()"""
+            % {"pid_col": pid_col},
+            (db_name,),
+        )
+    except Exception as e:
+        raise OSError("database could not be dropped") from e
+
+
+def _drop_database(configfile, db_name):
+    """Drop PostgreSQL DB"""
+    db = db_connect(configfile, postgres=True)
+    with closing(db.cursor()) as cr:
+        # database-altering operations cannot be executed inside a transaction
+        cr.connection.autocommit = True
+        _drop_conn(cr, db_name)
+        try:
+            cr.execute(
+                psycopg2.sql.SQL("DROP DATABASE IF EXISTS {}").format(
+                    psycopg2.sql.Identifier(db_name)
+                )
+            )
         except Exception as e:
-            raise OSError(f"Error deleting {file_path}") from e
+            raise OSError(f"Couldn't drop database {db_name}: {e}") from e
 
 
+# ==============================================================================
+# Odoo Helpers
 def get_odoo_conf(configfile, key):
     """get key value from odoo.conf"""
     with open(
@@ -495,6 +650,50 @@ def get_odoo_conf(configfile, key):
         for line in lines:
             if line.startswith(key):
                 return line.split("=")[1].strip()
+    return
+
+
+def install_upgrade(mode, module):
+    module_list = []
+    for m in module:
+        mods = m.split(",")
+        for mod in mods:
+            module_list.append(mod)
+    modules = list(dict.fromkeys(module_list))
+    """Install/Upgrade module"""
+    odoo_cmd = [
+        "odoo/odoo-bin",
+        "-c",
+        "/opt/odoo/conf/odoo.conf",
+        "--no-http",
+        "--stop-after-init",
+    ]
+    if mode == "install":
+        odoo_cmd.append("-i")
+        odoo_cmd.append(",".join(modules))
+    elif mode == "upgrade":
+        odoo_cmd.append("-u")
+        odoo_cmd.append(",".join(modules))
+    r = subprocess.run(
+        odoo_cmd,
+        check=True,
+    )
+    return
+
+
+def scaffold(module):
+    """Scaffold module"""
+    odoo_cmd = [
+        "odoo/odoo-bin",
+        "scaffold",
+        module[0],
+        "/opt/odoo/addons/",
+    ]
+    r = subprocess.run(
+        odoo_cmd,
+        check=True,
+    )
+    print(f"module '{module[0]}' scaffolded")
     return
 
 
@@ -527,43 +726,19 @@ def odoo_logs():
     )
 
 
-def odoo_backup(configfile):
-    bkp_prefix = f"{time.strftime('%Y_%m_%d_%H_%M_%S')}"
-    # main database and filestore
-    print("odoo:", _dump_db_tar(configfile, bkp_prefix, "/opt/odoo/backups"))
-    # addons
-    print("addons:", _dump_addons_tar(configfile, bkp_prefix, "/opt/odoo/backups"))
-
-
-def odoo_restore(configfile, backup_files):
-    """Restore from backup file"""
-    if not are_you_sure("restore from backup"):
-        return
-    # stop
-    files = parse_multi(backup_files)
-    files.sort()
-    for dump_file in files:
-        fname = os.path.splitext(os.path.basename(dump_file))[0].split(".")[0]
-        bfile = os.path.splitext(fname)[0].split("__")
-        if len(bfile) == 2:
-            print(f"restore from dump file {dump_file}")
-            _restore_db_tar(configfile, dump_file)
-        elif len(bfile) == 3 and bfile[-1] == "addons":
-            print(f"restore addons file {dump_file}")
-            _restore_addons_tar(dump_file)
-        else:
-            print("invalid backup filename")
-
-
-# Admin password
-def change_password(new_password):
-    new_password = new_password.strip()
-    if new_password == "":
-        return
-    ctx = CryptContext(schemes=["pbkdf2_sha512"])
-    pw_hash = ctx.hash(new_password)
-    print(pw_hash)
-    return
+# ==============================================================================
+# CLI Helpers
+def rmrf(data_dir):
+    """Remove Directory Contents"""
+    for filename in os.listdir(data_dir):
+        file_path = os.path.join(data_dir, filename)
+        try:
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+            elif os.path.isdir(file_path):
+                rmtree(file_path)
+        except Exception as e:
+            raise OSError(f"Error deleting {file_path}") from e
 
 
 def are_you_sure(action):
@@ -604,38 +779,40 @@ def main():
     subparsers = parser.add_subparsers(
         dest="command", title="commands", help="commands"
     )
-    # ===================
+
     # backup         Backup database filestore and addons
     subparsers.add_parser("backup", help="Backup database filestore and addons")
-    # config
-    parser.add_argument("-b", "--backup", action="store_true", help="backup database")
+
     # restore        Restore database and filestore or addons
     restore_parser = subparsers.add_parser(
         "restore", help="Restore database and filestore or addons"
     )
+    restore_parser.add_argument("--copy", help="copy database", action="store_true")
     restore_parser.add_argument("file", help="Path to backup file", nargs="+")
+
     # trim           Trim database backups
     subparsers.add_parser("trim", help="Trim database backups")
+
+    # Modules
     # install        Install module(s)
     install_parser = subparsers.add_parser("install", help="Install module(s)")
     install_parser.add_argument("module", help="module(s) to install", nargs="+")
     # upgrade        Upgrade module(s)
     upgrade_parser = subparsers.add_parser("upgrade", help="Upgrade module(s)")
     upgrade_parser.add_argument("module", help="module(s) to upgrade", nargs="+")
+
     # scaffold        Scaffold module
     scaffold_parser = subparsers.add_parser("scaffold", help="Scaffold module")
     scaffold_parser.add_argument("module", help="module to scaffold", nargs="*")
-    # password       Change admin password
-    password_parser = subparsers.add_parser("password", help="Change admin password")
-    password_parser.add_argument("password", help="password", nargs="*")
-    # start          start odoo server
+
+    # server control
     subparsers.add_parser("start", help="start odoo server")
-    # stop           stop odoo server
     subparsers.add_parser("stop", help="top odoo server")
-    # restart        restart odoo server
     subparsers.add_parser("restart", help="restart odoo server")
+
     # logs           tail the logs
     subparsers.add_parser("logs", help="tail the logs")
+
     # config
     parser.add_argument(
         "-c",
@@ -660,12 +837,12 @@ def main():
     # process arguments
     args = parser.parse_args(args=None if sys.argv[1:] else ["--help"])
 
-    if args.command == "backup" or args.backup:
+    if args.command == "backup":
         odoo_backup(args.config)
     elif args.command == "restore" and args.file:
-        odoo_restore(args.config, args.file)
+        odoo_restore(args.config, args.file, args.copy)
     elif args.command == "trim":
-        trim(args.d, int(args.n))
+        trim(args.config, args.d, int(args.n))
     elif args.command == "install":
         install_upgrade("install", args.module)
     elif args.command == "upgrade":
@@ -685,11 +862,6 @@ def main():
         odoo_service("start")
     elif args.command == "logs":
         odoo_logs()
-    elif args.command == "password":
-        if len(args.password) > 1:
-            print("no spaces allowed in password")
-            return
-        change_password(args.password[0])
     return
 
 
