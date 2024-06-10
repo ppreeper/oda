@@ -54,7 +54,7 @@ def _dump_db_tar(configfile, bkp_prefix, bkp_dest="/opt/odoo/backups"):
     db_password = get_odoo_conf(configfile, "db_password")
     data_dir = get_odoo_conf(configfile, "data_dir")
     bkp_file = f"{bkp_prefix}__{db_name}.tar.zst"
-    dump_dir = os.path.abspath(os.path.join(bkp_dest, bkp_prefix))
+    dump_dir = os.path.abspath(os.path.join(bkp_dest, f"{bkp_prefix}__{db_name}"))
     file_path = os.path.join(bkp_dest, bkp_file)
 
     # create dump_dir
@@ -458,97 +458,80 @@ def _neutralize_db(configfile, copy=False):
 
 # ==============================================================================
 # Trim
-def trim(configfile, bkp_path=".", limit=10):
+def trim(configfile, bkp_path=".", limit=10, all=False):
     """Trim database backups"""
     db_name = get_odoo_conf(configfile, "db_name")
-    onlyfiles = [
-        f for f in os.listdir(bkp_path) if os.path.isfile(os.path.join(bkp_path, f))
-    ]
-    backups = {}
-    addons = {}
-    for f in onlyfiles:
-        fparts = f.split("__")
-        # backups
-        if fparts[-1].endswith("zst") and len(fparts) == 2:
-            fs = f.replace(".tar.zst", "").split("__")
-            if len(fs) == 2:
-                if fs[1] not in backups:
-                    backups[fs[1]] = [fs[0]]
-                elif fs[1] in backups and len(backups[fs[1]]) == 0:
-                    backups[fs[1]] = [fs[0]]
-                else:
-                    backups[fs[1]].append(fs[0])
-        # addons
-        if fparts[-1].endswith("zst") and len(fparts) == 3:
-            fs = f.replace(".tar.zst", "").split("__")
-            if len(fs) == 3:
-                if fs[1] not in addons:
-                    addons[fs[1]] = [fs[0]]
-                elif fs[1] in addons and len(addons[fs[1]]) == 0:
-                    addons[fs[1]] = [fs[0]]
-                else:
-                    addons[fs[1]].append(fs[0])
-    rmlist = []
-    for dates in backups[db_name][:-limit]:
-        rmlist.append("__".join([dates, db_name]) + ".tar.zst")
-    for dates in addons[db_name][:-limit]:
-        rmlist.append("__".join([dates, db_name, "addons"]) + ".tar.zst")
-    rmlist.sort()
-    for r in rmlist:
-        print("rm -f ", os.path.join(bkp_path, r))
-        if os.path.exists(os.path.join(bkp_path, r)):
-            os.remove(os.path.join(bkp_path, r))
 
+    # Get all backup files
+    backups, addons = get_backup_files(bkp_path)
 
-def trim_all(bkp_path=".", limit=10):
-    """Trim database backups"""
-    onlyfiles = [
-        f for f in os.listdir(bkp_path) if os.path.isfile(os.path.join(bkp_path, f))
-    ]
-    backups = {}
-    addons = {}
-    for f in onlyfiles:
-        fparts = f.split("__")
-        # backups
-        if fparts[-1].endswith("zst") and len(fparts) == 2:
-            fs = f.replace(".tar.zst", "").split("__")
-            if len(fs) == 2:
-                if fs[1] not in backups:
-                    backups[fs[1]] = [fs[0]]
-                elif fs[1] in backups and len(backups[fs[1]]) == 0:
-                    backups[fs[1]] = [fs[0]]
-                else:
-                    backups[fs[1]].append(fs[0])
-        # addons
-        if fparts[-1].endswith("zst") and len(fparts) == 3:
-            fs = f.replace(".tar.zst", "").split("__")
-            if len(fs) == 3:
-                if fs[1] not in addons:
-                    addons[fs[1]] = [fs[0]]
-                elif fs[1] in addons and len(addons[fs[1]]) == 0:
-                    addons[fs[1]] = [fs[0]]
-                else:
-                    addons[fs[1]].append(fs[0])
-    rmlist = []
+    rmbkp = []
     bkeys = list(backups.keys())
     bkeys.sort()
-    for k in bkeys:
-        backups[k].sort()
-        destroy = backups[k][:-limit]
-        for d in destroy:
-            rmlist.append("__".join([d, k]) + ".tar.zst")
+    if all:
+        for k in bkeys:
+            backups[k].sort()
+            dates = backups[k][:-limit]
+            for d in dates:
+                rmbkp.append(f"{d}__{k}.tar.zst")
+    else:
+        backups[db_name].sort()
+        dates = backups[db_name][:-limit]
+        for d in dates:
+            rmbkp.append(f"{d}__{db_name}.tar.zst")
+
+    rmaddons = []
     akeys = list(addons.keys())
     akeys.sort()
-    for k in akeys:
-        addons[k].sort()
-        destroy = addons[k][:-limit]
-        for d in destroy:
-            rmlist.append("__".join([d, k, "addons"]) + ".tar.zst")
-    rmlist.sort()
+    if all:
+        for k in akeys:
+            addons[k].sort()
+            dates = addons[k][:-limit]
+            for d in dates:
+                rmaddons.append(f"{d}__{k}__addons.tar.zst")
+    else:
+        addons[db_name].sort()
+        dates = addons[db_name][:-limit]
+        for d in dates:
+            rmaddons.append(f"{d}__{db_name}__addons.tar.zst")
+
+    rmlist = rmbkp + rmaddons
+
     for r in rmlist:
-        print("rm -f ", os.path.join(bkp_path, r))
         if os.path.exists(os.path.join(bkp_path, r)):
+            print(" ".join(["rm", "-f", os.path.join(bkp_path, r)]))
             os.remove(os.path.join(bkp_path, r))
+
+
+def get_backup_files(bkp_path="."):
+    onlyfiles = [
+        f for f in os.listdir(bkp_path) if os.path.isfile(os.path.join(bkp_path, f))
+    ]
+    backups = {}
+    addons = {}
+    for f in onlyfiles:
+        fparts = f.split("__")
+        # backups
+        if fparts[-1].endswith("zst") and len(fparts) == 2:
+            fs = f.replace(".tar.zst", "").split("__")
+            if len(fs) == 2:
+                if fs[1] not in backups:
+                    backups[fs[1]] = [fs[0]]
+                elif fs[1] in backups and len(backups[fs[1]]) == 0:
+                    backups[fs[1]] = [fs[0]]
+                else:
+                    backups[fs[1]].append(fs[0])
+        # addons
+        if fparts[-1].endswith("zst") and len(fparts) == 3:
+            fs = f.replace(".tar.zst", "").split("__")
+            if len(fs) == 3:
+                if fs[1] not in addons:
+                    addons[fs[1]] = [fs[0]]
+                elif fs[1] in addons and len(addons[fs[1]]) == 0:
+                    addons[fs[1]] = [fs[0]]
+                else:
+                    addons[fs[1]].append(fs[0])
+    return backups, addons
 
 
 # ==============================================================================
@@ -792,6 +775,7 @@ def main():
 
     # trim           Trim database backups
     subparsers.add_parser("trim", help="Trim database backups")
+    subparsers.add_parser("trimall", help="Trim all database backups")
 
     # Modules
     # install        Install module(s)
@@ -843,6 +827,8 @@ def main():
         odoo_restore(args.config, args.file, args.copy)
     elif args.command == "trim":
         trim(args.config, args.d, int(args.n))
+    elif args.command == "trimall":
+        trim(args.config, args.d, int(args.n), all=True)
     elif args.command == "install":
         install_upgrade("install", args.module)
     elif args.command == "upgrade":
