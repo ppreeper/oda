@@ -50,7 +50,7 @@ func PgdbPgsql() error {
 	uid, err := IncusGetUid(conf.DBHost, "postgres")
 	if err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("failed to get postgres uid %w", err)
 	}
 	pgCmd := exec.Command("incus", "exec", conf.DBHost, "--user", uid, "-t", "--", "psql")
 	pgCmd.Stdin = os.Stdin
@@ -58,7 +58,7 @@ func PgdbPgsql() error {
 	pgCmd.Stderr = os.Stderr
 	if err := pgCmd.Run(); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("failed to run psql %w", err)
 	}
 	return nil
 }
@@ -67,11 +67,11 @@ func PgdbStart() error {
 	conf := GetConf()
 	container, err := GetContainer(conf.DBHost)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get container %w", err)
 	}
 	if container.State != "RUNNING" {
 		if err := IncusStart(conf.DBHost); err != nil {
-			return err
+			return fmt.Errorf("failed to start container %w", err)
 		}
 	}
 	fmt.Println(conf.DBHost, "started")
@@ -82,11 +82,11 @@ func PgdbStop() error {
 	conf := GetConf()
 	container, err := GetContainer(conf.DBHost)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get container %w", err)
 	}
 	if container.State != "STOPPED" {
 		if err := IncusStop(conf.DBHost); err != nil {
-			return err
+			return fmt.Errorf("failed to stop container %w", err)
 		}
 	}
 	fmt.Println(conf.DBHost, "stopped")
@@ -95,10 +95,10 @@ func PgdbStop() error {
 
 func PgdbRestart() error {
 	if err := PgdbStop(); err != nil {
-		return err
+		return fmt.Errorf("failed to stop container %w", err)
 	}
 	if err := PgdbStart(); err != nil {
-		return err
+		return fmt.Errorf("failed to start container %w", err)
 	}
 	return nil
 }
@@ -127,29 +127,29 @@ func PgdbFullReset() error {
 
 	if err := exec.Command("incus", "exec", conf.DBHost, "-t", "--", "apt", "upgrade", "-y").Run(); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("failed to upgrade packages %w", err)
 	}
 	if err := exec.Command("incus", "exec", conf.DBHost, "-t", "--", "apt", "install", "-y", "postgresql", "postgresql-contrib", "pgbouncer").Run(); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("failed to install packages %w", err)
 	}
 	fmt.Println("Database server " + conf.DBHost + " packages installed")
 
 	uid, err := IncusGetUid(conf.DBHost, "postgres")
 	if err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("failed to get postgres uid %w", err)
 	}
 
 	if err := exec.Command("incus", "exec", conf.DBHost, "--user", uid, "-t", "--", "psql", "-c", "ALTER ROLE postgres WITH ENCRYPTED PASSWORD '"+conf.DBPass+"';").Run(); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("failed to alter postgres role %w", err)
 	}
 	fmt.Println("Database server postgres role altered")
 
 	if err := exec.Command("incus", "exec", conf.DBHost, "--user", uid, "-t", "--", "psql", "-c", "CREATE ROLE "+conf.DBUsername+" WITH CREATEDB NOSUPERUSER ENCRYPTED PASSWORD '"+conf.DBUserpass+"' LOGIN;").Run(); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("failed to create role %w", err)
 	}
 	fmt.Println("Database server " + conf.DBUsername + " role created")
 
@@ -165,7 +165,7 @@ func PgdbFullReset() error {
 	// /etc/pgbouncer/userlist.txt
 	if err := exec.Command("incus", "exec", conf.DBHost, "--user", uid, "-t", "--", "psql", "-c", "COPY(SELECT '\"'||rolname||'\" \"'||coalesce(rolpassword,'')||'\"' from pg_authid) TO '/etc/pgbouncer/userlist.txt';").Run(); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("failed to create userlist.txt: %w", err)
 	}
 	fmt.Println("Database server " + conf.DBUsername + " pgbouncer userlist.txt created")
 
@@ -183,7 +183,7 @@ func POSTGRESCONF() error {
 
 	f, err := os.Create(localFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create postgresql.conf: %w", err)
 	}
 	defer f.Close()
 	f.WriteString("listen_addresses = '*'" + "\n")
@@ -207,7 +207,7 @@ func POSTGRESCONF() error {
 
 	if err := exec.Command("incus", "file", "push", localFile, conf.DBHost+"/etc/postgresql/15/main/conf.d/postgresql.conf").Run(); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("failed to push postgresql.conf: %w", err)
 	}
 
 	os.Remove(localFile)
@@ -221,7 +221,7 @@ func PGHBACONF() error {
 
 	f, err := os.Create(localFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create pg_hba.conf: %w", err)
 	}
 	defer f.Close()
 	f.WriteString("local  all          postgres                      peer" + "\n")
@@ -235,7 +235,7 @@ func PGHBACONF() error {
 
 	if err := exec.Command("incus", "file", "push", localFile, conf.DBHost+"/etc/postgresql/15/main/pg_hba.conf").Run(); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("failed to push pg_hba.conf: %w", err)
 	}
 
 	os.Remove(localFile)
@@ -249,7 +249,7 @@ func PGBouncer() error {
 
 	f, err := os.Create(localFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create pgbouncer.ini: %w", err)
 	}
 	defer f.Close()
 	f.WriteString("[databases]" + "\n")
@@ -271,7 +271,7 @@ func PGBouncer() error {
 
 	if err := exec.Command("incus", "file", "push", localFile, conf.DBHost+"/etc/pgbouncer/pgbouncer.ini").Run(); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("failed to push pgbouncer.ini: %w", err)
 	}
 
 	os.Remove(localFile)
@@ -290,7 +290,7 @@ func DBLogs() error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		return err
+		return fmt.Errorf("error running journalctl: %w", err)
 	}
 	return nil
 }

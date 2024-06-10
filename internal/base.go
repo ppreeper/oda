@@ -37,7 +37,7 @@ func BaseCreatePrompt() error {
 		return fmt.Errorf("create base form error %w", err)
 	}
 	if err := BaseCreate(version); err != nil {
-		return err
+		return fmt.Errorf("create base %s error %w", version, err)
 	}
 	return nil
 }
@@ -141,22 +141,22 @@ func BaseUpdatePrompt() error {
 	vers := "odoo-" + strings.Replace(version, ".", "-", -1)
 	container, err := GetContainer(vers)
 	if err != nil {
-		return err
+		return fmt.Errorf("get container %s error %w", vers, err)
 	}
 	switch container.State {
 	case "STOPPED":
 		if err := IncusStart(vers); err != nil {
-			return err
+			return fmt.Errorf("start container %s error %w", vers, err)
 		}
 		if err := roleUpdate(vers); err != nil {
-			return err
+			return fmt.Errorf("update container %s error %w", vers, err)
 		}
 		if err := IncusStop(vers); err != nil {
-			return err
+			return fmt.Errorf("stop container %s error %w", vers, err)
 		}
 	case "RUNNING":
 		if err := roleUpdate(vers); err != nil {
-			return err
+			return fmt.Errorf("update container %s error %w", vers, err)
 		}
 	}
 	return nil
@@ -168,92 +168,92 @@ func BaseCreate(version string) error {
 	conf := GetConf()
 	vers := "odoo-" + strings.Replace(version, ".", "-", -1)
 	if err := IncusLaunch(vers, conf.OSImage); err != nil {
-		return err
+		return fmt.Errorf("launch container %s %w", vers, err)
 	}
 	fmt.Println("launching:", vers)
 
 	fmt.Println("roleUpdate:", vers)
 	if err := roleUpdate(vers); err != nil {
-		return err
+		return fmt.Errorf("roleUpdate %s failed %w", vers, err)
 	}
 
 	fmt.Println("roleBaseline:", vers)
 	if err := roleBaseline(vers); err != nil {
-		return err
+		return fmt.Errorf("roleBaseline %s failed %w", vers, err)
 	}
 
 	fmt.Println("roleOdooUser:", vers)
 	if err := roleOdooUser(vers); err != nil {
-		return err
+		return fmt.Errorf("roleOdooUser %s failed %w", vers, err)
 	}
 
 	fmt.Println("roleOdooDirs:", vers)
 	if err := roleOdooDirs(vers); err != nil {
-		return err
+		return fmt.Errorf("roleOdooDirs %s failed %w", vers, err)
 	}
 
 	fmt.Println("rolePostgresqlRepo:", vers)
 	if err := rolePostgresqlRepo(vers); err != nil {
-		return err
+		return fmt.Errorf("rolePostgresqlRepo %s failed %w", vers, err)
 	}
 
 	fmt.Println("rolePostgresqlClient:", vers)
 	if err := rolePostgresqlClient(vers); err != nil {
-		return err
+		return fmt.Errorf("rolePostgresqlClient %s failed %w", vers, err)
 	}
 
 	fmt.Println("roleWkhtmltopdf:", vers)
 	if err := roleWkhtmltopdf(vers); err != nil {
-		return err
+		return fmt.Errorf("roleWkhtmltopdf %s failed %w", vers, err)
 	}
 
 	fmt.Println("roleOdooBasePackages:", vers)
 	if err := roleOdooBasePackages(vers, version); err != nil {
-		return err
+		return fmt.Errorf("roleOdooBasePackages %s failed %w", vers, err)
 	}
 
 	fmt.Println("pip3Install:", vers)
 	if err := pip3Install(vers, "ebaysdk", "google-auth"); err != nil {
-		return err
+		return fmt.Errorf("pip3Install %s failed %w", vers, err)
 	}
 
 	fmt.Println("npmInstall:", vers)
 	if err := npmInstall(vers, "rtlcss"); err != nil {
-		return err
+		return fmt.Errorf("npmInstall %s failed %w", vers, err)
 	}
 
 	fmt.Println("roleGeoIP2DB:", vers)
 	if err := roleGeoIP2DB(vers); err != nil {
-		return err
+		return fmt.Errorf("roleGeoIP2DB %s failed %w", vers, err)
 	}
 
 	fmt.Println("papersize:", vers)
 	if err := IncusExec(vers, "/usr/sbin/paperconfig", "-p", "letter"); err != nil {
-		return err
+		return fmt.Errorf("papersize %s failed %w", vers, err)
 	}
 
 	fmt.Println("roleOdooNode:", vers)
 	if err := roleOdooNode(vers); err != nil {
-		return err
+		return fmt.Errorf("roleOdooNode %s failed %w", vers, err)
 	}
 
 	fmt.Println("roleOdooService:", vers)
 	if err := roleOdooService(vers); err != nil {
-		return err
+		return fmt.Errorf("roleOdooService %s failed %w", vers, err)
 	}
 
 	fmt.Println("roleCaddy")
 	if err := roleCaddy(vers); err != nil {
-		return err
+		return fmt.Errorf("roleCaddy %s failed %w", vers, err)
 	}
 	fmt.Println("roleCaddyService")
 	if err := roleCaddyService(vers); err != nil {
-		return err
+		return fmt.Errorf("roleCaddyService %s failed %w", vers, err)
 	}
 
 	fmt.Println("IncusStop:", vers)
 	if err := IncusStop(vers); err != nil {
-		return err
+		return fmt.Errorf("IncusStop %s failed %w", vers, err)
 	}
 
 	return nil
@@ -262,7 +262,7 @@ func BaseCreate(version string) error {
 func BaseDestroy(version string) error {
 	vers := "odoo-" + strings.Replace(version, ".", "-", -1)
 	if err := IncusDelete(vers); err != nil {
-		return err
+		return fmt.Errorf("destroy container %s failed %w", vers, err)
 	}
 	fmt.Println("destroying:", vers)
 	return nil
@@ -272,7 +272,7 @@ func aptInstall(name string, pkgs ...string) error {
 	pkg := []string{"apt-get", "install", "-y", "--no-install-recommends"}
 	pkg = append(pkg, pkgs...)
 	if err := IncusExec(name, pkg...); err != nil {
-		return err
+		return fmt.Errorf("apt-get install failed %w", err)
 	}
 	return nil
 }
@@ -281,7 +281,7 @@ func pip3Install(name string, pkgs ...string) error {
 	pkg := []string{"pip3", "install"}
 	pkg = append(pkg, pkgs...)
 	if err := IncusExec(name, pkg...); err != nil {
-		return err
+		return fmt.Errorf("pip3 install failed %w", err)
 	}
 	return nil
 }
@@ -290,7 +290,7 @@ func npmInstall(name string, pkgs ...string) error {
 	pkg := []string{"npm", "install", "-g"}
 	pkg = append(pkg, pkgs...)
 	if err := IncusExec(name, pkg...); err != nil {
-		return err
+		return fmt.Errorf("npm install failed %w", err)
 	}
 	return nil
 }
@@ -299,22 +299,22 @@ func roleUpdate(name string) error {
 	// fmt.Println("apt-get update -y")
 	if err := IncusExec(name, "apt-get", "update", "-y"); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("apt-get update failed %w", err)
 	}
 
 	// fmt.Println("apt-get dist-upgrade -y")
 	if err := IncusExec(name, "apt-get", "dist-upgrade", "-y"); err != nil {
-		return err
+		return fmt.Errorf("apt-get dist-upgrade failed %w", err)
 	}
 
 	// fmt.Println("apt-get autoremove -y")
 	if err := IncusExec(name, "apt-get", "autoremove", "-y"); err != nil {
-		return err
+		return fmt.Errorf("apt-get autoremove failed %w", err)
 	}
 
 	// fmt.Println("apt-get autoclean -y")
 	if err := IncusExec(name, "apt-get", "autoclean", "-y"); err != nil {
-		return err
+		return fmt.Errorf("apt-get autoclean failed %w", err)
 	}
 	fmt.Println("update complete")
 	return nil
@@ -327,26 +327,26 @@ func roleBaseline(name string) error {
 		"git", "lsb-release", "vim",
 		"openssh-server",
 	); err != nil {
-		return err
+		return fmt.Errorf("apt-get install baseline failed %w", err)
 	}
 
 	f, err := os.Create("/tmp/update.sh")
 	if err != nil {
-		return err
+		return fmt.Errorf("create update.sh failed %w", err)
 	}
 	f.WriteString("#!/bin/bash" + "\n")
 	f.WriteString("sudo bash -c \"apt update -y && apt full-upgrade -y && apt autoremove -y && apt autoclean -y\"" + "\n")
 	f.Close()
 
 	if err := exec.Command("incus", "file", "push", "/tmp/update.sh", name+"/usr/local/bin/update").Run(); err != nil {
-		return err
+		return fmt.Errorf("push update.sh failed %w", err)
 	}
 
 	os.Remove("/tmp/update.sh")
 
 	if err := IncusExec(name, "chmod", "+x", "/usr/local/bin/update"); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("chmod update failed %w", err)
 	}
 
 	return nil
@@ -355,33 +355,33 @@ func roleBaseline(name string) error {
 func roleOdooUser(name string) error {
 	if err := IncusExec(name, "groupadd", "-f", "-g", "1001", "odoo"); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("groupadd odoo failed %w", err)
 	}
 
 	if err := IncusExec(name, "useradd", "-ms", "/bin/bash", "-g", "1001", "-u", "1001", "odoo"); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("useradd odoo failed %w", err)
 	}
 
 	if err := IncusExec(name, "usermod", "-aG", "sudo", "odoo"); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("usermod odoo failed %w", err)
 	}
 
 	f, err := os.Create("/tmp/odoo.sudo")
 	if err != nil {
-		return err
+		return fmt.Errorf("create odoo.sudo failed %w", err)
 	}
 	f.WriteString("odoo ALL=(ALL) NOPASSWD:ALL")
 	f.Close()
 
 	if err := exec.Command("incus", "file", "push", "/tmp/odoo.sudo", name+"/etc/sudoers.d/odoo").Run(); err != nil {
-		return err
+		return fmt.Errorf("push odoo.sudo failed %w", err)
 	}
 
 	if err := IncusExec(name, "chown", "root:root", "/etc/sudoers.d/odoo"); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("chown odoo failed %w", err)
 	}
 
 	os.Remove("/tmp/odoo.sudo")
@@ -389,7 +389,7 @@ func roleOdooUser(name string) error {
 	// SSH key
 	if err := IncusExec(name, "mkdir", "/home/odoo/.ssh"); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("mkdir /home/odoo/.ssh failed %w", err)
 	}
 
 	conf := GetConf()
@@ -398,17 +398,17 @@ func roleOdooUser(name string) error {
 	fmt.Println("SSHKey:", sshKey)
 
 	if err := exec.Command("incus", "file", "push", sshKey, name+"/home/odoo/.ssh/authorized_keys").Run(); err != nil {
-		return err
+		return fmt.Errorf("push authorized_keys failed %w", err)
 	}
 
 	if err := IncusExec(name, "chmod", "0600", "/home/odoo/.ssh/authorized_keys"); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("chmod authorized_keys failed %w", err)
 	}
 
 	if err := IncusExec(name, "chown", "-R", "odoo:odoo", "/home/odoo/.ssh"); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("chown odoo failed %w", err)
 	}
 
 	return nil
@@ -420,13 +420,13 @@ func roleOdooDirs(name string) error {
 	for _, dir := range dirs {
 		if err := IncusExec(name, "mkdir", "-p", "/opt/odoo/"+dir); err != nil {
 			fmt.Println(err)
-			return err
+			return fmt.Errorf("mkdir %s failed %w", dir, err)
 		}
 	}
 
 	if err := IncusExec(name, "chown", "-R", "odoo:odoo", "/opt/odoo"); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("chown odoo failed %w", err)
 	}
 
 	return nil
@@ -434,8 +434,8 @@ func roleOdooDirs(name string) error {
 
 func roleOdooBasePackages(name, version string) error {
 	packages := []string{}
-	switch version {
-	case "15.0", "16.0", "17.0":
+	switch strings.Split(version, ".")[0] {
+	case "15", "16", "17":
 		packages = []string{
 			"bzip2", "ca-certificates", "curl", "dirmngr", "fonts-liberation",
 			"fonts-noto", "fonts-noto-cjk", "fonts-noto-mono", "geoip-database",
@@ -461,7 +461,7 @@ func roleOdooBasePackages(name, version string) error {
 		}
 	}
 	if err := aptInstall(name, packages...); err != nil {
-		return err
+		return fmt.Errorf("apt-get install odoo base packages failed %w", err)
 	}
 	return nil
 }
@@ -469,11 +469,11 @@ func roleOdooBasePackages(name, version string) error {
 func roleOdooNode(name string) error {
 	if err := IncusExec(name, "wget", "-qO", "/usr/local/bin/oda", "https://raw.githubusercontent.com/ppreeper/oda/main/oda.py"); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("wget oda failed %w", err)
 	}
 	if err := IncusExec(name, "chmod", "+x", "/usr/local/bin/oda"); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("chmod oda failed %w", err)
 	}
 	return nil
 }
@@ -481,7 +481,7 @@ func roleOdooNode(name string) error {
 func roleOdooService(name string) error {
 	f, err := os.Create("/tmp/odoo.service")
 	if err != nil {
-		return err
+		return fmt.Errorf("create odoo.service failed %w", err)
 	}
 	f.WriteString("[Unit]" + "\n")
 	f.WriteString("Description=Odoo" + "\n")
@@ -502,19 +502,19 @@ func roleOdooService(name string) error {
 	f.Close()
 
 	if err := exec.Command("incus", "file", "push", "/tmp/odoo.service", name+"/etc/systemd/system/odoo.service").Run(); err != nil {
-		return err
+		return fmt.Errorf("push odoo.service failed %w", err)
 	}
 
 	os.Remove("/tmp/odoo.service")
 
 	if err := IncusExec(name, "systemctl", "daemon-reload"); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("systemctl daemon-reload failed %w", err)
 	}
 
 	if err := IncusExec(name, "systemctl", "enable", "odoo.service"); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("systemctl enable odoo.service failed %w", err)
 	}
 
 	return nil
@@ -532,7 +532,7 @@ func roleGeoIP2DB(name string) error {
 		fmt.Println("downloading", geo[0])
 		if err := IncusExec(name, "wget", "-qO", "/usr/share/GeoIP/"+geo[0], geo[1]); err != nil {
 			fmt.Println(err)
-			return err
+			return fmt.Errorf("wget %s failed %w", geo[0], err)
 		}
 	}
 
@@ -542,23 +542,23 @@ func roleGeoIP2DB(name string) error {
 func rolePostgresqlRepo(name string) error {
 	if err := IncusExec(name, "wget", "-qO", "/etc/apt/trusted.gpg.d/pgdg.gpg.asc", "https://www.postgresql.org/media/keys/ACCC4CF8.asc"); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("wget pgdg.gpg.asc failed %w", err)
 	}
 	f, err := os.Create("/tmp/pgdg.list")
 	if err != nil {
-		return err
+		return fmt.Errorf("create pgdg.list failed %w", err)
 	}
 	f.WriteString("deb [arch=amd64] http://apt.postgresql.org/pub/repos/apt/ jammy-pgdg main")
 	f.Close()
 
 	if err := exec.Command("incus", "file", "push", "/tmp/pgdg.list", name+"/etc/apt/sources.list.d/pgdg.list").Run(); err != nil {
-		return err
+		return fmt.Errorf("push pgdg.list failed %w", err)
 	}
 
 	os.Remove("/tmp/pgdg.list")
 
 	if err := roleUpdate(name); err != nil {
-		return err
+		return fmt.Errorf("roleUpdate %s failed %w", name, err)
 	}
 
 	return nil
@@ -567,7 +567,7 @@ func rolePostgresqlRepo(name string) error {
 func rolePostgresqlClient(name string) error {
 	if err := IncusExec(name, "apt-get", "install", "-y", "--no-install-recommends", "postgresql-client-15"); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("apt-get install postgresql-client-15 failed %w", err)
 	}
 	return nil
 }
@@ -578,17 +578,17 @@ func roleWkhtmltopdf(name string) error {
 
 	if err := IncusExec(name, "wget", "-qO", "wkhtmltox.deb", url); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("wget wkhtmltox.deb failed %w", err)
 	}
 
 	if err := IncusExec(name, "apt-get", "install", "-y", "--no-install-recommends", "./wkhtmltox.deb"); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("apt-get install wkhtmltox.deb failed %w", err)
 	}
 
 	if err := IncusExec(name, "rm", "-rf", "wkhtmltox.deb"); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("rm wkhtmltox.deb failed %w", err)
 	}
 	return nil
 }
@@ -598,11 +598,11 @@ func roleCaddy(name string) error {
 
 	if err := IncusExec(name, "wget", "-qO", "/usr/local/bin/caddy", url); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("wget caddy failed %w", err)
 	}
 	if err := IncusExec(name, "chmod", "+x", "/usr/local/bin/caddy"); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("chmod caddy failed %w", err)
 	}
 
 	return nil
@@ -611,7 +611,7 @@ func roleCaddy(name string) error {
 func roleCaddyService(name string) error {
 	f, err := os.Create("/tmp/caddy.service")
 	if err != nil {
-		return err
+		return fmt.Errorf("create caddy.service failed %w", err)
 	}
 	f.WriteString("[Unit]" + "\n")
 	f.WriteString("Description=caddy server" + "\n")
@@ -633,24 +633,24 @@ func roleCaddyService(name string) error {
 	f.Close()
 
 	if err := exec.Command("incus", "file", "push", "/tmp/caddy.service", name+"/etc/systemd/system/caddy.service").Run(); err != nil {
-		return err
+		return fmt.Errorf("push caddy.service failed %w", err)
 	}
 
 	os.Remove("/tmp/caddy.service")
 
 	if err := IncusExec(name, "systemctl", "daemon-reload"); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("systemctl daemon-reload failed %w", err)
 	}
 
 	if err := IncusExec(name, "systemctl", "enable", "caddy.service"); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("systemctl enable caddy.service failed %w", err)
 	}
 
 	if err := IncusExec(name, "mkdir", "-p", "/etc/caddy"); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("mkdir /etc/caddy failed %w", err)
 	}
 
 	return nil

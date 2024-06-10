@@ -1,6 +1,8 @@
 module github.com/ppreeper/oda
 
-go 1.22.1
+go 1.22.2
+
+toolchain go1.22.3
 
 require (
 	github.com/charmbracelet/huh v0.3.0
@@ -9,6 +11,7 @@ require (
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/joho/godotenv v1.5.1
 	github.com/ppreeper/odoojrpc v1.3.5
+	github.com/ppreeper/passhash v0.0.0-20240425043245-10c159e69543
 	github.com/ppreeper/str v0.0.0-20240129034638-e87440b77a20
 	github.com/urfave/cli/v2 v2.27.1
 )
@@ -53,12 +56,12 @@ require (
 	github.com/skeema/knownhosts v1.2.2 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e // indirect
-	golang.org/x/crypto v0.21.0 // indirect
+	golang.org/x/crypto v0.22.0 // indirect
 	golang.org/x/mod v0.16.0 // indirect
 	golang.org/x/net v0.22.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
-	golang.org/x/sys v0.18.0 // indirect
-	golang.org/x/term v0.18.0 // indirect
+	golang.org/x/sys v0.19.0 // indirect
+	golang.org/x/term v0.19.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/tools v0.19.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect

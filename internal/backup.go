@@ -19,7 +19,7 @@ func AdminBackup() error {
 	uid, err := IncusGetUid(project, "odoo")
 	if err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("could not get odoo uid %w", err)
 	}
 
 	if err := exec.Command("incus", "exec", project, "--user", uid, "-t",
@@ -74,16 +74,16 @@ func AdminRestore(move bool) error {
 		return nil
 	}
 
-	fmt.Println("restore from backup file " + backupFile)
-	if err := restoreDBTar(backupFile, move); err != nil {
-		return err
-	}
-
 	if addonFile != "none" {
 		fmt.Println("restore from addon file " + addonFile)
 		if err := restoreAddonsTar(addonFile); err != nil {
-			return err
+			return fmt.Errorf("restore addons tar failed %w", err)
 		}
+	}
+
+	fmt.Println("restore from backup file " + backupFile)
+	if err := restoreDBTar(backupFile, move); err != nil {
+		return fmt.Errorf("restore db tar failed %w", err)
 	}
 
 	return nil
@@ -92,7 +92,7 @@ func AdminRestore(move bool) error {
 // restoreDBTar Restore Odoo DB from backup
 func restoreDBTar(backupFile string, moveDB bool) error {
 	conf := GetConf()
-	cwd, _ := GetProject()
+	cwd, project := GetProject()
 	dirs := GetDirs()
 	source := filepath.Join(dirs.Project, "backups", backupFile)
 
@@ -102,21 +102,27 @@ func restoreDBTar(backupFile string, moveDB bool) error {
 	dbpassword := GetOdooConf(cwd, "db_password")
 	dbtemplate := GetOdooConf(cwd, "db_template")
 
-	uid, err := IncusGetUid(dbhost, "postgres")
+	dbserver := dbhost
+	if dbhost == "localhost" {
+		dbserver = project
+	}
+	uid, err := IncusGetUid(dbserver, "postgres")
 	if err != nil {
-		fmt.Println(err)
-		return err
+		return fmt.Errorf("could not get postgres uid %w", err)
 	}
 
 	// drop target database
-	if err := exec.Command("incus", "exec", dbhost, "--user", uid, "-t", "--",
+	// fmt.Println("drop target database")
+	if err := exec.Command("incus", "exec", dbserver, "--user", uid, "-t", "--",
 		"dropdb", "--if-exists", "-U", "postgres", "-f", dbname,
 	).Run(); err != nil {
 		return fmt.Errorf("could not drop postgresql database %s error: %w", dbname, err)
 	}
+	// fmt.Println("dropped database " + dbname)
 
 	// create new postgresql database
-	if err := exec.Command("incus", "exec", dbhost, "--user", uid, "-t", "--",
+	// fmt.Println("create new postgresql database")
+	if err := exec.Command("incus", "exec", dbserver, "--user", uid, "-t", "--",
 		"createdb", "-U", "postgres",
 		"--encoding", "unicode",
 		"--lc-collate", "C",
@@ -125,11 +131,22 @@ func restoreDBTar(backupFile string, moveDB bool) error {
 	).Run(); err != nil {
 		return fmt.Errorf("could not create postgresql database %s error: %w", dbname, err)
 	}
+	// fmt.Println("created database " + dbname)
 
 	// restore postgresql database
+	// fmt.Println("restore postgresql database")
 	tarpgCmd := exec.Command("tar", "Oaxf", source, "./dump.sql")
-	pgCmd := exec.Command("psql", "-h", dbhost+"."+conf.Domain, "-U", dbuser, "--dbname", dbname, "-q")
+	dbhostTarget := dbhost + "." + conf.Domain
+	if dbhost == "localhost" {
+		dbcontainer, _ := GetContainer(project)
+		fmt.Println(dbcontainer)
+		dbhostTarget = dbcontainer.IP4
+	}
+	pgCmd := exec.Command("psql", "-h", dbhostTarget, "-U", dbuser, "--dbname", dbname, "-q")
 	pgCmd.Env = append(pgCmd.Env, "PGPASSWORD="+dbpassword)
+
+	// fmt.Println("tar", "Oaxf", source, "./dump.sql")
+	// fmt.Println("PGPASSWORD="+dbpassword, "psql", "-h", dbhostTarget, "-U", dbuser, "--dbname", dbname, "-q")
 
 	r, w := io.Pipe()
 	tarpgCmd.Stdout = w
@@ -140,8 +157,10 @@ func restoreDBTar(backupFile string, moveDB bool) error {
 	tarpgCmd.Wait()
 	w.Close()
 	pgCmd.Wait()
+	// fmt.Println("restored database " + dbname)
 
 	// restore data filestore
+	// fmt.Println("restore postgresql database")
 	data := filepath.Join(cwd, "data")
 	if err := RemoveContents(data); err != nil {
 		return fmt.Errorf("data files removal failed %w", err)
@@ -156,13 +175,16 @@ func restoreDBTar(backupFile string, moveDB bool) error {
 	if err := tarCmd.Run(); err != nil {
 		return fmt.Errorf("filestore restore failed %w", err)
 	}
+	// fmt.Println("restored filestore " + dbname)
 
 	// if not moveDB then reset DBUUID and remove MCode
 	if !moveDB {
-		if err := dbReset(dbhost+"."+conf.Domain, dbname, dbuser, dbpassword); err != nil {
-			return err
+		fmt.Println("neutralize the database")
+		if err := dbReset(dbhostTarget, dbname, dbuser, dbpassword); err != nil {
+			return fmt.Errorf("db reset failed %w", err)
 		}
 	}
+	// fmt.Println("reset database " + dbname)
 	return nil
 }
 

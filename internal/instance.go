@@ -7,11 +7,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/charmbracelet/huh"
 	"github.com/ppreeper/odoojrpc"
+	"github.com/ppreeper/passhash"
 )
 
 func InstanceCreate() error {
@@ -23,11 +25,11 @@ func InstanceCreate() error {
 	vers := "odoo-" + strings.Replace(version, ".", "-", -1)
 
 	if err := IncusCopy(vers, project); err != nil {
-		return err
+		return fmt.Errorf("error copying %w", err)
 	}
 	IncusStop(project)
 	if err := IncusIdmap(project); err != nil {
-		return err
+		return fmt.Errorf("error idmap %w", err)
 	}
 	return nil
 }
@@ -42,7 +44,7 @@ func InstanceDestroy() error {
 		return fmt.Errorf("destroying the " + project + " instance canceled")
 	}
 	if err := IncusDelete(project); err != nil {
-		return err
+		return fmt.Errorf("error deleting %w", err)
 	}
 	return nil
 }
@@ -57,11 +59,11 @@ func InstanceRebuild() error {
 		return fmt.Errorf("rebuild the " + project + " instance canceled")
 	}
 	if err := IncusDelete(project); err != nil {
-		return err
+		return fmt.Errorf("error deleting %w", err)
 	}
 	fmt.Println("Image " + project + " deleted")
 	if err := InstanceCreate(); err != nil {
-		return err
+		return fmt.Errorf("error creating %w", err)
 	}
 	return nil
 }
@@ -80,31 +82,31 @@ func InstanceStart() error {
 
 	if err := IncusStart(project); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("error starting %w", err)
 	}
 
 	if err := IncusHosts(project, GetConf().Domain); err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("error hosts %w", err)
 	}
 
 	if err := IncusCaddyfile(project, GetConf().Domain); err != nil {
 		fmt.Println("IncusCaddyfile", err)
-		return err
+		return fmt.Errorf("error caddyfile %w", err)
 	}
 
 	if err := InstanceMounts(project); err != nil {
 		fmt.Println("InstanceMounts", err)
-		return err
+		return fmt.Errorf("error mounts %w", err)
 	}
 	time.Sleep(2 * time.Second)
 	if err := SSHConfigGenerate(project); err != nil {
 		fmt.Println("SSHConfigGenerate", err)
-		return err
+		return fmt.Errorf("error sshconfig %w", err)
 	}
 	if err = exec.Command("sshconfig").Run(); err != nil {
 		fmt.Println("sshconfig", err)
-		return err
+		return fmt.Errorf("error sshconfig %w", err)
 	}
 
 	// ProxyGenerate()
@@ -131,10 +133,10 @@ func InstanceRestart() error {
 		return fmt.Errorf("not in a project directory")
 	}
 	if err := InstanceStop(); err != nil {
-		return err
+		return fmt.Errorf("error stopping %w", err)
 	}
 	if err := InstanceStart(); err != nil {
-		return err
+		return fmt.Errorf("error starting %w", err)
 	}
 	return nil
 }
@@ -177,7 +179,7 @@ func InstanceAppInstallUpgrade(install bool, modules ...string) error {
 	uid, err := IncusGetUid(project, "odoo")
 	if err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("could not get odoo uid %w", err)
 	}
 
 	incusCmd := exec.Command("incus", "exec", project, "--user", uid, "-t",
@@ -191,7 +193,7 @@ func InstanceAppInstallUpgrade(install bool, modules ...string) error {
 	incusCmd.Stdout = os.Stdout
 	incusCmd.Stderr = os.Stderr
 	if err := incusCmd.Run(); err != nil {
-		return err
+		return fmt.Errorf("error installing/upgrading modules %w", err)
 	}
 
 	return nil
@@ -207,7 +209,7 @@ func InstanceScaffold(module string) error {
 	uid, err := IncusGetUid(project, "odoo")
 	if err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("could not get odoo uid %w", err)
 	}
 
 	incusCmd := exec.Command("incus", "exec", project, "--user", uid, "-t",
@@ -219,7 +221,7 @@ func InstanceScaffold(module string) error {
 	incusCmd.Stdout = os.Stdout
 	incusCmd.Stderr = os.Stderr
 	if err := incusCmd.Run(); err != nil {
-		return err
+		return fmt.Errorf("error scaffolding module %w", err)
 	}
 	return nil
 }
@@ -278,7 +280,7 @@ func InstanceExec(username string) error {
 	uid, err := IncusGetUid(project, username)
 	if err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("could not get odoo uid %w", err)
 	}
 
 	incusCmd := exec.Command("incus", "exec", project, "--user", uid, "-t",
@@ -289,7 +291,7 @@ func InstanceExec(username string) error {
 	incusCmd.Stdout = os.Stdout
 	incusCmd.Stderr = os.Stderr
 	if err := incusCmd.Run(); err != nil {
-		return err
+		return fmt.Errorf("error executing %w", err)
 	}
 	return nil
 }
@@ -308,7 +310,7 @@ func InstanceLogs() error {
 	podCmd.Stdout = os.Stdout
 	podCmd.Stderr = os.Stderr
 	if err := podCmd.Run(); err != nil {
-		return err
+		return fmt.Errorf("error getting logs %w", err)
 	}
 	return nil
 }
@@ -327,7 +329,7 @@ func InstancePSQL() error {
 	uid, err := IncusGetUid(conf.DBHost, "postgres")
 	if err != nil {
 		fmt.Println(err)
-		return err
+		return fmt.Errorf("could not get postgres uid %w", err)
 	}
 
 	incusCmd := exec.Command("incus", "exec", conf.DBHost, "--user", uid,
@@ -338,7 +340,7 @@ func InstancePSQL() error {
 	incusCmd.Stdout = os.Stdout
 	incusCmd.Stderr = os.Stderr
 	if err := incusCmd.Run(); err != nil {
-		return err
+		return fmt.Errorf("error instance psql %w", err)
 	}
 	return nil
 }
@@ -366,7 +368,7 @@ func InstanceQuery(q *QueryDef) error {
 
 	err = oc.Login()
 	if err != nil {
-		return err
+		return fmt.Errorf("error logging in %w", err)
 	}
 
 	umdl := strings.Replace(q.Model, "_", ".", -1)
@@ -418,12 +420,18 @@ func AdminUsername() error {
 		return fmt.Errorf("usernames entered do not match")
 	}
 
+	// Open Database
 	conf := GetConf()
 	cwd, _ := GetProject()
 
 	container, err := GetContainer(conf.DBHost)
 	if err != nil {
 		return fmt.Errorf("error getting container %w", err)
+	}
+
+	dbport, err := strconv.Atoi(conf.DBPort)
+	if err != nil {
+		return fmt.Errorf("error getting port %w", err)
 	}
 
 	dbhost := container.IP4
@@ -433,7 +441,7 @@ func AdminUsername() error {
 
 	db, err := OpenDatabase(Database{
 		Hostname: dbhost,
-		Port:     5432,
+		Port:     dbport,
 		Username: dbuser,
 		Password: dbpassword,
 		Database: dbname,
@@ -448,6 +456,7 @@ func AdminUsername() error {
 		return nil
 	}()
 
+	// Write username to database
 	_, err = db.Exec("update res_users set login=$1 where id=2;",
 		strings.TrimSpace(string(user1)))
 	if err != nil {
@@ -488,27 +497,19 @@ func AdminPassword() error {
 	if !confirm {
 		return fmt.Errorf("password change cancelled")
 	}
-	cwd, project := GetProject()
 
-	uid, err := IncusGetUid(project, "odoo")
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-
-	passkey, err := exec.Command("incus", "exec", project, "--user", uid, "-t",
-		"--env", "HOME=/home/odoo", "--cwd", "/opt/odoo", "--",
-		"oda", "password", password1,
-	).Output()
-	if err != nil {
-		return fmt.Errorf("error generating password %w", err)
-	}
-
+	// Open Database
 	conf := GetConf()
+	cwd, _ := GetProject()
 
 	container, err := GetContainer(conf.DBHost)
 	if err != nil {
 		return fmt.Errorf("error getting container %w", err)
+	}
+
+	dbport, err := strconv.Atoi(conf.DBPort)
+	if err != nil {
+		return fmt.Errorf("error getting port %w", err)
 	}
 
 	dbhost := container.IP4
@@ -518,6 +519,7 @@ func AdminPassword() error {
 
 	db, err := OpenDatabase(Database{
 		Hostname: dbhost,
+		Port:     dbport,
 		Username: dbuser,
 		Password: dbpassword,
 		Database: dbname,
@@ -532,11 +534,17 @@ func AdminPassword() error {
 		return nil
 	}()
 
+	// Write password to database
+	passkey, err := passhash.MakePassword(password1, 0, "")
+	if err != nil {
+		fmt.Println("password hashing error", err)
+	}
 	_, err = db.Exec("update res_users set password=$1 where id=2;",
 		strings.TrimSpace(string(passkey)))
 	if err != nil {
 		return fmt.Errorf("error updating password %w", err)
 	}
+
 	fmt.Println("admin password changed")
 
 	return nil
@@ -578,7 +586,7 @@ func SSHConfigGenerate(project string) error {
 	// WRITE config
 	fo, err := os.Create(sshconfigCSV)
 	if err != nil {
-		return err
+		return fmt.Errorf("hosts file write failed %w", err)
 	}
 	defer fo.Close()
 	fo.WriteString(headerLine + "\n")

@@ -192,7 +192,7 @@ func writeOdooConf(file, projectName, edition string) error {
 	}
 	fo, err := os.Create(file)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot create odoo.conf file %w", err)
 	}
 	defer fo.Close()
 	fo.WriteString("[options]" + "\n")
@@ -363,7 +363,7 @@ func ProjectHostsFile() error {
 
 	for _, container := range containers {
 		for _, project := range projects {
-			if strings.Contains(container.Name, project) {
+			if container.Name == project {
 				projectLines = append(projectLines,
 					str.RightLen(container.IP4, " ", 16)+" "+container.Name+"."+conf.Domain)
 			}
@@ -390,7 +390,7 @@ func ProjectHostsFile() error {
 
 	fo, err := os.Create("/etc/hosts")
 	if err != nil {
-		return err
+		return fmt.Errorf("error write /etc/hosts file failed %w", err)
 	}
 	defer fo.Close()
 	for _, hostline := range newHostlines {

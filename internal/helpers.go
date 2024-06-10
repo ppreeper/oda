@@ -42,8 +42,6 @@ func GetDirs() Dirs {
 	return DirList
 }
 
-
-
 func GetOdooConf(cwd, key string) string {
 	// cwd, _ := GetProject()
 	odooconf := filepath.Join(cwd, "conf", "odoo.conf")
@@ -155,7 +153,7 @@ func CloneUrlDir(url, baseDir, cloneDir, username, token string) error {
 				Password: token,
 			},
 		})
-		return err
+		return fmt.Errorf("error copying repo directory %w", err)
 	}
 	return nil
 }
@@ -163,17 +161,17 @@ func CloneUrlDir(url, baseDir, cloneDir, username, token string) error {
 func RemoveContents(dir string) error {
 	d, err := os.Open(dir)
 	if err != nil {
-		return err
+		return fmt.Errorf("error opening directory %w", err)
 	}
 	defer d.Close()
 	names, err := d.Readdirnames(-1)
 	if err != nil {
-		return err
+		return fmt.Errorf("error reading directory names %w", err)
 	}
 	for _, name := range names {
 		err = os.RemoveAll(filepath.Join(dir, name))
 		if err != nil {
-			return err
+			return fmt.Errorf("error removing directory %w", err)
 		}
 	}
 	return nil

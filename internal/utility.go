@@ -13,7 +13,7 @@ func ConfigVSCode() error {
 	}
 	cwd, err := os.Getwd()
 	if err != nil {
-		return err
+		return fmt.Errorf("could not get current working directory: %w", err)
 	}
 	version := GetVersion()
 	dirList := GetDirs()
@@ -48,12 +48,12 @@ func ConfigVSCode() error {
 	}
 	launchJSON, err := json.MarshalIndent(launchCfg, "", "  ")
 	if err != nil {
-		return err
+		return fmt.Errorf("could not marshal launch configuration: %w", err)
 	}
 
 	launch, err := os.Create(filepath.Join(cwd, ".vscode", "launch.json"))
 	if err != nil {
-		return err
+		return fmt.Errorf("could not create launch.json: %w", err)
 	}
 	defer launch.Close()
 	launch.WriteString(string(launchJSON))
@@ -68,12 +68,12 @@ func ConfigVSCode() error {
 	}
 	settingsJSON, err := json.MarshalIndent(settingsCfg, "", "  ")
 	if err != nil {
-		return err
+		return fmt.Errorf("could not marshal settings configuration: %w", err)
 	}
 
 	settings, err := os.Create(filepath.Join(cwd, ".vscode", "settings.json"))
 	if err != nil {
-		return err
+		return fmt.Errorf("could not create settings.json: %w", err)
 	}
 	defer settings.Close()
 	settings.WriteString(string(settingsJSON))
@@ -86,7 +86,7 @@ func ConfigPyright() error {
 	}
 	cwd, err := os.Getwd()
 	if err != nil {
-		return err
+		return fmt.Errorf("could not get current working directory: %w", err)
 	}
 	version := GetVersion()
 	dirList := GetDirs()
@@ -108,12 +108,12 @@ func ConfigPyright() error {
 	}
 	jsonCfg, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
-		return err
+		return fmt.Errorf("could not marshal pyright configuration: %w", err)
 	}
 
 	pyrightconfig, err := os.Create(filepath.Join(cwd, "pyrightconfig.json"))
 	if err != nil {
-		return err
+		return fmt.Errorf("could not create pyrightconfig.json: %w", err)
 	}
 	defer pyrightconfig.Close()
 	pyrightconfig.WriteString(string(jsonCfg))

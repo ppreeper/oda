@@ -51,7 +51,7 @@ func ODAConfig(keys []string, confMap map[string]any) error {
 		os.MkdirAll(filepath.Join(CONFIG, "oda"), 0o755)
 		f, err := os.Create(ODOOCONF)
 		if err != nil {
-			return err
+			return fmt.Errorf("cannot create oda.conf: %w", err)
 		}
 		defer f.Close()
 		for _, field := range keys {
