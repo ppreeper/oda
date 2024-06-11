@@ -611,11 +611,7 @@ def _drop_database(configfile, db_name):
         cr.connection.autocommit = True
         _drop_conn(cr, db_name)
         try:
-            cr.execute(
-                psycopg2.sql.SQL("DROP DATABASE IF EXISTS {}").format(
-                    psycopg2.sql.Identifier(db_name)
-                )
-            )
+            cr.execute("""DROP DATABASE IF EXISTS %s""" % (db_name))
         except Exception as e:
             raise OSError(f"Couldn't drop database {db_name}: {e}") from e
 
