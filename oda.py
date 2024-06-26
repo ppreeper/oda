@@ -690,6 +690,52 @@ def odoo_service(action):
     )
 
 
+def odoo_hosts(domain):
+    """Update hosts file"""
+    if not domain:
+        print("no domain provided")
+        return
+    hname = os.uname().nodename
+    domain = domain[0]
+    with open("/etc/hosts", "w") as f:
+        f.write(f"127.0.1.1	{hname} {hname}.{domain}\n")
+        f.write("127.0.0.1	localhost\n")
+        f.write("::1		localhost ip6-localhost ip6-loopback\n")
+        f.write("ff02::1		ip6-allnodes\n")
+        f.write("ff02::2		ip6-allrouters\n")
+    return
+
+
+def odoo_caddy(domain):
+    """Update Caddyfile"""
+    if not domain:
+        print("no domain provided")
+        return
+    hname = os.uname().nodename
+    domain = domain[0]
+    with open("/etc/caddy/Caddyfile", "w") as f:
+        f.write(f"{hname}.{domain} " + "{\n")
+        f.write("tls internal\n")
+        f.write(f"reverse_proxy http://{hname}:8069\n")
+        f.write(f"reverse_proxy /websocket http://{hname}:8072\n")
+        f.write(f"reverse_proxy /longpolling/* http://{hname}:8072\n")
+        f.write("encode gzip zstd\n")
+        f.write("file_server\n")
+        f.write("log\n")
+        f.write("}\n")
+    cmd = [
+        "sudo",
+        "caddy",
+        "fmt",
+        "--overwrite",
+        "/etc/caddy/Caddyfile",
+    ]
+    subprocess.run(
+        cmd,
+        check=True,
+    )
+
+
 def odoo_logs():
     """Tail Odoo Logs"""
     print("Odoo Logs")
@@ -790,6 +836,14 @@ def main():
     subparsers.add_parser("stop", help="top odoo server")
     subparsers.add_parser("restart", help="restart odoo server")
 
+    # hosts          update hosts
+    hosts_parser = subparsers.add_parser("hosts", help="update hosts file")
+    hosts_parser.add_argument("domain", help="domain", nargs="*")
+
+    # caddy          update hosts
+    caddy_parser = subparsers.add_parser("caddy", help="update caddy file")
+    caddy_parser.add_argument("domain", help="domain", nargs="*")
+
     # logs           tail the logs
     subparsers.add_parser("logs", help="tail the logs")
 
@@ -842,6 +896,10 @@ def main():
         odoo_service("stop")
         time.sleep(2)
         odoo_service("start")
+    elif args.command == "hosts":
+        odoo_hosts(args.domain)
+    elif args.command == "caddy":
+        odoo_caddy(args.domain)
     elif args.command == "logs":
         odoo_logs()
     return
