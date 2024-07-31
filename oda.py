@@ -116,7 +116,7 @@ def _dump_db_tar(configfile, bkp_prefix, bkp_dest="/opt/odoo/backups"):
 
 # ==============================================================================
 # Restore
-def odoo_restore(configfile, backup_files, copy=False):
+def odoo_restore(configfile, backup_files, move=False):
     """Restore from backup file"""
     if not are_you_sure("restore from backup"):
         return
@@ -128,7 +128,7 @@ def odoo_restore(configfile, backup_files, copy=False):
         bfile = os.path.splitext(fname)[0].split("__")
         if len(bfile) == 2:
             print(f"restore from dump file {dump_file}")
-            _restore_db_tar(configfile, dump_file, copy=copy)
+            _restore_db_tar(configfile, dump_file, move=move)
         elif len(bfile) == 3 and bfile[-1] == "addons":
             print(f"restore addons file {dump_file}")
             _restore_addons_tar(dump_file)
@@ -156,7 +156,7 @@ def _restore_addons_tar(dump_file, bkp_dir="/opt/odoo/backups"):
         raise OSError(f"could not restore addons {dest}") from e
 
 
-def _restore_db_tar(configfile, dump_file, bkp_dir="/opt/odoo/backups", copy=True):
+def _restore_db_tar(configfile, dump_file, move=False, bkp_dir="/opt/odoo/backups"):
     """Restore Odoo DB from dump file"""
     db_host = get_odoo_conf(configfile, "db_host")
     db_port = get_odoo_conf(configfile, "db_port")
@@ -237,222 +237,222 @@ def _restore_db_tar(configfile, dump_file, bkp_dir="/opt/odoo/backups", copy=Tru
 
     #########
     # odoo database neutralize if not copy
-    _neutralize_db(configfile, copy)
+    if not move:
+        _neutralize_db(configfile)
     return
 
 
-def _neutralize_db(configfile, copy=False):
-    if not copy:
-        db = db_connect(configfile)
-        with closing(db.cursor()) as cr:
-            try:
-                # -- remove the enterprise code, report.url and web.base.url
-                cr.execute(
-                    "delete from ir_config_parameter where key in ('database.enterprise_code', 'report.url', 'web.base.url.freeze')"
-                )
-            except:
-                pass
+def _neutralize_db(configfile):
+    db = db_connect(configfile)
+    with closing(db.cursor()) as cr:
+        try:
+            # -- remove the enterprise code, report.url and web.base.url
+            cr.execute(
+                "delete from ir_config_parameter where key in ('database.enterprise_code', 'report.url', 'web.base.url.freeze')"
+            )
+        except:
+            pass
 
-            try:
-                # -- deactivate crons
-                cr.execute("""UPDATE ir_cron SET active = 'f';""")
-                cr.execute(
-                    """UPDATE ir_cron SET active = 't' WHERE id IN (SELECT res_id FROM ir_model_data WHERE name = 'autovacuum_job' AND module = 'base');"""
-                )
-            except:
-                pass
+        try:
+            # -- deactivate crons
+            cr.execute("""UPDATE ir_cron SET active = 'f';""")
+            cr.execute(
+                """UPDATE ir_cron SET active = 't' WHERE id IN (SELECT res_id FROM ir_model_data WHERE name = 'autovacuum_job' AND module = 'base');"""
+            )
+        except:
+            pass
 
-            try:
-                # -- remove platform ir_logging
-                cr.execute("""DELETE FROM ir_logging WHERE func = 'odoo.sh';""")
-            except:
-                pass
+        try:
+            # -- remove platform ir_logging
+            cr.execute("""DELETE FROM ir_logging WHERE func = 'odoo.sh';""")
+        except:
+            pass
 
-            try:
-                # -- reset db uuid
-                cr.execute(
-                    """update ir_config_parameter set value=(select gen_random_uuid())
-                    where key = 'database.uuid'"""
-                )
-            except:
-                pass
+        try:
+            # -- reset db uuid
+            cr.execute(
+                """update ir_config_parameter set value=(select gen_random_uuid())
+                where key = 'database.uuid'"""
+            )
+        except:
+            pass
 
-            try:
-                cr.execute(
-                    """insert into ir_config_parameter
-                    (key,value,create_uid,create_date,write_uid,write_date)
-                    values
-                    ('database.expiration_date',(current_date+'3 months'::interval)::timestamp,1,
-                    current_timestamp,1,current_timestamp)
-                    on conflict (key)
-                    do UPDATE set value = (current_date+'3 months'::interval)::timestamp;"""
-                )
-            except:
-                pass
+        try:
+            cr.execute(
+                """insert into ir_config_parameter
+                (key,value,create_uid,create_date,write_uid,write_date)
+                values
+                ('database.expiration_date',(current_date+'3 months'::interval)::timestamp,1,
+                current_timestamp,1,current_timestamp)
+                on conflict (key)
+                do UPDATE set value = (current_date+'3 months'::interval)::timestamp;"""
+            )
+        except:
+            pass
 
-            try:
-                # -- disable prod environment in all delivery carriers
-                cr.execute("""UPDATE delivery_carrier SET prod_environment = false;""")
-            except:
-                pass
+        try:
+            # -- disable prod environment in all delivery carriers
+            cr.execute("""UPDATE delivery_carrier SET prod_environment = false;""")
+        except:
+            pass
 
-            try:
-                # -- disable delivery carriers from external providers
-                cr.execute(
-                    """UPDATE delivery_carrier SET active = false WHERE delivery_type NOT IN ('fixed', 'base_on_rule');"""
-                )
-            except:
-                pass
+        try:
+            # -- disable delivery carriers from external providers
+            cr.execute(
+                """UPDATE delivery_carrier SET active = false WHERE delivery_type NOT IN ('fixed', 'base_on_rule');"""
+            )
+        except:
+            pass
 
-            try:
-                cr.execute(
-                    """UPDATE iap_account SET account_token = REGEXP_REPLACE(account_token, '(\+.*)?$', '+disabled');"""
-                )
-            except:
-                pass
+        try:
+            cr.execute(
+                """UPDATE iap_account SET account_token = REGEXP_REPLACE(account_token, '(\+.*)?$', '+disabled');"""
+            )
+        except:
+            pass
 
-            try:
-                # -- deactivate mail template
-                cr.execute("""UPDATE mail_template SET mail_server_id = NULL;""")
-            except:
-                pass
+        try:
+            # -- deactivate mail template
+            cr.execute("""UPDATE mail_template SET mail_server_id = NULL;""")
+        except:
+            pass
 
-            try:
-                # -- deactivate fetchmail server
-                cr.execute("""UPDATE fetchmail_server SET active = false;""")
-            except:
-                pass
+        try:
+            # -- deactivate fetchmail server
+            cr.execute("""UPDATE fetchmail_server SET active = false;""")
+        except:
+            pass
 
-            try:
-                # -- disable generic payment provider
-                cr.execute(
-                    """UPDATE payment_provider SET state = 'disabled' WHERE state NOT IN ('test', 'disabled');"""
-                )
-            except:
-                pass
+        try:
+            # -- disable generic payment provider
+            cr.execute(
+                """UPDATE payment_provider SET state = 'disabled' WHERE state NOT IN ('test', 'disabled');"""
+            )
+        except:
+            pass
 
-            try:
-                # -- activate neutralization watermarks
-                cr.execute(
-                    """UPDATE ir_ui_view SET active = true WHERE key = 'web.neutralize_banner';"""
-                )
-            except:
-                pass
+        try:
+            # -- activate neutralization watermarks
+            cr.execute(
+                """UPDATE ir_ui_view SET active = true WHERE key = 'web.neutralize_banner';"""
+            )
+        except:
+            pass
 
-            try:
-                # -- delete domains on websites
-                cr.execute("""UPDATE website SET domain = NULL;""")
-            except:
-                pass
+        try:
+            # -- delete domains on websites
+            cr.execute("""UPDATE website SET domain = NULL;""")
+        except:
+            pass
 
-            try:
-                # -- activate neutralization watermarks
-                cr.execute(
-                    """UPDATE ir_ui_view SET active = true WHERE key = 'website.neutralize_ribbon';"""
-                )
-            except:
-                pass
+        try:
+            # -- activate neutralization watermarks
+            cr.execute(
+                """UPDATE ir_ui_view SET active = true WHERE key = 'website.neutralize_ribbon';"""
+            )
+        except:
+            pass
 
-            try:
-                # -- disable cdn
-                cr.execute("""UPDATE website SET cdn_activated = false;""")
-            except:
-                pass
+        try:
+            # -- disable cdn
+            cr.execute("""UPDATE website SET cdn_activated = false;""")
+        except:
+            pass
 
-            try:
-                # -- disable bank synchronisation links
-                cr.execute(
-                    """UPDATE account_online_link SET provider_data = '', client_id = 'duplicate';"""
-                )
-            except:
-                pass
+        try:
+            # -- disable bank synchronisation links
+            cr.execute(
+                """UPDATE account_online_link SET provider_data = '', client_id = 'duplicate';"""
+            )
+        except:
+            pass
 
-            try:
-                cr.execute(
-                    """DELETE FROM ir_config_parameter WHERE key IN ('odoo_ocn.project_id', 'ocn.uuid');"""
-                )
-            except:
-                pass
+        try:
+            cr.execute(
+                """DELETE FROM ir_config_parameter WHERE key IN ('odoo_ocn.project_id', 'ocn.uuid');"""
+            )
+        except:
+            pass
 
-            try:
-                # -- delete Facebook Access Tokens
-                cr.execute(
-                    """UPDATE social_account SET facebook_account_id = NULL, facebook_access_token = NULL;"""
-                )
-            except:
-                pass
+        try:
+            # -- delete Facebook Access Tokens
+            cr.execute(
+                """UPDATE social_account SET facebook_account_id = NULL, facebook_access_token = NULL;"""
+            )
+        except:
+            pass
 
-            try:
-                # -- delete Instagram Access Tokens
-                cr.execute(
-                    """UPDATE social_account SET instagram_account_id = NULL, instagram_facebook_account_id = NULL, instagram_access_token = NULL;"""
-                )
-            except:
-                pass
+        try:
+            # -- delete Instagram Access Tokens
+            cr.execute(
+                """UPDATE social_account SET instagram_account_id = NULL, instagram_facebook_account_id = NULL, instagram_access_token = NULL;"""
+            )
+        except:
+            pass
 
-            try:
-                # -- delete LinkedIn Access Tokens
-                cr.execute(
-                    """UPDATE social_account SET linkedin_account_urn = NULL, linkedin_access_token = NULL;"""
-                )
-            except:
-                pass
+        try:
+            # -- delete LinkedIn Access Tokens
+            cr.execute(
+                """UPDATE social_account SET linkedin_account_urn = NULL, linkedin_access_token = NULL;"""
+            )
+        except:
+            pass
 
-            try:
-                # -- Unset Firebase configuration within website
-                cr.execute(
-                    """UPDATE website SET firebase_enable_push_notifications = false, firebase_use_own_account = false, firebase_project_id = NULL, firebase_web_api_key = NULL, firebase_push_certificate_key = NULL, firebase_sender_id = NULL;"""
-                )
-            except:
-                pass
+        try:
+            # -- Unset Firebase configuration within website
+            cr.execute(
+                """UPDATE website SET firebase_enable_push_notifications = false, firebase_use_own_account = false, firebase_project_id = NULL, firebase_web_api_key = NULL, firebase_push_certificate_key = NULL, firebase_sender_id = NULL;"""
+            )
+        except:
+            pass
 
-            try:
-                # -- delete Twitter Access Tokens
-                cr.execute(
-                    """UPDATE social_account SET twitter_user_id = NULL, twitter_oauth_token = NULL, twitter_oauth_token_secret = NULL;"""
-                )
-            except:
-                pass
+        try:
+            # -- delete Twitter Access Tokens
+            cr.execute(
+                """UPDATE social_account SET twitter_user_id = NULL, twitter_oauth_token = NULL, twitter_oauth_token_secret = NULL;"""
+            )
+        except:
+            pass
 
-            try:
-                # -- delete Youtube Access Tokens
-                cr.execute(
-                    """UPDATE social_account SET youtube_channel_id = NULL, youtube_access_token = NULL, youtube_refresh_token = NULL, youtube_token_expiration_date = NULL, youtube_upload_playlist_id = NULL;"""
-                )
-            except:
-                pass
+        try:
+            # -- delete Youtube Access Tokens
+            cr.execute(
+                """UPDATE social_account SET youtube_channel_id = NULL, youtube_access_token = NULL, youtube_refresh_token = NULL, youtube_token_expiration_date = NULL, youtube_upload_playlist_id = NULL;"""
+            )
+        except:
+            pass
 
-            try:
-                # -- Remove Map Box Token as it's only valid per DB url
-                cr.execute(
-                    """DELETE FROM ir_config_parameter WHERE key = 'web_map.token_map_box';"""
-                )
-            except:
-                pass
+        try:
+            # -- Remove Map Box Token as it's only valid per DB url
+            cr.execute(
+                """DELETE FROM ir_config_parameter WHERE key = 'web_map.token_map_box';"""
+            )
+        except:
+            pass
 
-            try:
-                cr.execute(
-                    """UPDATE ir_cron SET active = 't' WHERE id IN (SELECT res_id FROM ir_model_data WHERE name = 'ir_cron_module_update_notification' AND module = 'mail');"""
-                )
-            except:
-                pass
+        try:
+            cr.execute(
+                """UPDATE ir_cron SET active = 't' WHERE id IN (SELECT res_id FROM ir_model_data WHERE name = 'ir_cron_module_update_notification' AND module = 'mail');"""
+            )
+        except:
+            pass
 
-            try:
-                # -- deactivate mail servers but activate default "localhost" mail server
-                cr.execute(
-                    """DO $$
-                    BEGIN
-                        UPDATE ir_mail_server SET active = 'f';
-                        IF EXISTS (SELECT 1 FROM ir_module_module WHERE name='mail' and state IN ('installed', 'to upgrade', 'to remove')) THEN
-                            UPDATE mail_template SET mail_server_id = NULL;
-                        END IF;
-                    EXCEPTION
-                        WHEN undefined_table OR undefined_column THEN
-                    END;
-                $$;"""
-                )
-            except:
-                pass
+        try:
+            # -- deactivate mail servers but activate default "localhost" mail server
+            cr.execute(
+                """DO $$
+                BEGIN
+                    UPDATE ir_mail_server SET active = 'f';
+                    IF EXISTS (SELECT 1 FROM ir_module_module WHERE name='mail' and state IN ('installed', 'to upgrade', 'to remove')) THEN
+                        UPDATE mail_template SET mail_server_id = NULL;
+                    END IF;
+                EXCEPTION
+                    WHEN undefined_table OR undefined_column THEN
+                END;
+            $$;"""
+            )
+        except:
+            pass
     return
 
 
@@ -812,8 +812,10 @@ def main():
     restore_parser = subparsers.add_parser(
         "restore", help="Restore database and filestore or addons"
     )
-    restore_parser.add_argument("--copy", help="copy database", action="store_true")
     restore_parser.add_argument("file", help="Path to backup file", nargs="+")
+    restore_parser.add_argument(
+        "--move", help="move database", action="store_true", default=False
+    )
 
     # trim           Trim database backups
     subparsers.add_parser("trim", help="Trim database backups")
@@ -874,7 +876,7 @@ def main():
     if args.command == "backup":
         odoo_backup(args.config)
     elif args.command == "restore" and args.file:
-        odoo_restore(args.config, args.file, args.copy)
+        odoo_restore(args.config, args.file, args.move)
     elif args.command == "trim":
         trim(args.config, args.d, int(args.n))
     elif args.command == "trimall":
