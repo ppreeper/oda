@@ -40,7 +40,7 @@ jobs:
       - name: Package .deb file
         run: |
           fpm -s dir -t deb -n odaserver -v ${{ github.ref_name || 'manual-build' }} \
-          --description "Oda Server Application" \
+          --description "ODA Server Application" \
           --url "https://github.com/${{ github.repository }}" \
           --license "GPL" \
           --maintainer "ppreeper@gmail.com" \
