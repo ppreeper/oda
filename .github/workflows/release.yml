@@ -1,5 +1,8 @@
 name: Build and Release DEB Package
 
+permissions:
+  contents: write
+
 on:
   push:
     tags:
