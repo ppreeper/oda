@@ -24,8 +24,7 @@ jobs:
       # Step 3: Build the Go binary
       - name: Build binary
         run: |
-          cd ./cmd/odaserver
-          CGO_ENABLED=0 GOOS=linux go build -a -o oda .
+          CGO_ENABLED=0 GOOS=linux go build -a -o oda ./cmd/odaserver/.
 
       # Step 4: Install FPM to package as .deb
       - name: Install FPM
