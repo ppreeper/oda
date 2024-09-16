@@ -16,13 +16,13 @@ jobs:
     steps:
       # Step 1: Checkout the code
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Step 2: Set up Go
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
-          go-version: "1.22" # Change to your Go version
+          go-version: "1.23" # Change to your Go version
 
       # Step 3: Build the Go binary
       - name: Build binary
@@ -42,13 +42,13 @@ jobs:
           fpm -s dir -t deb -n odaserver -v ${{ github.ref_name || 'manual-build' }} \
           --description "Oda Server Application" \
           --url "https://github.com/${{ github.repository }}" \
-          --license "MIT" \
-          --maintainer "your-email@example.com" \
+          --license "GPL" \
+          --maintainer "ppreeper@gmail.com" \
           --prefix /usr/local/bin oda
 
       # Step 6: Upload the .deb as an artifact
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: odaserver-deb
           path: odaserver_*.deb
@@ -59,11 +59,11 @@ jobs:
     steps:
       # Step 1: Checkout code
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Step 2: Download built .deb artifact
       - name: Download artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: odaserver-deb
           path: ./dist
