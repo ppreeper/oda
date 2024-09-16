@@ -33,8 +33,20 @@ func AdminBackup() error {
 }
 
 // AdminRestore Restore from backup file
-func AdminRestore(move bool) error {
-	backups, addons := GetOdooBackups()
+func AdminRestore(any, move bool) error {
+	if !IsProject() {
+		return fmt.Errorf("not in a project directory")
+	}
+	_, project := GetProject()
+
+	var backups []string
+	var addons []string
+
+	if any {
+		backups, addons = GetOdooBackups("")
+	} else {
+		backups, addons = GetOdooBackups(project)
+	}
 
 	backupOptions := []huh.Option[string]{}
 	for _, backup := range backups {
@@ -138,9 +150,9 @@ func restoreDBTar(backupFile string, moveDB bool) error {
 	tarpgCmd := exec.Command("tar", "Oaxf", source, "./dump.sql")
 	dbhostTarget := dbhost + "." + conf.Domain
 	if dbhost == "localhost" {
-		dbcontainer, _ := GetContainer(project)
-		fmt.Println(dbcontainer)
-		dbhostTarget = dbcontainer.IP4
+		dbInstance, _ := GetInstance(project)
+		fmt.Println(dbInstance)
+		dbhostTarget = dbInstance.IP4
 	}
 	pgCmd := exec.Command("psql", "-h", dbhostTarget, "-U", dbuser, "--dbname", dbname, "-q")
 	pgCmd.Env = append(pgCmd.Env, "PGPASSWORD="+dbpassword)

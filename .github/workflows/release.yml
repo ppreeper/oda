@@ -1,0 +1,77 @@
+name: Build and Release DEB Package
+
+on:
+  push:
+    tags:
+      - "v*" # Trigger on version tag pushes like v1.0.0
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Go
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.22" # Change to your Go version
+
+      # Step 3: Build the Go binary
+      - name: Build binary
+        run: |
+          CGO_ENABLED=0 GOOS=linux go build -a -o oda ./cmd/odaserver/.
+
+      # Step 4: Install FPM to package as .deb
+      - name: Install FPM
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ruby ruby-dev build-essential
+          sudo gem install --no-document fpm
+
+      # Step 5: Package the binary into a .deb file
+      - name: Package .deb file
+        run: |
+          fpm -s dir -t deb -n odaserver -v ${{ github.ref_name }} \
+          --description "ODA Server" \
+          --url "https://github.com/${{ github.repository }}" \
+          --license "GPL3" \
+          --maintainer "ppreeper@gmail.com" \
+          --prefix /usr/local/bin oda
+
+      # Step 6: Upload the .deb as an artifact
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: odaserver-deb
+          path: odaserver_*.deb
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Download built .deb artifact
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: odaserver-deb
+          path: ./dist
+
+      # Step 3: Create a release and upload .deb artifact
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: ./dist/odaserver_*.deb
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+          name: "Release ${{ github.ref_name }}"
+          body: "Release notes for ${{ github.ref_name }}"
+          draft: false
+          prerelease: false

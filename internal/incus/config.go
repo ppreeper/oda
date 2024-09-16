@@ -10,17 +10,20 @@ import (
 )
 
 type Conf struct {
-	Repo       string `json:"REPO,omitempty"`
-	Project    string `json:"PROJECT,omitempty"`
-	Domain     string `json:"DOMAIN,omitempty"`
-	OSImage    string `json:"OS_IMAGE,omitempty"`
-	DBImage    string `json:"DB_IMAGE,omitempty"`
-	DBHost     string `json:"DB_HOST,omitempty"`
-	DBPort     string `json:"DB_PORT,omitempty"`
-	DBPass     string `json:"DB_PASS,omitempty"`
-	DBUsername string `json:"DB_USERNAME,omitempty"`
-	DBUserpass string `json:"DB_USERPASS,omitempty"`
-	SSHKey     string `json:"SSH_KEY,omitempty"`
+	InstanceType string `json:"INSTANCE_TYPE,omitempty"`
+	Repo         string `json:"REPO,omitempty"`
+	Project      string `json:"PROJECT,omitempty"`
+	Domain       string `json:"DOMAIN,omitempty"`
+	OSImage      string `json:"OS_IMAGE,omitempty"`
+	DBImage      string `json:"DB_IMAGE,omitempty"`
+	DBVersion    string `json:"DB_VERSION,omitempty"`
+	DBHost       string `json:"DB_HOST,omitempty"`
+	DBPort       string `json:"DB_PORT,omitempty"`
+	DBPass       string `json:"DB_PASS,omitempty"`
+	DBUsername   string `json:"DB_USERNAME,omitempty"`
+	DBUserpass   string `json:"DB_USERPASS,omitempty"`
+	SSHKey       string `json:"SSH_KEY,omitempty"`
+	DEBUG        string `json:"DEBUG,omitempty"`
 }
 
 func (o *Conf) WithRepo(repodir string) *Conf {
@@ -75,15 +78,18 @@ func (o *Conf) WithDBUserpass(dbuserpass string) *Conf {
 
 func NewConf() *Conf {
 	return &Conf{
-		Domain:     "local",
-		OSImage:    "ubuntu/22.04",
-		DBImage:    "debian/12",
-		DBHost:     "db",
-		DBPort:     "6432",
-		DBPass:     "postgres",
-		DBUsername: "odoodev",
-		DBUserpass: "odooodoo",
-		SSHKey:     "id_rsa",
+		InstanceType: "CONTAINER",
+		Domain:       "local",
+		OSImage:      "ubuntu/22.04",
+		DBImage:      "alpine/3.20",
+		DBVersion:    "16",
+		DBHost:       "db",
+		DBPort:       "6432",
+		DBPass:       "postgres",
+		DBUsername:   "odoodev",
+		DBUserpass:   "odooodoo",
+		SSHKey:       "id_rsa",
+		DEBUG:        "true",
 	}
 }
 
@@ -107,10 +113,12 @@ func GetConf() Conf {
 		fmt.Println("Error loading .env file")
 		return ConfList
 	}
+	ConfList.InstanceType, _ = os.LookupEnv("INSTANCE_TYPE")
 	ConfList.Repo, _ = os.LookupEnv("REPO")
 	ConfList.Project, _ = os.LookupEnv("PROJECT")
 	ConfList.Domain, _ = os.LookupEnv("DOMAIN")
 	ConfList.OSImage, _ = os.LookupEnv("OS_IMAGE")
+	ConfList.DBVersion, _ = os.LookupEnv("DB_VERSION")
 	ConfList.DBImage, _ = os.LookupEnv("DB_IMAGE")
 	ConfList.DBHost, _ = os.LookupEnv("DB_HOST")
 	ConfList.DBPort, _ = os.LookupEnv("DB_PORT")
@@ -118,5 +126,6 @@ func GetConf() Conf {
 	ConfList.DBUsername, _ = os.LookupEnv("DB_USERNAME")
 	ConfList.DBUserpass, _ = os.LookupEnv("DB_USERPASS")
 	ConfList.SSHKey, _ = os.LookupEnv("SSH_KEY")
+	ConfList.DEBUG, _ = os.LookupEnv("DEBUG")
 	return ConfList
 }

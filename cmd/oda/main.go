@@ -7,7 +7,7 @@ import (
 	"runtime/debug"
 	"time"
 
-	oda "github.com/ppreeper/oda/internal"
+	oda "github.com/ppreeper/oda/internal/incus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -438,6 +438,11 @@ func main() {
 				Usage: "Restore database and filestore or addons",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
+						Name:  "any",
+						Value: false,
+						Usage: "restore from any backup",
+					},
+					&cli.BoolFlag{
 						Name:  "move",
 						Value: false,
 						Usage: "move server",
@@ -447,8 +452,9 @@ func main() {
 					if !oda.IsProject() {
 						return fmt.Errorf("not in a project directory")
 					}
+					any := cCtx.Bool("any")
 					move := cCtx.Bool("move")
-					return oda.AdminRestore(move)
+					return oda.AdminRestore(any, move)
 				},
 			},
 			{

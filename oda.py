@@ -118,6 +118,7 @@ def _dump_db_tar(configfile, bkp_prefix, bkp_dest="/opt/odoo/backups"):
 # Restore
 def odoo_restore(configfile, backup_files, move=False):
     """Restore from backup file"""
+    print(configfile, backup_files, move)
     if not are_you_sure("restore from backup"):
         return
     # stop
@@ -157,6 +158,7 @@ def _restore_addons_tar(dump_file, bkp_dir="/opt/odoo/backups"):
 
 
 def _restore_db_tar(configfile, dump_file, move=False, bkp_dir="/opt/odoo/backups"):
+    print(configfile, dump_file, move, bkp_dir)
     """Restore Odoo DB from dump file"""
     db_host = get_odoo_conf(configfile, "db_host")
     db_port = get_odoo_conf(configfile, "db_port")
@@ -238,6 +240,7 @@ def _restore_db_tar(configfile, dump_file, move=False, bkp_dir="/opt/odoo/backup
     #########
     # odoo database neutralize if not copy
     if not move:
+        print("neutralize database")
         _neutralize_db(configfile)
     return
 
@@ -245,39 +248,48 @@ def _restore_db_tar(configfile, dump_file, move=False, bkp_dir="/opt/odoo/backup
 def _neutralize_db(configfile):
     db = db_connect(configfile)
     with closing(db.cursor()) as cr:
+        # -- remove the enterprise code, report.url and web.base.url
         try:
-            # -- remove the enterprise code, report.url and web.base.url
+            print("delete enterprise code")
             cr.execute(
                 "delete from ir_config_parameter where key in ('database.enterprise_code', 'report.url', 'web.base.url.freeze')"
             )
         except:
+            print("error deleting enterprise code")
             pass
 
+        # -- reset db uuid
         try:
-            # -- deactivate crons
-            cr.execute("""UPDATE ir_cron SET active = 'f';""")
-            cr.execute(
-                """UPDATE ir_cron SET active = 't' WHERE id IN (SELECT res_id FROM ir_model_data WHERE name = 'autovacuum_job' AND module = 'base');"""
-            )
-        except:
-            pass
-
-        try:
-            # -- remove platform ir_logging
-            cr.execute("""DELETE FROM ir_logging WHERE func = 'odoo.sh';""")
-        except:
-            pass
-
-        try:
-            # -- reset db uuid
+            print("reset db uuid")
             cr.execute(
                 """update ir_config_parameter set value=(select gen_random_uuid())
                 where key = 'database.uuid'"""
             )
         except:
+            print("error resetting db uuid")
+            pass
+
+        # -- deactivate crons
+        try:
+            print("deactivate crons")
+            cr.execute("""UPDATE ir_cron SET active = 'f';""")
+            cr.execute(
+                """UPDATE ir_cron SET active = 't' WHERE id IN (SELECT res_id FROM ir_model_data WHERE name = 'autovacuum_job' AND module = 'base');"""
+            )
+        except:
+            print("error deactivating crons")
+            pass
+
+        # -- remove platform ir_logging
+        try:
+            print("delete ir_logging")
+            cr.execute("""DELETE FROM ir_logging WHERE func = 'odoo.sh';""")
+        except:
+            print("error deleting ir_logging")
             pass
 
         try:
+            print("delete ir_logging")
             cr.execute(
                 """insert into ir_config_parameter
                 (key,value,create_uid,create_date,write_uid,write_date)
@@ -288,157 +300,202 @@ def _neutralize_db(configfile):
                 do UPDATE set value = (current_date+'3 months'::interval)::timestamp;"""
             )
         except:
+            print("error setting expiration date")
             pass
 
+        # -- disable prod environment in all delivery carriers
         try:
-            # -- disable prod environment in all delivery carriers
+            print("disable prod environment")
             cr.execute("""UPDATE delivery_carrier SET prod_environment = false;""")
         except:
+            print("error disabling prod environment")
             pass
 
+        # -- disable delivery carriers from external providers
         try:
-            # -- disable delivery carriers from external providers
+            print("disable delivery carriers")
             cr.execute(
                 """UPDATE delivery_carrier SET active = false WHERE delivery_type NOT IN ('fixed', 'base_on_rule');"""
             )
         except:
+            print("error disabling delivery carriers")
             pass
 
+        # -- disable iap account
         try:
+            print("disable iap account")
             cr.execute(
                 """UPDATE iap_account SET account_token = REGEXP_REPLACE(account_token, '(\+.*)?$', '+disabled');"""
             )
         except:
+            print("error disabling iap account")
             pass
 
+        # -- deactivate mail template
         try:
-            # -- deactivate mail template
+            print("deactivate mail template")
             cr.execute("""UPDATE mail_template SET mail_server_id = NULL;""")
         except:
+            print("error deactivating mail template")
             pass
 
+        # -- deactivate fetchmail server
         try:
-            # -- deactivate fetchmail server
+            print("deactivate fetchmail server")
             cr.execute("""UPDATE fetchmail_server SET active = false;""")
         except:
+            print("error deactivating fetchmail server")
             pass
 
+        # -- disable generic payment provider
         try:
-            # -- disable generic payment provider
+            print("disable generic payment provider")
             cr.execute(
                 """UPDATE payment_provider SET state = 'disabled' WHERE state NOT IN ('test', 'disabled');"""
             )
         except:
+            print("error disabling payment provider")
             pass
 
+        # -- activate neutralization watermarks
         try:
-            # -- activate neutralization watermarks
+            print("activate neutralization watermarks")
             cr.execute(
                 """UPDATE ir_ui_view SET active = true WHERE key = 'web.neutralize_banner';"""
             )
         except:
+            print("error activating neutralization watermarks")
             pass
 
+        # -- delete domains on websites
         try:
-            # -- delete domains on websites
+            print("delete domains on websites")
             cr.execute("""UPDATE website SET domain = NULL;""")
         except:
+            print("error deleting domains on websites")
             pass
 
+        # -- activate neutralization watermarks
         try:
-            # -- activate neutralization watermarks
+            print("activate neutralization watermarks")
             cr.execute(
                 """UPDATE ir_ui_view SET active = true WHERE key = 'website.neutralize_ribbon';"""
             )
         except:
+            print("error activating neutralization watermarks")
             pass
 
+        # -- disable cdn
         try:
-            # -- disable cdn
+            print("disable cdn")
             cr.execute("""UPDATE website SET cdn_activated = false;""")
         except:
+            print("error disabling cdn")
             pass
 
+        # -- disable bank synchronisation links
         try:
-            # -- disable bank synchronisation links
+            print("disable bank synchronisation links")
             cr.execute(
                 """UPDATE account_online_link SET provider_data = '', client_id = 'duplicate';"""
             )
         except:
+            print("error disabling bank synchronisation links")
             pass
 
+        # -- delete odoo_ocn.project_id and ocn.uuid
         try:
+            print("delete delete odoo_ocn.project_id and ocn.uuid")
             cr.execute(
                 """DELETE FROM ir_config_parameter WHERE key IN ('odoo_ocn.project_id', 'ocn.uuid');"""
             )
         except:
+            print("error deleting delete odoo_ocn.project_id and ocn.uuid")
             pass
 
+        # -- delete Facebook Access Tokens
         try:
-            # -- delete Facebook Access Tokens
+            print("delete Facebook Access Tokens")
             cr.execute(
                 """UPDATE social_account SET facebook_account_id = NULL, facebook_access_token = NULL;"""
             )
         except:
+            print("error deleting Facebook Access Tokens")
             pass
 
+        # -- delete Instagram Access Tokens
         try:
-            # -- delete Instagram Access Tokens
+            print("delete Instagram Access Tokens")
             cr.execute(
                 """UPDATE social_account SET instagram_account_id = NULL, instagram_facebook_account_id = NULL, instagram_access_token = NULL;"""
             )
         except:
+            print("error deleting Instagram Access Tokens")
             pass
 
+        # -- delete LinkedIn Access Tokens
         try:
-            # -- delete LinkedIn Access Tokens
+            print("delete LinkedIn Access Tokens")
             cr.execute(
                 """UPDATE social_account SET linkedin_account_urn = NULL, linkedin_access_token = NULL;"""
             )
         except:
+            print("error deleting LinkedIn Access Tokens")
             pass
 
+        # -- Unset Firebase configuration within website
         try:
-            # -- Unset Firebase configuration within website
+            print("unset Firebase configuration")
             cr.execute(
                 """UPDATE website SET firebase_enable_push_notifications = false, firebase_use_own_account = false, firebase_project_id = NULL, firebase_web_api_key = NULL, firebase_push_certificate_key = NULL, firebase_sender_id = NULL;"""
             )
         except:
+            print("error unsetting Firebase configuration")
             pass
 
+        # -- delete Twitter Access Tokens
         try:
-            # -- delete Twitter Access Tokens
+            print("delete Twitter Access Tokens")
             cr.execute(
                 """UPDATE social_account SET twitter_user_id = NULL, twitter_oauth_token = NULL, twitter_oauth_token_secret = NULL;"""
             )
         except:
+            print("error deleting Twitter Access Tokens")
             pass
 
+        # -- delete Youtube Access Tokens
         try:
-            # -- delete Youtube Access Tokens
+            print("delete Youtube Access Tokens")
             cr.execute(
                 """UPDATE social_account SET youtube_channel_id = NULL, youtube_access_token = NULL, youtube_refresh_token = NULL, youtube_token_expiration_date = NULL, youtube_upload_playlist_id = NULL;"""
             )
         except:
+            print("error deleting Youtube Access Tokens")
             pass
 
+        # -- Remove Map Box Token as it's only valid per DB url
         try:
-            # -- Remove Map Box Token as it's only valid per DB url
+            print("delete Map Box Token")
             cr.execute(
                 """DELETE FROM ir_config_parameter WHERE key = 'web_map.token_map_box';"""
             )
         except:
+            print("error deleting Map Box Token")
             pass
 
+        # -- activating module update notification cron
         try:
+            print("activating module update notification cron")
             cr.execute(
                 """UPDATE ir_cron SET active = 't' WHERE id IN (SELECT res_id FROM ir_model_data WHERE name = 'ir_cron_module_update_notification' AND module = 'mail');"""
             )
         except:
+            print("error activating module update notification cron")
             pass
 
+        # -- deactivate mail servers but activate default "localhost" mail server
         try:
-            # -- deactivate mail servers but activate default "localhost" mail server
+            print("deactivating mail servers")
             cr.execute(
                 """DO $$
                 BEGIN
@@ -452,6 +509,7 @@ def _neutralize_db(configfile):
             $$;"""
             )
         except:
+            print("error deactivating mail servers")
             pass
     return
 
@@ -872,6 +930,7 @@ def main():
     # ===================
     # process arguments
     args = parser.parse_args(args=None if sys.argv[1:] else ["--help"])
+    print("version 0.1.5")
 
     if args.command == "backup":
         odoo_backup(args.config)

@@ -354,27 +354,27 @@ func ProjectHostsFile() error {
 	projects := GetCurrentOdooProjects()
 	conf := GetConf()
 
-	containers, err := GetContainers()
+	instances, err := GetInstances()
 	if err != nil {
-		return fmt.Errorf("containers list failed %w", err)
+		return fmt.Errorf("instances list failed %w", err)
 	}
 
 	projectLines := []string{}
 
-	for _, container := range containers {
+	for _, instance := range instances {
 		for _, project := range projects {
-			if container.Name == project {
+			if instance.Name == project {
 				projectLines = append(projectLines,
-					str.RightLen(container.IP4, " ", 16)+" "+container.Name+"."+conf.Domain)
+					str.RightLen(instance.IP4, " ", 16)+" "+instance.Name+"."+conf.Domain)
 			}
 		}
 	}
-	container, err := GetContainer(conf.DBHost)
+	instance, err := GetInstance(conf.DBHost)
 	if err != nil {
-		return fmt.Errorf("container %s not found %w", conf.DBHost, err)
+		return fmt.Errorf("instance %s not found %w", conf.DBHost, err)
 	}
 	projectLines = append(projectLines,
-		str.RightLen(container.IP4, " ", 16)+" "+conf.DBHost+"."+conf.Domain)
+		str.RightLen(instance.IP4, " ", 16)+" "+conf.DBHost+"."+conf.Domain)
 
 	newHostlines := []string{}
 	if begin == -1 && end == -1 {

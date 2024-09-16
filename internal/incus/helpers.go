@@ -261,7 +261,7 @@ func GetOdooBackupsNode() (backups, addons []string) {
 }
 
 // GetCurrentOdooProjects Get Current Odoo Projects
-func GetOdooBackups() (backups, addons []string) {
+func GetOdooBackups(project string) (backups, addons []string) {
 	dirs := GetDirs()
 	entries, err := os.ReadDir(filepath.Join(dirs.Project, "backups"))
 	if err != nil {
@@ -281,6 +281,10 @@ func GetOdooBackups() (backups, addons []string) {
 	slices.Sort(addons)
 	backups = removeDuplicate(backups)
 	addons = removeDuplicate(addons)
+	if project != "" {
+		backups = selectOnly(backups, project)
+		addons = selectOnly(addons, project)
+	}
 	return
 }
 
@@ -301,6 +305,16 @@ func removeDuplicate[T comparable](sliceList []T) []T {
 	for _, item := range sliceList {
 		if _, value := allKeys[item]; !value {
 			allKeys[item] = true
+			list = append(list, item)
+		}
+	}
+	return list
+}
+
+func selectOnly(sliceList []string, value string) []string {
+	list := []string{}
+	for _, item := range sliceList {
+		if strings.Contains(item, value) {
 			list = append(list, item)
 		}
 	}

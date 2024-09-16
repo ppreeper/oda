@@ -7,9 +7,27 @@ import (
 	"runtime/debug"
 	"time"
 
-	oda "github.com/ppreeper/oda/internal"
+	server "github.com/ppreeper/oda/internal/server"
 	"github.com/urfave/cli/v2"
 )
+
+// Odoo Server Administration Tool
+
+// options:
+//   -h, --help            show this help message and exit
+//   -c CONFIG, --config CONFIG
+//                         odoo.conf file location
+//   -d D                  backup directory
+//   -n N                  number of backups to keep
+
+// commands:
+//   {backup,restore,trim,trimall,install,upgrade,scaffold,start,stop,restart,hosts,caddy,logs}
+//                         commands
+
+//     scaffold            Scaffold module [modulename]
+
+//     hosts               update hosts file
+//     caddy               update caddy file
 
 var Commit = func() string {
 	if info, ok := debug.ReadBuildInfo(); ok {
@@ -30,262 +48,163 @@ var Commit = func() string {
 }
 
 func main() {
-	q := oda.QueryDef{}
+	// q := oda.QueryDef{}
 	app := &cli.App{
 		Name:                 "oda",
 		Usage:                "Odoo Server Administration Tool",
 		Version:              Commit(),
 		EnableBashCompletion: true,
 		Commands: []*cli.Command{
+			// App Management
+			{
+				Name:     "install",
+				Usage:    "Install module(s)",
+				Category: "app management",
+				Action: func(cCtx *cli.Context) error {
+					modlen := cCtx.Args().Len()
+					if modlen == 0 {
+						return fmt.Errorf("no modules specified")
+					}
+					return server.InstanceAppInstallUpgrade(true, cCtx.Args().Slice()...)
+				},
+			},
+			{
+				Name:     "upgrade",
+				Usage:    "Upgrade module(s)",
+				Category: "app management",
+				Action: func(cCtx *cli.Context) error {
+					modlen := cCtx.Args().Len()
+					if modlen == 0 {
+						return fmt.Errorf("no modules specified")
+					}
+					return server.InstanceAppInstallUpgrade(false, cCtx.Args().Slice()...)
+				},
+			},
+			// Backup Restore
+			{
+				Name:     "backup",
+				Usage:    "Backup database filestore and addons",
+				Category: "backup",
+				Action: func(cCtx *cli.Context) error {
+					return server.AdminBackup()
+				},
+			},
+			{
+				Name:     "restore",
+				Usage:    "Restore database and filestore or addons",
+				Category: "backup",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:  "any",
+						Value: false,
+						Usage: "any backup",
+					},
+					&cli.BoolFlag{
+						Name:  "move",
+						Value: false,
+						Usage: "move server",
+					},
+					&cli.BoolFlag{
+						Name:  "neutralize",
+						Value: false,
+						Usage: "fully neutralize the server",
+					},
+				},
+				Action: func(cCtx *cli.Context) error {
+					if cCtx.Bool("move") && cCtx.Bool("neutralize") {
+						return fmt.Errorf("cannot move and neutralize at the same time")
+					}
+					return server.AdminRestore(
+						cCtx.Bool("any"),
+						cCtx.Bool("move"),
+						cCtx.Bool("neutralize"),
+					)
+				},
+			},
+			{
+				Name:     "trim",
+				Usage:    "Trim database backups",
+				Category: "backup",
+				Flags: []cli.Flag{
+					&cli.IntFlag{
+						Name:  "limit",
+						Value: 10,
+						Usage: "number of backups to keep",
+					},
+				},
+				Action: func(cCtx *cli.Context) error {
+					return server.Trim(cCtx.Int("limit"), false)
+				},
+			},
+			{
+				Name:     "trimall",
+				Usage:    "Trim all database backups",
+				Category: "backup",
+				Flags: []cli.Flag{
+					&cli.IntFlag{
+						Name:  "limit",
+						Value: 10,
+						Usage: "number of backups to keep",
+					},
+				},
+				Action: func(cCtx *cli.Context) error {
+					return server.Trim(cCtx.Int("limit"), true)
+				},
+			},
+			// Control
+			{
+				Name:     "start",
+				Usage:    "Start the instance",
+				Category: "control",
+				Action: func(cCtx *cli.Context) error {
+					return server.ServiceStart()
+				},
+			},
+			{
+				Name:     "stop",
+				Usage:    "Stop the instance",
+				Category: "control",
+				Action: func(cCtx *cli.Context) error {
+					return server.ServiceStop()
+				},
+			},
+			{
+				Name:     "restart",
+				Usage:    "Restart the instance",
+				Category: "control",
+				Action: func(cCtx *cli.Context) error {
+					return server.ServiceRestart()
+				},
+			},
+			// General
+			{
+				Name:     "logs",
+				Usage:    "Follow the logs",
+				Category: "general",
+				Action: func(cCtx *cli.Context) error {
+					return server.InstanceLogs()
+				},
+			},
+			// User Management
 			{
 				Name:     "admin",
 				Usage:    "Admin user management",
-				Category: "admin",
+				Category: "user management",
 				Subcommands: []*cli.Command{
 					{
 						Name:  "username",
 						Usage: "Odoo Admin username",
 						Action: func(cCtx *cli.Context) error {
-							return oda.AdminUsername()
+							return server.AdminUsername()
 						},
 					},
 					{
 						Name:  "password",
 						Usage: "Odoo Admin password",
 						Action: func(cCtx *cli.Context) error {
-							return oda.AdminPassword()
+							return server.AdminPassword()
 						},
 					},
-				},
-			},
-			{
-				Name:     "app",
-				Usage:    "app management",
-				Category: "app",
-				Subcommands: []*cli.Command{
-					{
-						Name:  "install",
-						Usage: "Install module(s)",
-						Action: func(cCtx *cli.Context) error {
-							modlen := cCtx.Args().Len()
-							if modlen == 0 {
-								return fmt.Errorf("no modules specified")
-							}
-							return oda.InstanceAppInstallUpgrade(true, cCtx.Args().Slice()...)
-						},
-					},
-					{
-						Name:  "upgrade",
-						Usage: "Upgrade module(s)",
-						Action: func(cCtx *cli.Context) error {
-							modlen := cCtx.Args().Len()
-							if modlen == 0 {
-								return fmt.Errorf("no modules specified")
-							}
-							return oda.InstanceAppInstallUpgrade(false, cCtx.Args().Slice()...)
-						},
-					},
-				},
-			},
-			{
-				Name:     "db",
-				Usage:    "Access postgresql",
-				Category: "db",
-				Subcommands: []*cli.Command{
-					{
-						Name:  "psql",
-						Usage: "database psql",
-						Action: func(cCtx *cli.Context) error {
-							return oda.PgdbPgsql()
-						},
-					},
-					{
-						Name:  "start",
-						Usage: "database start",
-						Action: func(cCtx *cli.Context) error {
-							return oda.PgdbStart()
-						},
-					},
-					{
-						Name:  "stop",
-						Usage: "database stop",
-						Action: func(cCtx *cli.Context) error {
-							return oda.PgdbStop()
-						},
-					},
-					{
-						Name:  "restart",
-						Usage: "database restart",
-						Action: func(cCtx *cli.Context) error {
-							return oda.PgdbRestart()
-						},
-					},
-					{
-						Name:  "fullreset",
-						Usage: "database fullreset",
-						Action: func(cCtx *cli.Context) error {
-							// incus start db
-							return oda.PgdbFullReset()
-						},
-					},
-					{
-						Name:  "logs",
-						Usage: "Follow the logs",
-						Action: func(cCtx *cli.Context) error {
-							return oda.DBLogs()
-						},
-					},
-				},
-			},
-			{
-				Name:  "start",
-				Usage: "Start the instance",
-				Action: func(cCtx *cli.Context) error {
-					return oda.InstanceStart()
-				},
-			},
-			{
-				Name:  "stop",
-				Usage: "Stop the instance",
-				Action: func(cCtx *cli.Context) error {
-					return oda.InstanceStop()
-				},
-			},
-			{
-				Name:  "restart",
-				Usage: "Restart the instance",
-				Action: func(cCtx *cli.Context) error {
-					return oda.InstanceRestart()
-				},
-			},
-			{
-				Name:  "logs",
-				Usage: "Follow the logs",
-				Action: func(cCtx *cli.Context) error {
-					return oda.InstanceLogs()
-				},
-			},
-			// //////////////////////////////////////////////
-			{
-				Name:  "psql",
-				Usage: "Access the instance database",
-				Action: func(cCtx *cli.Context) error {
-					return oda.InstancePSQL()
-				},
-			},
-			{
-				Name:  "scaffold",
-				Usage: "Generates an Odoo module skeleton in addons",
-				Action: func(cCtx *cli.Context) error {
-					modlen := cCtx.Args().Len()
-					if modlen == 0 {
-						return fmt.Errorf("no module specified")
-					}
-					module := cCtx.Args().First()
-					return oda.InstanceScaffold(module)
-				},
-			},
-			{
-				Name:      "query",
-				Usage:     "Query an Odoo model",
-				UsageText: "oda query <model> [command options]",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:        "domain",
-						Aliases:     []string{"d"},
-						Value:       "",
-						Usage:       "domain filter",
-						Destination: &q.Filter,
-					},
-					&cli.IntFlag{
-						Name:        "offset",
-						Aliases:     []string{"o"},
-						Value:       0,
-						Usage:       "offset",
-						Destination: &q.Offset,
-					},
-					&cli.IntFlag{
-						Name:        "limit",
-						Aliases:     []string{"l"},
-						Value:       0,
-						Usage:       "limit records returned",
-						Destination: &q.Limit,
-					},
-					&cli.StringFlag{
-						Name:        "fields",
-						Aliases:     []string{"f"},
-						Value:       "",
-						Usage:       "fields to return",
-						Destination: &q.Fields,
-					},
-					&cli.BoolFlag{
-						Name:        "count",
-						Aliases:     []string{"c"},
-						Value:       false,
-						Usage:       "count records",
-						Destination: &q.Count,
-					},
-					&cli.StringFlag{
-						Name:        "username",
-						Aliases:     []string{"u"},
-						Value:       "admin",
-						Usage:       "username",
-						Destination: &q.Username,
-					},
-					&cli.StringFlag{
-						Name:        "password",
-						Aliases:     []string{"p"},
-						Value:       "admin",
-						Usage:       "password",
-						Destination: &q.Password,
-					},
-				},
-				Action: func(cCtx *cli.Context) error {
-					if cCtx.NArg() == 0 {
-						return fmt.Errorf("no model specified")
-					}
-					q.Model = cCtx.Args().First()
-					return oda.InstanceQuery(&q)
-				},
-			},
-			{
-				Name:  "backup",
-				Usage: "Backup database filestore and addons",
-				Action: func(cCtx *cli.Context) error {
-					return oda.AdminBackup()
-				},
-			},
-			{
-				Name:  "restore",
-				Usage: "Restore database and filestore or addons",
-				Flags: []cli.Flag{
-					&cli.BoolFlag{
-						Name:  "move",
-						Value: false,
-						Usage: "move server",
-					},
-				},
-				Action: func(cCtx *cli.Context) error {
-					if !oda.IsProject() {
-						return fmt.Errorf("not in a project directory")
-					}
-					move := cCtx.Bool("move")
-					return oda.AdminRestore(move)
-				},
-			},
-			{
-				Name:  "trim",
-				Usage: "Trim database backups",
-				Action: func(cCtx *cli.Context) error {
-					fmt.Println("Trimming database backups")
-					return nil
-				},
-			},
-			{
-				Name:  "init",
-				Usage: "initialize oda setup",
-				Action: func(cCtx *cli.Context) error {
-					return oda.AdminInit()
 				},
 			},
 		},

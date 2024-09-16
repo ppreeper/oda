@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/charmbracelet/huh"
 	"github.com/ppreeper/odoojrpc"
@@ -75,9 +74,18 @@ func InstanceStart() error {
 	conf := GetConf()
 	_, project := GetProject()
 
-	_, err := GetContainer(project)
+	instance, err := GetInstance(project)
 	if err != nil {
 		InstanceCreate()
+	}
+	if instance.State == "RUNNING" {
+		fmt.Println(instance.Name + " is already running")
+		return nil
+	}
+
+	if err := InstanceMounts(project); err != nil {
+		fmt.Println("InstanceMounts", err)
+		return fmt.Errorf("error mounts %w", err)
 	}
 
 	if err := IncusStart(project); err != nil {
@@ -95,11 +103,6 @@ func InstanceStart() error {
 		return fmt.Errorf("error caddyfile %w", err)
 	}
 
-	if err := InstanceMounts(project); err != nil {
-		fmt.Println("InstanceMounts", err)
-		return fmt.Errorf("error mounts %w", err)
-	}
-	time.Sleep(2 * time.Second)
 	if err := SSHConfigGenerate(project); err != nil {
 		fmt.Println("SSHConfigGenerate", err)
 		return fmt.Errorf("error sshconfig %w", err)
@@ -109,9 +112,6 @@ func InstanceStart() error {
 		return fmt.Errorf("error sshconfig %w", err)
 	}
 
-	// ProxyGenerate()
-	// ProxyStop()
-	// ProxyStart()
 	fmt.Println(project + "." + conf.Domain + " started")
 
 	return nil
@@ -228,17 +228,17 @@ func InstanceScaffold(module string) error {
 
 func InstancePS() error {
 	projects := GetCurrentOdooProjects()
-	containers, err := GetContainers()
+	instances, err := GetInstances()
 	if err != nil {
-		return fmt.Errorf("containers list failed %w", err)
+		return fmt.Errorf("instances list failed %w", err)
 	}
 
-	containerList := []Container{}
+	instanceList := []Instance{}
 
-	for _, container := range containers {
+	for _, instance := range instances {
 		for _, project := range projects {
-			if container.Name == project {
-				containerList = append(containerList, container)
+			if instance.Name == project {
+				instanceList = append(instanceList, instance)
 			}
 		}
 	}
@@ -247,12 +247,12 @@ func InstancePS() error {
 	maxstateLen := 0
 	maxipv4Len := 15
 
-	for _, container := range containerList {
-		if len(container.Name) > maxnameLen {
-			maxnameLen = len(container.Name)
+	for _, instance := range instanceList {
+		if len(instance.Name) > maxnameLen {
+			maxnameLen = len(instance.Name)
 		}
-		if len(container.State) > maxstateLen {
-			maxstateLen = len(container.State)
+		if len(instance.State) > maxstateLen {
+			maxstateLen = len(instance.State)
 		}
 	}
 
@@ -261,11 +261,11 @@ func InstancePS() error {
 		maxstateLen+2, "STATE",
 		maxipv4Len+2, "IPV4",
 	)
-	for _, container := range containerList {
+	for _, instance := range instanceList {
 		fmt.Printf("%-*s %-*s %-*s\n",
-			maxnameLen+2, container.Name,
-			maxstateLen+2, container.State,
-			maxipv4Len+2, container.IP4,
+			maxnameLen+2, instance.Name,
+			maxstateLen+2, instance.State,
+			maxipv4Len+2, instance.IP4,
 		)
 	}
 	return nil
@@ -351,15 +351,15 @@ func InstanceQuery(q *QueryDef) error {
 	}
 	// conf := GetConf()
 	cwd, project := GetProject()
-	container, err := GetContainer(project)
+	instance, err := GetInstance(project)
 	if err != nil {
-		return fmt.Errorf("error getting container %w", err)
+		return fmt.Errorf("error getting instance %w", err)
 	}
 
 	dbname := GetOdooConf(cwd, "db_name")
 
 	oc := odoojrpc.NewOdoo().
-		WithHostname(container.IP4).
+		WithHostname(instance.IP4).
 		WithPort(8069).
 		WithDatabase(dbname).
 		WithUsername(q.Username).
@@ -424,9 +424,9 @@ func AdminUsername() error {
 	conf := GetConf()
 	cwd, _ := GetProject()
 
-	container, err := GetContainer(conf.DBHost)
+	instance, err := GetInstance(conf.DBHost)
 	if err != nil {
-		return fmt.Errorf("error getting container %w", err)
+		return fmt.Errorf("error getting instance %w", err)
 	}
 
 	dbport, err := strconv.Atoi(conf.DBPort)
@@ -434,7 +434,7 @@ func AdminUsername() error {
 		return fmt.Errorf("error getting port %w", err)
 	}
 
-	dbhost := container.IP4
+	dbhost := instance.IP4
 	dbuser := GetOdooConf(cwd, "db_user")
 	dbpassword := GetOdooConf(cwd, "db_password")
 	dbname := GetOdooConf(cwd, "db_name")
@@ -502,9 +502,9 @@ func AdminPassword() error {
 	conf := GetConf()
 	cwd, _ := GetProject()
 
-	container, err := GetContainer(conf.DBHost)
+	instance, err := GetInstance(conf.DBHost)
 	if err != nil {
-		return fmt.Errorf("error getting container %w", err)
+		return fmt.Errorf("error getting instance %w", err)
 	}
 
 	dbport, err := strconv.Atoi(conf.DBPort)
@@ -512,7 +512,7 @@ func AdminPassword() error {
 		return fmt.Errorf("error getting port %w", err)
 	}
 
-	dbhost := container.IP4
+	dbhost := instance.IP4
 	dbuser := GetOdooConf(cwd, "db_user")
 	dbpassword := GetOdooConf(cwd, "db_password")
 	dbname := GetOdooConf(cwd, "db_name")
@@ -553,12 +553,12 @@ func AdminPassword() error {
 func SSHConfigGenerate(project string) error {
 	HOME, _ := os.UserHomeDir()
 	conf := GetConf()
-	container, err := GetContainer(project)
+	instance, err := GetInstance(project)
 	if err != nil {
-		return fmt.Errorf("error getting container %w", err)
+		return fmt.Errorf("error getting instance %w", err)
 	}
 	// priority;host;hostname;user;identityfile;port
-	sshconfig := fmt.Sprintf("%d;%s.%s;%s;%s;%s;%d", 10, project, conf.Domain, container.IP4, "odoo", conf.SSHKey, 22)
+	sshconfig := fmt.Sprintf("%d;%s.%s;%s;%s;%s;%d", 10, project, conf.Domain, instance.IP4, "odoo", conf.SSHKey, 22)
 	sshconfigCSV := filepath.Join(HOME, ".ssh", "sshconfig.csv")
 	// READ config
 	hosts, err := os.Open(sshconfigCSV)
