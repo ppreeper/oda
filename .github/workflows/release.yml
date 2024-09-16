@@ -24,7 +24,8 @@ jobs:
       # Step 3: Build the Go binary
       - name: Build binary
         run: |
-          CGO_ENABLED=0 GOOS=linux go build -a -o oda ./cmd/odaserver/.
+          cd ./cmd/odaserver
+          CGO_ENABLED=0 GOOS=linux go build -a -o oda .
 
       # Step 4: Install FPM to package as .deb
       - name: Install FPM
@@ -36,11 +37,11 @@ jobs:
       # Step 5: Package the binary into a .deb file
       - name: Package .deb file
         run: |
-          fpm -s dir -t deb -n odaserver -v ${{ github.ref_name }} \
-          --description "ODA Server" \
+          fpm -s dir -t deb -n odaserver -v ${{ github.ref_name || 'manual-build' }} \
+          --description "Oda Server Application" \
           --url "https://github.com/${{ github.repository }}" \
-          --license "GPL3" \
-          --maintainer "ppreeper@gmail.com" \
+          --license "MIT" \
+          --maintainer "your-email@example.com" \
           --prefix /usr/local/bin oda
 
       # Step 6: Upload the .deb as an artifact
@@ -71,8 +72,8 @@ jobs:
         with:
           artifacts: ./dist/odaserver_*.deb
           token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ github.ref_name }}
-          name: "Release ${{ github.ref_name }}"
-          body: "Release notes for ${{ github.ref_name }}"
+          tag: ${{ github.ref_name || 'manual-release' }}
+          name: "Release ${{ github.ref_name || 'Manual Release' }}"
+          body: "Release notes for ${{ github.ref_name || 'manual' }}"
           draft: false
           prerelease: false

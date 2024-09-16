@@ -12,23 +12,6 @@ import (
 )
 
 // Odoo Server Administration Tool
-
-// options:
-//   -h, --help            show this help message and exit
-//   -c CONFIG, --config CONFIG
-//                         odoo.conf file location
-//   -d D                  backup directory
-//   -n N                  number of backups to keep
-
-// commands:
-//   {backup,restore,trim,trimall,install,upgrade,scaffold,start,stop,restart,hosts,caddy,logs}
-//                         commands
-
-//     scaffold            Scaffold module [modulename]
-
-//     hosts               update hosts file
-//     caddy               update caddy file
-
 var Commit = func() string {
 	if info, ok := debug.ReadBuildInfo(); ok {
 		Revision := ""
