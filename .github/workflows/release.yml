@@ -24,20 +24,20 @@ jobs:
         with:
           go-version: "1.23" # Change to your Go version
 
-      # Step 3: Build the Go binary
-      - name: Build binary
-        run: |
-          CGO_ENABLED=0 GOOS=linux go build -a -o oda ./cmd/odaserver/.
-
-      # Step 4: Install FPM to package as .deb
+      # Step 3: Install FPM to package as .deb
       - name: Install FPM
         run: |
           sudo apt-get update
           sudo apt-get install -y ruby ruby-dev build-essential
           sudo gem install --no-document fpm
 
-      # Step 5: Package the binary into a .deb file
-      - name: Package .deb file
+      # Step 4: Build the odaserver binary
+      - name: Build odaserver binary
+        run: |
+          CGO_ENABLED=0 GOOS=linux go build -a -o oda ./cmd/odaserver/.
+
+      # Step 5: Package the odaserver binary into a .deb file
+      - name: Package odaserver.deb file
         run: |
           fpm -s dir -t deb -n odaserver -v ${{ github.ref_name || 'manual-build' }} \
           --description "ODA Server Application" \
@@ -46,12 +46,33 @@ jobs:
           --maintainer "ppreeper@gmail.com" \
           --prefix /usr/local/bin oda
 
-      # Step 6: Upload the .deb as an artifact
-      - name: Upload artifact
+      # Step 6: Build the odacli binary
+      - name: Build odacli binary
+        run: |
+          CGO_ENABLED=0 GOOS=linux go build -a -o odacli ./cmd/oda/.
+
+      # Step 7: Package the odacli binary into a .deb file
+      - name: Package odacli.deb file
+        run: |
+          fpm -s dir -t deb -n odacli -v ${{ github.ref_name || 'manual-build' }} \
+          --description "ODA CLI Application" \
+          --url "https://github.com/${{ github.repository }}" \
+          --license "GPL" \
+          --maintainer "ppreeper@gmail.com" \
+          --prefix /usr/local/bin oda
+
+      # Step 8: Upload the .deb as an artifact
+      - name: Upload odaserver artifact
         uses: actions/upload-artifact@v4
         with:
           name: odaserver-deb
           path: odaserver_*.deb
+
+      - name: Upload odacli artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: odacli-deb
+          path: odacli_*.deb
 
   release:
     needs: build
@@ -62,10 +83,16 @@ jobs:
         uses: actions/checkout@v4
 
       # Step 2: Download built .deb artifact
-      - name: Download artifact
+      - name: Download odaserver artifact
         uses: actions/download-artifact@v4
         with:
           name: odaserver-deb
+          path: ./dist
+
+      - name: Download odacli artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: odacli-deb
           path: ./dist
 
       # Step 3: Create a release and upload .deb artifact
@@ -73,6 +100,17 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           artifacts: ./dist/odaserver_*.deb
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name || 'manual-release' }}
+          name: "Release ${{ github.ref_name || 'Manual Release' }}"
+          body: "Release notes for ${{ github.ref_name || 'manual' }}"
+          draft: false
+          prerelease: false
+
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: ./dist/odacli_*.deb
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name || 'manual-release' }}
           name: "Release ${{ github.ref_name || 'Manual Release' }}"
