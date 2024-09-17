@@ -99,18 +99,7 @@ jobs:
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: ./dist/odaserver_*.deb
-          token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ github.ref_name || 'manual-release' }}
-          name: "Release ${{ github.ref_name || 'Manual Release' }}"
-          body: "Release notes for ${{ github.ref_name || 'manual' }}"
-          draft: false
-          prerelease: false
-
-      - name: Create Release
-        uses: ncipollo/release-action@v1
-        with:
-          artifacts: ./dist/odacli_*.deb
+          artifacts: ./dist/odaserver_*.deb, ./dist/odacli_*.deb
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name || 'manual-release' }}
           name: "Release ${{ github.ref_name || 'Manual Release' }}"
