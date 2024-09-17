@@ -178,6 +178,10 @@ func BaseCreate(version string) error {
 		return fmt.Errorf("roleUpdateScript %s failed %w", vers, err)
 	}
 
+	if err := roleGupScript(vers); err != nil {
+		return fmt.Errorf("roleGupScript %s failed %w", vers, err)
+	}
+
 	if err := roleUpdate(vers); err != nil {
 		return fmt.Errorf("roleUpdate %s failed %w", vers, err)
 	}
@@ -226,7 +230,7 @@ func BaseCreate(version string) error {
 		return fmt.Errorf("rolePaperSize %s failed %w", vers, err)
 	}
 
-	if err := roleOdooNode(vers); err != nil {
+	if err := roleOdaServer(vers); err != nil {
 		return fmt.Errorf("roleOdooNode %s failed %w", vers, err)
 	}
 

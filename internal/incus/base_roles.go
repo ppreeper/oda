@@ -323,15 +323,11 @@ func roleOdooBasePackages(instanceName, version string) error {
 	return nil
 }
 
-func roleOdooNode(instanceName string) error {
-	fmt.Println("roleOdooNode:", instanceName)
-	if err := IncusExec(instanceName, "wget", "-qO", "/usr/local/bin/oda", "https://raw.githubusercontent.com/ppreeper/oda/main/oda.py"); err != nil {
+func roleOdaServer(instanceName string) error {
+	fmt.Println("roleOdaServer:", instanceName)
+	if err := IncusExec(instanceName, "/usr/local/bin/gup", "install", "odaserver"); err != nil {
 		fmt.Println(err)
-		return fmt.Errorf("wget oda failed %w", err)
-	}
-	if err := IncusExec(instanceName, "chmod", "+x", "/usr/local/bin/oda"); err != nil {
-		fmt.Println(err)
-		return fmt.Errorf("chmod oda failed %w", err)
+		return fmt.Errorf("odaserver install failed %w", err)
 	}
 	return nil
 }
@@ -378,6 +374,19 @@ func roleUpdateScript(instanceName string) error {
 	if err := IncusExec(instanceName, "chmod", "+x", "/usr/local/bin/update"); err != nil {
 		fmt.Println(err)
 		return fmt.Errorf("chmod update failed %w", err)
+	}
+	return nil
+}
+
+func roleGupScript(instanceName string) error {
+	gup := `https://raw.githubusercontent.com/ppreeper/gup/main/gup`
+	if err := IncusExec(instanceName, "wget", "-qO", "/usr/local/bin/gup", gup); err != nil {
+		fmt.Println(err)
+		return fmt.Errorf("wget gup failed %w", err)
+	}
+	if err := IncusExec(instanceName, "chmod", "+x", "/usr/local/bin/gup"); err != nil {
+		fmt.Println(err)
+		return fmt.Errorf("chmod gup failed %w", err)
 	}
 	return nil
 }
