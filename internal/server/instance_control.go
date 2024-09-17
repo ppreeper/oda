@@ -32,8 +32,8 @@ func ServiceStop() error {
 }
 
 func ServiceRestart() error {
-	ServiceStart()
-	time.Sleep(2 * time.Second)
 	ServiceStop()
+	time.Sleep(2 * time.Second)
+	ServiceStart()
 	return nil
 }
