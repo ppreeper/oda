@@ -38,6 +38,36 @@ func main() {
 		Version:              Commit(),
 		EnableBashCompletion: true,
 		Commands: []*cli.Command{
+			{
+				Name:     "caddy",
+				Usage:    "update caddyfile",
+				Category: "admin",
+				Action: func(cCtx *cli.Context) error {
+					domain := ""
+					modlen := cCtx.Args().Len()
+					if modlen == 0 {
+						domain = "local"
+					} else {
+						domain = cCtx.Args().First()
+					}
+					return server.CaddyfileUpdate(domain)
+				},
+			},
+			{
+				Name:     "hosts",
+				Usage:    "update hosts file",
+				Category: "admin",
+				Action: func(cCtx *cli.Context) error {
+					domain := ""
+					modlen := cCtx.Args().Len()
+					if modlen == 0 {
+						domain = "local"
+					} else {
+						domain = cCtx.Args().First()
+					}
+					return server.HostsUpdate(domain)
+				},
+			},
 			// App Management
 			{
 				Name:     "install",
