@@ -1,40 +1,25 @@
 package main
 
 import (
+	_ "embed"
 	"fmt"
 	"log"
 	"os"
-	"runtime/debug"
-	"time"
 
 	oda "github.com/ppreeper/oda/internal/incus"
 	"github.com/urfave/cli/v2"
 )
 
-var Commit = func() string {
-	if info, ok := debug.ReadBuildInfo(); ok {
-		Revision := ""
-		LastCommit := time.Time{}
-		// DirtyBuild := false
-		for _, kv := range info.Settings {
-			switch kv.Key {
-			case "vcs.revision":
-				Revision = string([]rune(kv.Value)[:7])
-			case "vcs.time":
-				LastCommit, _ = time.Parse(time.RFC3339, kv.Value)
-			}
-		}
-		return fmt.Sprintf("%d%02d%02d-%s", LastCommit.Year(), LastCommit.Month(), LastCommit.Day(), Revision)
-	}
-	return ""
-}
+//go:generate sh -c "printf '%s (%s)' $(git tag -l --contains HEAD) $(date +%Y%m%d)-$(git rev-parse --short HEAD)" > commit.txt
+//go:embed commit.txt
+var Commit string
 
 func main() {
 	q := oda.QueryDef{}
 	app := &cli.App{
 		Name:                 "oda",
 		Usage:                "Odoo Client Administration Tool",
-		Version:              Commit(),
+		Version:              Commit,
 		EnableBashCompletion: true,
 		Commands: []*cli.Command{
 			{

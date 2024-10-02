@@ -1,10 +1,10 @@
 oda:
-	@rm -f $HOME/go/bin/oda && go install ./cmd/oda/.
+	@rm -f $HOME/go/bin/oda && go generate ./cmd/oda/. > ./cmd/oda/commit.txt && go install ./cmd/oda/.
 odabuild:
+	@go generate ./cmd/oda/. > ./cmd/oda/commit.txt
 	@CGO_ENABLED=0 GOOS=linux go build -a -o bin/oda ./cmd/oda/.
-odaserver:
-	@rm -f $HOME/go/bin/odaserver && go install ./cmd/odaserver/.
-odaserverbuild:
-	@CGO_ENABLED=0 GOOS=linux go build -a -o bin/odaserver ./cmd/odaserver/.
-build:
-	@CGO_ENABLED=0 GOOS=linux go build -o bin/odaserver ./cmd/odaserver/.
+odas:
+	@rm -f $HOME/go/bin/odas && go generate ./cmd/odas/. > ./cmd/odas/commit.txt &&  go install ./cmd/odas/.
+odasbuild:
+	@go generate ./cmd/odas/. > ./cmd/odas/commit.txt
+	@CGO_ENABLED=0 GOOS=linux go build -a -o bin/odas ./cmd/odas/.

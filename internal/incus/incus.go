@@ -70,6 +70,7 @@ func WaitForInstance(instanceName string) error {
 }
 
 func IncusLaunch(instanceName, image string) error {
+	fmt.Println("IncusLaunch", "instanceName", instanceName, "image", image)
 	conf := GetConf()
 	instance, _ := GetInstance(instanceName)
 	if instance == (Instance{}) {

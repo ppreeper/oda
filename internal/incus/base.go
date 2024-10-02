@@ -163,10 +163,24 @@ func BaseUpdatePrompt() error {
 ////////////////////////
 
 func BaseCreate(version string) error {
+	fmt.Println("version", version)
 	conf := GetConf()
+	fmt.Println(conf.OSImage)
+	osImage := ""
+	switch version {
+	case "15.0":
+		osImage = "ubuntu/22.04"
+	case "16.0":
+		osImage = "ubuntu/22.04"
+	case "17.0":
+		osImage = "ubuntu/22.04"
+	case "18.0":
+		osImage = "ubuntu/24.04"
+	}
 	vers := "odoo-" + strings.Replace(version, ".", "-", -1)
+	fmt.Println(version, osImage, vers)
 
-	if err := IncusLaunch(vers, conf.OSImage); err != nil {
+	if err := IncusLaunch(vers, osImage); err != nil {
 		return fmt.Errorf("launch instance %s %w", vers, err)
 	}
 
