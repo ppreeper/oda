@@ -34,23 +34,24 @@ jobs:
       # Step 4: Build the odaserver binary
       - name: Build odaserver binary
         run: |
-          CGO_ENABLED=0 GOOS=linux go build -a -o odaserver ./cmd/odaserver/.
+          go generate ./cmd/odas/. > ./cmd/odas/commit.txt
+          CGO_ENABLED=0 GOOS=linux go build -a -o odas ./cmd/odas/.
 
       # Step 5: Build the odacli binary
       - name: Build odacli binary
         run: |
-          CGO_ENABLED=0 GOOS=linux go build -a -o odacli ./cmd/oda/.
+          go generate ./cmd/oda/. > ./cmd/oda/commit.txt
+          CGO_ENABLED=0 GOOS=linux go build -a -o oda ./cmd/oda/.
 
       # Step 6: Package the odaserver binary into a .deb file
       - name: Package odaserver.deb file
         run: |
           fpm -s dir -t deb -n odaserver -v ${{ github.ref_name || 'manual-build' }} \
-          --description "ODA Server Application" \
+          --description "ODA Server Side Application" \
           --url "https://github.com/${{ github.repository }}" \
-          --license "GPL" \
+          --license "GPL3" \
           --maintainer "ppreeper@gmail.com" \
-          --after-install deb/odaserver-after.sh \
-          --prefix /usr/local/bin odaserver
+          --prefix /usr/local/bin odas
 
       # Step 7: Package the odacli binary into a .deb file
       - name: Package odacli.deb file
@@ -58,10 +59,9 @@ jobs:
           fpm -s dir -t deb -n odacli -v ${{ github.ref_name || 'manual-build' }} \
           --description "ODA Client Application" \
           --url "https://github.com/${{ github.repository }}" \
-          --license "GPL" \
+          --license "GPL3" \
           --maintainer "ppreeper@gmail.com" \
-          --after-install deb/odacli-after.sh \
-          --prefix /usr/local/bin odacli
+          --prefix /usr/local/bin oda
 
       # Step 8: Upload the .deb as an artifact
       - name: Upload odaserver artifact

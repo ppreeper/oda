@@ -1,2 +1,2 @@
 #!/bin/bash
-mv /usr/local/bin/odacli /usr/local/bin/oda
+mv /usr/local/bin/oda /usr/local/bin/oda
