@@ -34,8 +34,8 @@ jobs:
       # Step 4: Build the odacli binary
       - name: Build odacli binary
         run: |
-          go generate ./cmd/oda/. > ./cmd/oda/commit.txt
-          CGO_ENABLED=0 GOOS=linux go build -a -o oda ./cmd/oda/.
+          go generate . > commit.txt
+          CGO_ENABLED=0 GOOS=linux go build -a -o oda .
 
       # Step 5: Package the odacli binary into a .deb file
       - name: Package odacli.deb file
