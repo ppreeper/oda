@@ -321,7 +321,7 @@ func IncusHosts(instanceName, domain string) error {
 	// 	return fmt.Errorf("hosts file %v pull to %v failed %w", remoteHosts, localHosts, err)
 	// }
 
-	err := IncusExec(instanceName, "sudo", "/usr/local/bin/oda", "hosts", domain)
+	err := IncusExec(instanceName, "sudo", "/usr/local/bin/odas", "hosts", domain)
 	if errors.Is(err, exec.ErrWaitDelay) {
 		return fmt.Errorf("failed to update hosts file %w", err)
 	}
@@ -377,7 +377,7 @@ func IncusHosts(instanceName, domain string) error {
 }
 
 func IncusCaddyfile(instanceName, domain string) error {
-	err := IncusExec(instanceName, "sudo", "/usr/local/bin/oda", "caddy", domain)
+	err := IncusExec(instanceName, "sudo", "/usr/local/bin/odas", "caddy", domain)
 	if errors.Is(err, exec.ErrWaitDelay) {
 		return fmt.Errorf("failed to update hosts file %w", err)
 	}

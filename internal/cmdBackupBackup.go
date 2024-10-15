@@ -29,7 +29,7 @@ var backupCmd = &cobra.Command{
 
 		if err := exec.Command("incus", "exec", project, "--user", uid, "-t",
 			"--env", "HOME=/home/odoo", "--cwd", "/opt/odoo", "--",
-			"oda", "backup",
+			"odas", "backup",
 		).Run(); err != nil {
 			fmt.Fprintln(os.Stderr, "backup failed", err)
 			return
