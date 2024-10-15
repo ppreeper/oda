@@ -31,29 +31,13 @@ jobs:
           sudo apt-get install -y ruby ruby-dev build-essential
           sudo gem install --no-document fpm
 
-      # Step 4: Build the odaserver binary
-      - name: Build odaserver binary
-        run: |
-          go generate ./cmd/odas/. > ./cmd/odas/commit.txt
-          CGO_ENABLED=0 GOOS=linux go build -a -o odas ./cmd/odas/.
-
-      # Step 5: Build the odacli binary
+      # Step 4: Build the odacli binary
       - name: Build odacli binary
         run: |
           go generate ./cmd/oda/. > ./cmd/oda/commit.txt
           CGO_ENABLED=0 GOOS=linux go build -a -o oda ./cmd/oda/.
 
-      # Step 6: Package the odaserver binary into a .deb file
-      - name: Package odaserver.deb file
-        run: |
-          fpm -s dir -t deb -n odaserver -v ${{ github.ref_name || 'manual-build' }} \
-          --description "ODA Server Side Application" \
-          --url "https://github.com/${{ github.repository }}" \
-          --license "GPL3" \
-          --maintainer "ppreeper@gmail.com" \
-          --prefix /usr/local/bin odas
-
-      # Step 7: Package the odacli binary into a .deb file
+      # Step 5: Package the odacli binary into a .deb file
       - name: Package odacli.deb file
         run: |
           fpm -s dir -t deb -n odacli -v ${{ github.ref_name || 'manual-build' }} \
@@ -63,13 +47,7 @@ jobs:
           --maintainer "ppreeper@gmail.com" \
           --prefix /usr/local/bin oda
 
-      # Step 8: Upload the .deb as an artifact
-      - name: Upload odaserver artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: odaserver-deb
-          path: odaserver_*.deb
-
+      # Step 6: Upload the .deb as an artifact
       - name: Upload odacli artifact
         uses: actions/upload-artifact@v4
         with:
@@ -85,12 +63,6 @@ jobs:
         uses: actions/checkout@v4
 
       # Step 2: Download built .deb artifact
-      - name: Download odaserver artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: odaserver-deb
-          path: ./dist
-
       - name: Download odacli artifact
         uses: actions/download-artifact@v4
         with:
@@ -101,7 +73,7 @@ jobs:
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: ./dist/odaserver_*.deb, ./dist/odacli_*.deb
+          artifacts: ./dist/odacli_*.deb
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name || 'manual-release' }}
           name: "Release ${{ github.ref_name || 'Manual Release' }}"

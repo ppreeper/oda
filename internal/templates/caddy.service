@@ -1,0 +1,17 @@
+[Unit]
+Description=caddy server
+Requires=network-online.target
+After=remote-fs.target
+
+[Service]
+Type=simple
+SyslogIdentifier=caddy
+Restart=on-failure
+ExecStart=/usr/local/bin/caddy run --config /etc/caddy/Caddyfile
+KillSignal=SIGTERM
+StandardOutput=journal+console
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target

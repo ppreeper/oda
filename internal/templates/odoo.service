@@ -1,0 +1,18 @@
+[Unit]
+Description=Odoo
+Requires=network-online.target
+After=remote-fs.target
+
+[Service]
+Type=simple
+SyslogIdentifier=odoo
+PermissionsStartOnly=true
+User=odoo
+Group=odoo
+ExecStart=/opt/odoo/odoo/odoo-bin -c /opt/odoo/conf/odoo.conf
+StandardOutput=journal+console
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=remote-fs.target
