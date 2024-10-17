@@ -17,14 +17,10 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 package main
 
 import (
-	_ "embed"
-
 	"github.com/ppreeper/oda/internal"
 )
 
-//go:generate sh -c "printf '%s (%s)' $(git tag -l --contains HEAD) $(date +%Y%m%d)-$(git rev-parse --short HEAD)" > commit.txt
-//go:embed commit.txt
-var Commit string
+//go:generate sh -c "printf '%s (%s)' $(git tag -l | sort -V | tail -1) $(date +%Y%m%d)-$(git rev-parse --short HEAD)"
 
 func main() {
 	internal.Execute()

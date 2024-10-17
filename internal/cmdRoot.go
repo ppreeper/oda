@@ -17,6 +17,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 package internal
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"os/user"
@@ -26,6 +27,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
+
+//go:embed commit.txt
+var Commit string
 
 var rootCmd = &cobra.Command{
 	Use:   "oda",
@@ -42,6 +46,7 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
+	rootCmd.Version = Commit
 	rootCmd.AddGroup(
 		&cobra.Group{ID: "app", Title: "App Management"},
 		&cobra.Group{ID: "backup", Title: "Backup Management"},
