@@ -100,7 +100,7 @@ func genOdaConf() OdaConf {
 		},
 		System: OdaSystem{
 			Domain: "local",
-			SSHKey: "/home/odoo/.ssh/id_rsa",
+			SSHKey: "id_rsa",
 		},
 	}
 }
