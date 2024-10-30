@@ -79,20 +79,6 @@ var dbFullresetCmd = &cobra.Command{
 		// PGHBA Config
 		PGHBACONF()
 
-		// PGBouncer Config
-		PGBouncer()
-
-		// /etc/pgbouncer/userlist.txt
-		err = exec.Command("incus", "exec", dbHost, "--user", uid, "-t", "--",
-			"psql", "-c", "COPY(SELECT '\"'||rolname||'\" \"'||coalesce(rolpassword,'')||'\"' from pg_authid) TO '/etc/pgbouncer/userlist.txt';").Run()
-		if err != nil {
-			if errors.Is(err, exec.ErrWaitDelay) {
-				fmt.Fprintln(os.Stderr, "failed to create userlist.txt: %w", err)
-				return
-			}
-		}
-		fmt.Fprintln(os.Stderr, "postgresql server "+dbUsername+" pgbouncer userlist.txt created")
-
 		SetInstanceState(dbHost, "stop")
 		SetInstanceState(dbHost, "start")
 		fmt.Fprintln(os.Stderr, "postgresql server "+dbHost+" restarted")
@@ -154,33 +140,6 @@ func PGHBACONF() error {
 	if err := exec.Command("incus", "file", "push", localFile, dbHost+"/etc/postgresql/"+dbVersion+"/main/pg_hba.conf").Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return fmt.Errorf("failed to push pg_hba.conf: %w", err)
-	}
-
-	os.Remove(localFile)
-
-	return nil
-}
-
-func PGBouncer() error {
-	dbHost := viper.GetString("database.host")
-
-	localFile := "/tmp/" + dbHost + "-pgbouncer.ini"
-
-	fo, err := os.Create(localFile)
-	if err != nil {
-		return fmt.Errorf("failed to create pgbouncer.ini: %w", err)
-	}
-	defer fo.Close()
-
-	data := map[string]string{}
-	t, err := template.ParseFS(embedFS, "templates/pgbouncer.ini")
-	cobra.CheckErr(err)
-	err = t.Execute(fo, data)
-	cobra.CheckErr(err)
-
-	if err := exec.Command("incus", "file", "push", localFile, dbHost+"/etc/pgbouncer/pgbouncer.ini").Run(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return fmt.Errorf("failed to push pgbouncer.ini: %w", err)
 	}
 
 	os.Remove(localFile)
