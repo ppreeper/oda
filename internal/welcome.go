@@ -25,49 +25,49 @@ func (o *ODA) Welcome() error {
 		Cmd  string
 		Help string
 	}{
-		{Cmd: "odas db fullreset", Help: "Complete rebuild of the db server"},
-		{Cmd: "odas db logs", Help: "Follow the postgresql logs"},
-		{Cmd: "odas db psql", Help: "Direct psql access to the postgres database"},
+		{Cmd: "oda db fullreset", Help: "Complete rebuild of the db server"},
+		{Cmd: "oda db logs", Help: "Follow the postgresql logs"},
+		{Cmd: "oda db psql", Help: "Direct psql access to the postgres database"},
 	}
 	exampleRepoCommands := []struct {
 		Cmd  string
 		Help string
 	}{
-		{Cmd: "odas repo base clone", Help: "Clone Odoo base repository"},
-		{Cmd: "odas repo branch clone", Help: "Clone specific Odoo branch repository"},
-		{Cmd: "odas repo base update", Help: "Update Odoo base repository"},
-		{Cmd: "odas repo branch update", Help: "Update specific Odoo branch repository"},
+		{Cmd: "oda repo base clone", Help: "Clone Odoo base repository"},
+		{Cmd: "oda repo branch clone", Help: "Clone specific Odoo branch repository"},
+		{Cmd: "oda repo base update", Help: "Update Odoo base repository"},
+		{Cmd: "oda repo branch update", Help: "Update specific Odoo branch repository"},
 	}
 	exampleBaseCommands := []struct {
 		Cmd  string
 		Help string
 	}{
-		{Cmd: "odas base create", Help: "Create a new Odoo base image"},
-		{Cmd: "odas base update", Help: "Update the Odoo base image"},
-		{Cmd: "odas base destroy", Help: "Destroy the Odoo base image"},
+		{Cmd: "oda base create", Help: "Create a new Odoo base image"},
+		{Cmd: "oda base update", Help: "Update the Odoo base image"},
+		{Cmd: "oda base destroy", Help: "Destroy the Odoo base image"},
 	}
 
 	exampleCommands := []struct {
 		Cmd  string
 		Help string
 	}{
-		{Cmd: "odas project init", Help: "Setup a new project"},
-		{Cmd: "odas project reset", Help: "Drop project database and clear filestore"},
-		{Cmd: "odas instance create", Help: "Initialize the project instance"},
-		{Cmd: "odas start", Help: "Start the project instance"},
-		{Cmd: "odas stop", Help: "Stop the project instance"},
-		{Cmd: "odas restart", Help: "Restart the project instance"},
-		{Cmd: "odas logs", Help: "Follow the project logs"},
-		{Cmd: "odas psql", Help: "Open PostgreSQL shell of project database"},
-		{Cmd: "odas exec", Help: "Open bash shell on project instance"},
-		{Cmd: "odas admin updateuser", Help: "Update the an username or password"},
+		{Cmd: "oda project init", Help: "Setup a new project"},
+		{Cmd: "oda project reset", Help: "Drop project database and clear filestore"},
+		{Cmd: "oda instance create", Help: "Initialize the project instance"},
+		{Cmd: "oda start", Help: "Start the project instance"},
+		{Cmd: "oda stop", Help: "Stop the project instance"},
+		{Cmd: "oda restart", Help: "Restart the project instance"},
+		{Cmd: "oda logs", Help: "Follow the project logs"},
+		{Cmd: "oda psql", Help: "Open PostgreSQL shell of project database"},
+		{Cmd: "oda exec", Help: "Open bash shell on project instance"},
+		{Cmd: "oda admin updateuser", Help: "Update the an username or password"},
 	}
 	exampleAdminCommands := []struct {
 		Cmd  string
 		Help string
 	}{
-		{Cmd: "odas ps", Help: "List all project instances"},
-		{Cmd: "odas hosts", Help: "Update the /etc/hosts file with project instances (requires sudo)"},
+		{Cmd: "oda ps", Help: "List all project instances"},
+		{Cmd: "oda hosts", Help: "Update the /etc/hosts file with project instances (requires sudo)"},
 	}
 
 	cmdLen := 0
