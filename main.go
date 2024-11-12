@@ -38,6 +38,8 @@ var templates embed.FS
 func main() {
 	oda := internal.NewODA("oda", "Odoo Client Administration Tool", commit, templates)
 
+	var restoreAny, restoreMove, restoreNeutralize bool
+
 	app := &cli.App{
 		Name:                 oda.Name,
 		Usage:                oda.Usage,
@@ -122,6 +124,26 @@ func main() {
 				Name:     "restore",
 				Usage:    "Restore database and filestore or addons",
 				Category: "Backup Management",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:        "any",
+						Value:       false,
+						Usage:       "lookup any backup",
+						Destination: &restoreAny,
+					},
+					&cli.BoolFlag{
+						Name:        "move",
+						Value:       false,
+						Usage:       "move database",
+						Destination: &restoreMove,
+					},
+					&cli.BoolFlag{
+						Name:        "neutralize",
+						Value:       true,
+						Usage:       "neutralize database",
+						Destination: &restoreNeutralize,
+					},
+				},
 				Action: func(cCtx *cli.Context) error {
 					if cCtx.Bool("move") && cCtx.Bool("neutralize") {
 						return fmt.Errorf("cannot move and neutralize at the same time")
